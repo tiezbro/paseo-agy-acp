@@ -76,6 +76,35 @@ post-tool final assistant output, StreamPoller final-output and lifecycle-bounda
 ## Verification
 
 - `npm run build` — passes
-- `npm test` — 381 passed, 1 skipped (1 expected failure when PASEO_HOME is set,
-  see README Known Issues)
+- `npm test` — 381 passed, 1 skipped
 - `npm pack` — produces `paseo-agy-acp-1.0.0.0.tgz`
+
+## Local Production Connector Switch
+
+2026-08-06:
+
+- Built and tested `paseo-agy-acp@1.0.0.0`.
+- Packed `/home/tiezbro/projects/paseo-agy-acp/paseo-agy-acp-1.0.0.0.tgz`.
+- Installed it into an isolated prefix:
+  `/home/tiezbro/.local/opt/paseo-agy-acp-1.0.0.0-20260806T1159Z`.
+- Verified the installed package can import:
+  - `dist/main.js`
+  - `dist/acp/session/prompt.js`
+  - target-local `node-pty`
+- Switched global symlink:
+  `/home/tiezbro/.local/bin/agy-acp`
+  to:
+  `/home/tiezbro/.local/opt/paseo-agy-acp-1.0.0.0-20260806T1159Z/bin/agy-acp`.
+- Previous symlink backup:
+  `/home/tiezbro/.local/bin/agy-acp.backup.20260806T1200Z`.
+- Previous target record:
+  `/home/tiezbro/.local/bin/agy-acp.backup.20260806T1200Z.txt`.
+- Production Paseo daemon `127.0.0.1:6767` was not restarted.
+- Production Antigravity canary agent
+  `b46d4b7a-67f6-47c6-aa78-032ad4fd6c53` completed on `6767` with
+  `Status:"idle"`, `PendingPermissions:[]`, provider
+  `antigravity/gemini-3.1-pro`, `thinking=high`, and returned
+  `sawDaemonContext:true`.
+- Health checks after switch:
+  - `127.0.0.1:6767` OK
+  - `127.0.0.1:6768` OK
