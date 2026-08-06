@@ -15,7 +15,7 @@
 
 ACP adapter for [Google Antigravity CLI](https://antigravity.google/product/antigravity-cli).
 A community derivative of [`shindgew/agy-acp`](https://github.com/shindgew/agy-acp), hardened
-for reliable daily use with [Paseo](https://github.com/answerdotai/paseo).
+for reliable daily use with [Paseo](https://github.com/getpaseo/paseo).
 
 > **Not official Paseo support. Not official Google support.**
 > Community-maintained fork. Use at your own risk.
