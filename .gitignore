@@ -1,0 +1,6 @@
+node_modules/
+dist/
+.agy-acp/
+*.log
+.DS_Store
+*.tgz
