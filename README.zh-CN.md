@@ -15,7 +15,7 @@
 
 [Google Antigravity CLI](https://antigravity.google/product/antigravity-cli) 的 ACP 适配器。
 基于 [`shindgew/agy-acp`](https://github.com/shindgew/agy-acp) 的社区衍生版本，针对
-[Paseo](https://github.com/answerdotai/paseo) 日常使用进行了可靠性强化。
+[Paseo](https://github.com/getpaseo/paseo) 日常使用进行了可靠性强化。
 
 > **非 Paseo 官方支持。非 Google 官方支持。** 社区维护分支，使用风险自负。
 
