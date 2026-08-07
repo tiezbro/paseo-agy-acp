@@ -71,6 +71,16 @@ describe("interpretSlashCommand", () => {
       configId: "mode",
       value: "accept-edits"
     });
+    expect(interpretSlashCommand({ name: "mode", input: "dangerously-skip-permissions" })).toEqual({
+      kind: "set_config",
+      configId: "mode",
+      value: "dangerously-skip-permissions"
+    });
+    expect(interpretSlashCommand({ name: "mode", input: "yolo" })).toEqual({
+      kind: "set_config",
+      configId: "mode",
+      value: "dangerously-skip-permissions"
+    });
   });
 
   it("maps model and effort", () => {

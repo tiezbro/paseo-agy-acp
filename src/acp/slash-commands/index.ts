@@ -20,8 +20,8 @@ export const SKILLS_SLASH = "skills";
 export const AVAILABLE_COMMANDS: readonly AvailableCommand[] = [
   {
     name: MODE_SLASH,
-    description: "Set agy execution mode for this session (default, accept-edits, plan).",
-    input: { hint: "default | accept-edits | plan" }
+    description: "Set agy execution mode for this session (default, accept-edits, plan, dangerously-skip-permissions).",
+    input: { hint: "default | accept-edits | plan | dangerously-skip-permissions" }
   },
   {
     name: PLAN_SLASH,
@@ -126,14 +126,14 @@ export function interpretSlashCommand(parsed: ParsedSlashCommand): SlashInterpre
       if (!parsed.input) {
         return {
           kind: "error",
-          message: "Usage: /mode default | accept-edits | plan"
+          message: "Usage: /mode default | accept-edits | plan | dangerously-skip-permissions"
         };
       }
       const value = normalizeModeInput(parsed.input);
       if (!value) {
         return {
           kind: "error",
-          message: `Unknown mode "${parsed.input}". Use: default | accept-edits | plan`
+          message: `Unknown mode "${parsed.input}". Use: default | accept-edits | plan | dangerously-skip-permissions`
         };
       }
       return { kind: "set_config", configId: "mode", value };
@@ -168,10 +168,18 @@ export function interpretSlashCommand(parsed: ParsedSlashCommand): SlashInterpre
 
 function normalizeModeInput(raw: string): string | null {
   const key = raw.trim().toLowerCase().replace(/_/g, "-");
-  if (key === "default" || key === "accept-edits" || key === "plan") return key;
+  if (key === "default" || key === "accept-edits" || key === "plan" || key === "dangerously-skip-permissions") return key;
   // Common aliases
   if (key === "acceptedits" || key === "accept" || key === "auto") return "accept-edits";
   if (key === "planning") return "plan";
+  if (
+    key === "dangerouslyskippermissions" ||
+    key === "skip-permissions" ||
+    key === "skippermissions" ||
+    key === "bypass" ||
+    key === "dangerous" ||
+    key === "yolo"
+  ) return "dangerously-skip-permissions";
   return null;
 }
 

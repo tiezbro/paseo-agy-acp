@@ -3,7 +3,7 @@
 This document records local modifications made to [`shindgew/agy-acp`](https://github.com/shindgew/agy-acp)
 that differentiate this community derivative.
 
-Last updated: 2026-08-06
+Last updated: 2026-08-07
 
 ## Baseline
 
@@ -12,7 +12,7 @@ Last updated: 2026-08-06
 | Upstream | `https://github.com/shindgew/agy-acp.git` |
 | Upstream HEAD | `6f44500` (release/v0.4.3) |
 | This project | `https://github.com/tiezbro/paseo-agy-acp` |
-| Package | `paseo-agy-acp@1.0.0.1` |
+| Package | `paseo-agy-acp@1.0.0.2` |
 
 ## Source Changes
 
@@ -76,11 +76,33 @@ terminal state and suppression, no finish on progress plus idle before final ans
 rejected completed write authoritative over provider success, print process waits for
 post-tool final assistant output, StreamPoller final-output and lifecycle-boundary behavior.
 
+### 7. Native Antigravity Permission Bypass Mode
+
+**Files:** `src/agy/cli.ts`, `src/acp/session/modes.ts`,
+`src/acp/slash-commands/index.ts`, `tests/cli.test.ts`,
+`tests/acp-server.test.ts`, `tests/slash-commands.test.ts`
+
+Exposes Antigravity CLI's official unattended permission bypass parameter as ACP
+mode id `dangerously-skip-permissions`. The adapter maps that mode directly to
+`agy --dangerously-skip-permissions` and deliberately does not introduce a
+custom "full access" name for Antigravity. `accept-edits` and `plan` remain the
+only values passed through `agy --mode`.
+
+If the adapter process is launched with `--dangerously-skip-permissions`, the
+initial ACP session mode is reported as `dangerously-skip-permissions`. Changing
+the session mode back to `default`, `accept-edits`, or `plan` disables the
+bypass for later turns in that ACP session.
+
 ## Verification
 
 - `env -u PASEO_AGENT_ID -u PASEO_AGENT_CWD -u PASEO_HOME npm test` — 383 passed, 1 skipped
 - `env -u PASEO_AGENT_ID -u PASEO_AGENT_CWD -u PASEO_HOME npm run build` — passes
 - `npm pack` — produces `paseo-agy-acp-1.0.0.1.tgz`
+
+Verification for `1.0.0.2`:
+
+- `env -u PASEO_AGENT_ID -u PASEO_AGENT_CWD -u PASEO_HOME npm test` — 383 passed, 1 skipped
+- `env -u PASEO_AGENT_ID -u PASEO_AGENT_CWD -u PASEO_HOME npm run build` — passes
 
 ## Local Production Connector Switch
 
@@ -141,3 +163,36 @@ post-tool final assistant output, StreamPoller final-output and lifecycle-bounda
 - Residual issue: Antigravity repeated the same `paseo inspect` permission three
   times before completing. This is a permission replay/acknowledgement issue
   separate from the daemon-context bridge.
+
+### 2026-08-07: `1.0.0.2` native Antigravity permission bypass mode
+
+- Source fix: exposed the native Antigravity CLI
+  `--dangerously-skip-permissions` parameter as ACP mode id
+  `dangerously-skip-permissions`; no custom Antigravity "full access" alias is
+  introduced.
+- Regression coverage:
+  - ACP mode list includes `dangerously-skip-permissions`.
+  - `/mode dangerously-skip-permissions` and `/mode yolo` resolve to that mode.
+  - `commandForPrompt()` emits `--dangerously-skip-permissions` and does not emit
+    `--mode dangerously-skip-permissions`.
+  - Launching the adapter with `--dangerously-skip-permissions` reports the same
+    initial ACP mode id.
+- Verification:
+  - `env -u PASEO_AGENT_ID -u PASEO_AGENT_CWD -u PASEO_HOME npm test` — 383
+    passed, 1 skipped.
+  - `env -u PASEO_AGENT_ID -u PASEO_AGENT_CWD -u PASEO_HOME npm run build` —
+    passes.
+  - `npm pack` — produced `paseo-agy-acp-1.0.0.2.tgz` with `CHANGELOG.md`.
+- Installed prefix:
+  `/home/tiezbro/.local/opt/paseo-agy-acp-1.0.0.2-20260807T010141Z`.
+- Active symlink:
+  `/home/tiezbro/.local/bin/agy-acp` ->
+  `/home/tiezbro/.local/opt/paseo-agy-acp-1.0.0.2-20260807T010141Z/bin/agy-acp`.
+- Previous symlink backup:
+  `/home/tiezbro/.local/bin/agy-acp.backup.20260807T010302Z`.
+- Previous target record:
+  `/home/tiezbro/.local/bin/agy-acp.backup.20260807T010302Z.txt`.
+- Global ACP initialize smoke returned `agentInfo.version:"1.0.0.2"`.
+- Installed mode list check returned
+  `["default","accept-edits","plan","dangerously-skip-permissions"]`.
+- Production Paseo daemon `127.0.0.1:6767` was not restarted.

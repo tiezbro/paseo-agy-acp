@@ -920,6 +920,11 @@ describe("session modes and config option sync", () => {
             id: "plan",
             name: "Plan",
             description: "Plan-oriented execution (agy --mode plan)."
+          },
+          {
+            id: "dangerously-skip-permissions",
+            name: "Dangerously Skip Permissions",
+            description: "Auto-approve all tool permission requests without prompting (agy --dangerously-skip-permissions)."
           }
         ]
       });
@@ -1184,7 +1189,7 @@ describe("session model config", () => {
 
       expect(modeConfig.category).toBe("mode");
       expect(modeConfig.currentValue).toBe("default");
-      expect(optionValues(modeConfig)).toEqual(["default", "accept-edits", "plan"]);
+      expect(optionValues(modeConfig)).toEqual(["default", "accept-edits", "plan", "dangerously-skip-permissions"]);
 
       expect(modelConfig.category).toBe("model");
       expect(modelConfig.currentValue).toBe("gemini-3.5-flash");
@@ -1226,9 +1231,9 @@ describe("session model config", () => {
       const modeResponse = await connection.agent.request(methods.agent.session.setConfigOption, {
         sessionId: session.sessionId,
         configId: "mode",
-        value: "accept-edits"
+        value: "dangerously-skip-permissions"
       });
-      expect(modeResponse.configOptions[0].currentValue).toBe("accept-edits");
+      expect(modeResponse.configOptions[0].currentValue).toBe("dangerously-skip-permissions");
 
       const thinkingResponse = await connection.agent.request(methods.agent.session.setConfigOption, {
         sessionId: session.sessionId,
@@ -1248,7 +1253,8 @@ describe("session model config", () => {
       expect(promptCall?.args[promptCall.args.indexOf("--print") + 1]).toBe("hi");
       expect(flagValue(promptCall!.args, "--model")).toBe("claude-opus-4-6-thinking");
       expect(promptCall!.args).not.toContain("--effort");
-      expect(flagValue(promptCall!.args, "--mode")).toBe("accept-edits");
+      expect(promptCall!.args).toContain("--dangerously-skip-permissions");
+      expect(promptCall!.args).not.toContain("--mode");
     } finally {
       connection.close();
     }

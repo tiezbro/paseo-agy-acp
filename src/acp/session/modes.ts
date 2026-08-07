@@ -26,6 +26,11 @@ export const AGY_MODE_OPTIONS: ReadonlyArray<{
     value: "plan",
     name: "Plan",
     description: "Plan-oriented execution (agy --mode plan)."
+  },
+  {
+    value: "dangerously-skip-permissions",
+    name: "Dangerously Skip Permissions",
+    description: "Auto-approve all tool permission requests without prompting (agy --dangerously-skip-permissions)."
   }
 ];
 
@@ -46,7 +51,7 @@ export function modeConfigOption(mode: SessionModeId): V1SessionConfigOption {
     id: MODE_CONFIG_ID,
     name: "Mode",
     description:
-      "agy execution mode (--mode). Default reviews writes; Accept Edits applies file changes; Plan focuses on planning.",
+      "agy execution mode. Default reviews writes; Accept Edits applies file changes; Plan focuses on planning; Dangerously Skip Permissions auto-approves tool permission requests.",
     category: "mode",
     type: "select",
     currentValue: mode,

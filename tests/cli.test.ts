@@ -86,9 +86,10 @@ describe("commandForPrompt", () => {
     expect(flagValue(command, "--effort")).toBe("high");
   });
 
-  it("omits --mode for default and passes accept-edits or plan", () => {
+  it("omits --mode for default, passes agy modes, and maps the native dangerous bypass flag", () => {
     const defaultCmd = new AgyCliSession(defaultConfig()).commandForPrompt("hello");
     expect(defaultCmd).not.toContain("--mode");
+    expect(defaultCmd).not.toContain("--dangerously-skip-permissions");
 
     const acceptCmd = new AgyCliSession({
       ...defaultConfig(),
@@ -101,6 +102,13 @@ describe("commandForPrompt", () => {
       mode: "plan"
     }).commandForPrompt("hello");
     expect(flagValue(planCmd, "--mode")).toBe("plan");
+
+    const bypassCmd = new AgyCliSession({
+      ...defaultConfig(),
+      mode: "dangerously-skip-permissions"
+    }).commandForPrompt("hello");
+    expect(bypassCmd).toContain("--dangerously-skip-permissions");
+    expect(bypassCmd).not.toContain("--mode");
   });
 
   it("builds interactive mode without print flags", () => {
@@ -1704,6 +1712,7 @@ describe("configFromEnv", () => {
   it("configures mode from argv", () => {
     expect(configFromEnv({ cwd: "/repo" }).mode).toBe("default");
     expect(configFromEnv({ cwd: "/repo", argv: ["--mode", "accept-edits"] }).mode).toBe("accept-edits");
+    expect(configFromEnv({ cwd: "/repo", argv: ["--dangerously-skip-permissions"] }).mode).toBe("dangerously-skip-permissions");
   });
 
   it("configures sandbox and skipPermissions based on argv", () => {

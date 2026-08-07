@@ -137,13 +137,15 @@ export type SpawnFactory = (
   options: SpawnOptions
 ) => SpawnedProcess;
 
-/** agy execution mode for `--mode` (omit flag when `default`). */
-export type SessionModeId = "default" | "accept-edits" | "plan";
+/** agy execution setting exposed through ACP/Paseo. `dangerously-skip-permissions`
+ * is the native agy flag name, not an agy `--mode` value. */
+export type SessionModeId = "default" | "accept-edits" | "plan" | "dangerously-skip-permissions";
 
 export const SESSION_MODE_IDS: readonly SessionModeId[] = [
   "default",
   "accept-edits",
-  "plan"
+  "plan",
+  "dangerously-skip-permissions"
 ] as const;
 
 export function isSessionModeId(value: string): value is SessionModeId {
@@ -160,9 +162,10 @@ export interface AgyCliConfig {
   /** Value for `--effort` (`low` | `medium` | `high`), when applicable. */
   effort?: string;
   /**
-   * Agent execution mode for `agy --mode`.
+   * Agent execution mode exposed through ACP/Paseo.
    * `default` omits the flag (request-review / write confirmation).
    * `accept-edits` and `plan` pass `--mode <value>`.
+   * `dangerously-skip-permissions` passes `--dangerously-skip-permissions` and no `--mode`.
    */
   mode: SessionModeId;
   project?: string;
@@ -283,6 +286,7 @@ export class AgyCliSession {
 
   setMode(mode: SessionModeId): void {
     this.config.mode = mode;
+    this.config.skipPermissions = mode === "dangerously-skip-permissions";
   }
 
   commandForPrompt(prompt: string): string[] {
@@ -300,10 +304,10 @@ export class AgyCliSession {
     if (this.config.sandbox) {
       command.push("--sandbox");
     }
-    if (this.config.skipPermissions) {
+    if (this.shouldSkipPermissions()) {
       command.push("--dangerously-skip-permissions");
     }
-    if (this.config.mode !== "default") {
+    if (this.config.mode !== "default" && this.config.mode !== "dangerously-skip-permissions") {
       command.push("--mode", this.config.mode);
     }
     if (this.config.model) {
@@ -367,13 +371,13 @@ export class AgyCliSession {
     elicitationCap?: ClientElicitationCapability
   ): Promise<PromptOutcome> {
     this.#lastPromptUserStepIdxs = [];
-    if (this.config.interactivePermissions && !onPermission) {
+    if (this.shouldUseInteractivePermissions() && !onPermission) {
       throw new Error("interactive permissions require a permission callback");
     }
     this.#cancelled = false;
     this.#cancelWait = new Promise((resolve) => { this.#cancelTurn = resolve; });
     try {
-      if (this.config.interactivePermissions) {
+      if (this.shouldUseInteractivePermissions()) {
         return await this.runInteractivePrompt(prompt, onUpdate, onPermission!, fsBridge, elicitationCap);
       }
       const command = this.commandForPrompt(prompt);
@@ -1263,6 +1267,14 @@ export class AgyCliSession {
   async close(): Promise<void> {
     await this.cancel();
   }
+
+  private shouldSkipPermissions(): boolean {
+    return this.config.skipPermissions || this.config.mode === "dangerously-skip-permissions";
+  }
+
+  private shouldUseInteractivePermissions(): boolean {
+    return this.config.interactivePermissions && !this.shouldSkipPermissions();
+  }
 }
 
 function markerPrefixTail(output: string, marker: string): string {
@@ -1359,17 +1371,9 @@ export function configFromEnv(input: AgyCliConfigInput): AgyCliConfig {
     sandbox = true;
   }
 
-  let skipPermissions = false;
-  if (argv.includes("--dangerously-skip-permissions")) {
-    skipPermissions = true;
-  }
-  // Interactive permission forwarding is the normal execution path. The
-  // explicit dangerous bypass selects print mode because there is no
-  // permission request to forward when agy auto-approves everything.
-  const interactiveDisabled = argv.includes("--no-interactive-permissions");
-  const interactivePermissions = !skipPermissions && !interactiveDisabled;
-
-  let mode: SessionModeId = "default";
+  let mode: SessionModeId = argv.includes("--dangerously-skip-permissions")
+    ? "dangerously-skip-permissions"
+    : "default";
   const modeFlagIdx = argv.indexOf("--mode");
   if (modeFlagIdx >= 0) {
     const modeArg = argv[modeFlagIdx + 1];
@@ -1377,6 +1381,13 @@ export function configFromEnv(input: AgyCliConfigInput): AgyCliConfig {
       mode = modeArg;
     }
   }
+
+  const skipPermissions = mode === "dangerously-skip-permissions";
+  // Interactive permission forwarding is the normal execution path. The
+  // explicit dangerous bypass selects print mode because there is no
+  // permission request to forward when agy auto-approves everything.
+  const interactiveDisabled = argv.includes("--no-interactive-permissions");
+  const interactivePermissions = !skipPermissions && !interactiveDisabled;
 
   return {
     cwd: input.cwd,

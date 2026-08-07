@@ -31,7 +31,7 @@ export interface StoredSession {
   model: string;
   /** Matches ACP config option `reasoningEffort` (maps to agy --effort). */
   reasoningEffort: string;
-  /** Matches ACP config option `mode` (`default` | `accept-edits` | `plan`). Absent on older store files. */
+  /** Matches ACP config option `mode`. Absent on older store files. */
   mode?: string;
   /** Stable v2 user-message IDs keyed by their persisted agy step index. */
   v2UserMessageIdsByStep: Record<string, string>;
@@ -165,4 +165,3 @@ function normalizeMessageIdMap(value: unknown): Record<string, string> {
     )
   ) as Record<string, string>;
 }
-

@@ -5,7 +5,7 @@
 **Paseo × Antigravity — ACP 适配器**
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](./LICENSE)
-[![Version](https://img.shields.io/badge/version-1.0.0.1-blue?style=flat-square)](./package.json)
+[![Version](https://img.shields.io/badge/version-1.0.0.2-blue?style=flat-square)](./package.json)
 [![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen?style=flat-square)](#)
 [![ACP](https://img.shields.io/badge/ACP-v1%20%2B%20draft%20v2-8A2BE2?style=flat-square)](https://agentclientprotocol.com)
 
@@ -42,6 +42,7 @@
 | 3 | Turn 在最终 assistant 消息出现前就关闭 | `turnCompleteCandidate` 要求可见的终端输出 |
 | 4 | 带退出码的前台命令仍显示为"活跃"后台任务 | `task_details` + `exitCode` 行不再视为后台任务 |
 | 5 | 整文件回滚因 provider 添加的换行符而失败 | 对整文件写入操作容忍 `\n` / `\r\n` |
+| 6 | Paseo 无法选择 Antigravity 的无人值守权限绕过 | 将官方 `--dangerously-skip-permissions` 参数暴露为 ACP mode id `dangerously-skip-permissions` |
 
 → [完整技术细节](./docs/PASEO_LOCAL_CHANGES.md)
 
@@ -78,6 +79,8 @@ Paseo / ACP 客户端
 
 每会话一个 PTY。步骤从 SQLite protobuf 解码，不解析 stdout。
 `--sandbox` 默认开启。配置项：`mode`、`model`、`reasoningEffort`。
+`dangerously-skip-permissions` mode 直接映射到 Antigravity CLI 官方
+`--dangerously-skip-permissions` 参数，不经过自定义的 "full access" 名称转义。
 
 Paseo daemon 上下文会前置到发送给 `agy` 的后端 prompt。Antigravity CLI
 当前没有逐调用 system/developer prompt 参数，因此这是模型可见的 prompt

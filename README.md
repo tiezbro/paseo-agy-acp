@@ -5,7 +5,7 @@
 **Paseo × Antigravity — ACP Adapter**
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](./LICENSE)
-[![Version](https://img.shields.io/badge/version-1.0.0.1-blue?style=flat-square)](./package.json)
+[![Version](https://img.shields.io/badge/version-1.0.0.2-blue?style=flat-square)](./package.json)
 [![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen?style=flat-square)](#)
 [![ACP](https://img.shields.io/badge/ACP-v1%20%2B%20draft%20v2-8A2BE2?style=flat-square)](https://agentclientprotocol.com)
 
@@ -44,6 +44,7 @@ reliability problems:
 | 3 | Turn closed before final assistant message | `turnCompleteCandidate` requires visible terminal output |
 | 4 | Explicit-exit foreground commands stuck as "active" | `task_details` + `exitCode` rows not treated as background tasks |
 | 5 | Whole-file revert broken by provider-added newlines | `\n` / `\r\n` tolerance for whole-file writes |
+| 6 | Paseo cannot select Antigravity's unattended permission bypass | Exposes the native `--dangerously-skip-permissions` parameter as ACP mode id `dangerously-skip-permissions` |
 
 → [Full technical detail](./docs/PASEO_LOCAL_CHANGES.md)
 
@@ -80,6 +81,9 @@ Paseo / ACP Client
 
 One PTY per session. Steps decoded from SQLite protobuf, never from stdout.
 `--sandbox` on by default. Config: `mode`, `model`, `reasoningEffort`.
+The `dangerously-skip-permissions` mode maps directly to Antigravity CLI's
+native `--dangerously-skip-permissions` flag; it is not translated through a
+custom "full access" name.
 
 Paseo daemon context is prepended to the backend prompt sent to `agy`. The
 Antigravity CLI does not currently expose a per-call system/developer prompt
