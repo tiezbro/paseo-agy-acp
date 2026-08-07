@@ -12,7 +12,7 @@ Last updated: 2026-08-06
 | Upstream | `https://github.com/shindgew/agy-acp.git` |
 | Upstream HEAD | `6f44500` (release/v0.4.3) |
 | This project | `https://github.com/tiezbro/paseo-agy-acp` |
-| Package | `paseo-agy-acp@1.0.0.0` |
+| Package | `paseo-agy-acp@1.0.0.1` |
 
 ## Source Changes
 
@@ -20,14 +20,17 @@ Last updated: 2026-08-06
 
 **Files:** `src/acp/session/prompt.ts`, `tests/queue-steer.test.ts`
 
-Recovers Paseo `daemon.appendSystemPrompt` text from agent state when `PASEO_HOME` and
-`PASEO_AGENT_ID` are present. Prepends the recovered text only to the backend prompt
-sent to Antigravity, keeping ACP-visible `user_message` unchanged. Fails open to the
-original prompt when Paseo metadata is missing.
+Recovers Paseo `daemon.appendSystemPrompt` text from agent state when `PASEO_AGENT_ID`
+is present. `PASEO_HOME` is treated as an optional override and falls back to
+`~/.paseo` when unset or empty. Prepends the recovered text only to the backend
+prompt sent to Antigravity, keeping ACP-visible `user_message` unchanged. Fails
+open to the original prompt when Paseo metadata is missing.
 
 This is an explicit, auditable exception to the Zero Prompt Injection invariant:
-it only prepends daemon-authored system context, never adapter prose, and only
-activates when both Paseo environment variables are present.
+it only prepends daemon-authored context, never adapter prose, and only activates
+for Paseo-managed Agent processes with a valid `PASEO_AGENT_ID`. Because `agy`
+does not expose a per-call system/developer prompt flag, this is a backend prompt
+prefix bridge rather than a native system-role message.
 
 ### 2. Permission Decisions Are Authoritative
 
@@ -75,9 +78,9 @@ post-tool final assistant output, StreamPoller final-output and lifecycle-bounda
 
 ## Verification
 
-- `npm run build` — passes
-- `npm test` — 381 passed, 1 skipped
-- `npm pack` — produces `paseo-agy-acp-1.0.0.0.tgz`
+- `env -u PASEO_AGENT_ID -u PASEO_AGENT_CWD -u PASEO_HOME npm test` — 383 passed, 1 skipped
+- `env -u PASEO_AGENT_ID -u PASEO_AGENT_CWD -u PASEO_HOME npm run build` — passes
+- `npm pack` — produces `paseo-agy-acp-1.0.0.1.tgz`
 
 ## Local Production Connector Switch
 
@@ -108,3 +111,33 @@ post-tool final assistant output, StreamPoller final-output and lifecycle-bounda
 - Health checks after switch:
   - `127.0.0.1:6767` OK
   - `127.0.0.1:6768` OK
+
+### 2026-08-06: `1.0.0.1` PASEO_HOME fallback fix
+
+- Root cause: production Paseo only guarantees `PASEO_AGENT_ID` and
+  `PASEO_AGENT_CWD` for ACP provider processes. `PASEO_HOME` may be unset or
+  empty, while the `1.0.0.0` bridge treated it as mandatory and returned an
+  empty daemon context before reading Agent state.
+- Source fix: `src/acp/session/prompt.ts` now resolves Paseo home as non-empty
+  `PASEO_HOME`, then `~/.paseo`.
+- Regression: `tests/queue-steer.test.ts` covers both unset and empty
+  `PASEO_HOME` with only `PASEO_AGENT_ID` present.
+- Installed prefix:
+  `/home/tiezbro/.local/opt/paseo-agy-acp-1.0.0.1-20260806T144518Z`.
+- Active symlink:
+  `/home/tiezbro/.local/bin/agy-acp` ->
+  `/home/tiezbro/.local/opt/paseo-agy-acp-1.0.0.1-20260806T144518Z/bin/agy-acp`.
+- ACP initialize smoke returned `agentInfo.version:"1.0.0.1"`.
+- Production Paseo daemon `127.0.0.1:6767` was not restarted.
+- Antigravity marker-only canary `037d0218-c30e-489b-a97c-c9605a4fad33`
+  returned `sawThinBootstrap:true` and `sawSelectorSkillPath:true`.
+- Antigravity child-scope canary `a6717cf7-65e4-41b8-8417-21e8f822c94b`
+  returned `sawThinBootstrap:true`, `scopeDecision:"child"`,
+  `selectorLoaded:false`, `policyRead:false`, `childrenCreated:false`.
+- Antigravity visible-context multi-turn canary
+  `4cad1ad1-181b-457c-8f79-d24b53e64be1` returned
+  `sawPaseoBootstrap:true` and `sawAbsoluteSelectorSkillPath:true` on both
+  turn 1 and turn 2.
+- Residual issue: Antigravity repeated the same `paseo inspect` permission three
+  times before completing. This is a permission replay/acknowledgement issue
+  separate from the daemon-context bridge.

@@ -12,6 +12,7 @@
 
 import { randomUUID } from "node:crypto";
 import { readdir, readFile } from "node:fs/promises";
+import * as os from "node:os";
 import path from "node:path";
 import * as v1 from "@agentclientprotocol/sdk";
 import * as v2 from "@agentclientprotocol/sdk/experimental/v2";
@@ -115,8 +116,22 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+function resolvePaseoHome(): string {
+  const configured = process.env.PASEO_HOME?.trim();
+  if (configured) {
+    if (configured === "~") return os.homedir();
+    if (configured.startsWith("~/") || configured.startsWith("~\\")) {
+      return path.join(os.homedir(), configured.slice(2));
+    }
+    return configured;
+  }
+
+  const homeDir = process.env.HOME || os.homedir();
+  return homeDir ? path.join(homeDir, ".paseo") : "";
+}
+
 async function readPaseoDaemonAppendSystemPrompt(): Promise<string> {
-  const home = process.env.PASEO_HOME;
+  const home = resolvePaseoHome();
   const agentId = process.env.PASEO_AGENT_ID;
   if (!home || !agentId || agentId.includes("/") || agentId.includes("\\")) return "";
 

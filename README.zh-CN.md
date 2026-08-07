@@ -5,7 +5,7 @@
 **Paseo × Antigravity — ACP 适配器**
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](./LICENSE)
-[![Version](https://img.shields.io/badge/version-1.0.0.0-blue?style=flat-square)](./package.json)
+[![Version](https://img.shields.io/badge/version-1.0.0.1-blue?style=flat-square)](./package.json)
 [![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen?style=flat-square)](#)
 [![ACP](https://img.shields.io/badge/ACP-v1%20%2B%20draft%20v2-8A2BE2?style=flat-square)](https://agentclientprotocol.com)
 
@@ -37,7 +37,7 @@
 
 | # | 问题 | 解决方案 |
 |---|------|----------|
-| 1 | Paseo daemon 系统上下文对 Antigravity 不可见 | 桥接将 `daemon.appendSystemPrompt` 前置追加到后端 prompt |
+| 1 | Paseo daemon 上下文对 Antigravity 不可见 | 桥接将 `daemon.appendSystemPrompt` 前置追加到后端 prompt；`PASEO_HOME` 可选，默认回退到 `~/.paseo` |
 | 2 | 权限"拒绝"被延迟的 provider 成功消息覆盖 | 权威拒绝追踪，拒绝后抑制成功行 |
 | 3 | Turn 在最终 assistant 消息出现前就关闭 | `turnCompleteCandidate` 要求可见的终端输出 |
 | 4 | 带退出码的前台命令仍显示为"活跃"后台任务 | `task_details` + `exitCode` 行不再视为后台任务 |
@@ -63,8 +63,8 @@ npm test
 |---|---|
 | `PATH` | 需包含 `agy` 和 `node` |
 | `AGY_BIN` | 覆盖 `agy` 二进制路径 |
-| `PASEO_HOME` | Paseo 主目录；配合 `PASEO_AGENT_ID` 启用 daemon 上下文桥接 |
-| `PASEO_AGENT_ID` | Agent ID；配合 `PASEO_HOME` 恢复 daemon 上下文 |
+| `PASEO_AGENT_ID` | Agent ID；启用 daemon 上下文桥接 |
+| `PASEO_HOME` | 可选 Paseo 主目录覆盖；未设置或为空时回退到 `~/.paseo` |
 
 ## 🏗️ 架构
 
@@ -78,6 +78,10 @@ Paseo / ACP 客户端
 
 每会话一个 PTY。步骤从 SQLite protobuf 解码，不解析 stdout。
 `--sandbox` 默认开启。配置项：`mode`、`model`、`reasoningEffort`。
+
+Paseo daemon 上下文会前置到发送给 `agy` 的后端 prompt。Antigravity CLI
+当前没有逐调用 system/developer prompt 参数，因此这是模型可见的 prompt
+桥接，不是真正的原生 system-role 消息。
 
 ## 🔌 Paseo Provider 配置
 
@@ -129,14 +133,13 @@ npm test
 
 ## ⚠️ 已知问题
 
-**设置 PASEO_HOME 时 1 个测试失败。** append-system-prompt 桥接激活后，
-`tests/acp-server.test.ts` 会看到前置的 daemon 上下文而非原始 `"hi"`。
+当 `PASEO_AGENT_ID` 指向一个真实 Paseo agent state 时，原始 prompt 测试可能看到前置的 daemon 上下文。
 
 ```bash
-unset PASEO_HOME PASEO_AGENT_ID && npm test   # → 382/382 全部通过
+env -u PASEO_AGENT_ID -u PASEO_HOME npm test
 ```
 
-这是设计如此——桥接受环境变量控制。
+这只会在测试进程中禁用 bridge。
 
 ## 🔄 升级 / 回滚
 

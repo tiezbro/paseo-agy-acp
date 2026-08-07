@@ -5,7 +5,7 @@
 **Paseo × Antigravity — ACP Adapter**
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](./LICENSE)
-[![Version](https://img.shields.io/badge/version-1.0.0.0-blue?style=flat-square)](./package.json)
+[![Version](https://img.shields.io/badge/version-1.0.0.1-blue?style=flat-square)](./package.json)
 [![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen?style=flat-square)](#)
 [![ACP](https://img.shields.io/badge/ACP-v1%20%2B%20draft%20v2-8A2BE2?style=flat-square)](https://agentclientprotocol.com)
 
@@ -39,7 +39,7 @@ reliability problems:
 
 | # | Problem | Solution |
 |---|---------|----------|
-| 1 | Paseo daemon system context invisible to Antigravity | Bridge prepends `daemon.appendSystemPrompt` to backend prompts |
+| 1 | Paseo daemon context invisible to Antigravity | Bridge prepends `daemon.appendSystemPrompt` to backend prompts; `PASEO_HOME` is optional and falls back to `~/.paseo` |
 | 2 | Permission "deny" overridden by late provider success | Authoritative deny tracking, success rows suppressed post-denial |
 | 3 | Turn closed before final assistant message | `turnCompleteCandidate` requires visible terminal output |
 | 4 | Explicit-exit foreground commands stuck as "active" | `task_details` + `exitCode` rows not treated as background tasks |
@@ -65,8 +65,8 @@ npm test
 |---|---|
 | `PATH` | Must include `agy` and `node` |
 | `AGY_BIN` | Override `agy` binary path |
-| `PASEO_HOME` | Paseo home; with `PASEO_AGENT_ID`, enables daemon context bridge |
-| `PASEO_AGENT_ID` | Agent ID; combined with `PASEO_HOME` to recover daemon context |
+| `PASEO_AGENT_ID` | Agent ID; enables daemon context bridge |
+| `PASEO_HOME` | Optional Paseo home override; falls back to `~/.paseo` when unset or empty |
 
 ## Architecture
 
@@ -80,6 +80,11 @@ Paseo / ACP Client
 
 One PTY per session. Steps decoded from SQLite protobuf, never from stdout.
 `--sandbox` on by default. Config: `mode`, `model`, `reasoningEffort`.
+
+Paseo daemon context is prepended to the backend prompt sent to `agy`. The
+Antigravity CLI does not currently expose a per-call system/developer prompt
+flag, so this is a model-visible prompt bridge rather than a native system-role
+message.
 
 ## Paseo Provider Config
 
@@ -132,14 +137,14 @@ commands, whole-file edits.
 
 ## Known Issues
 
-**1 test fails when PASEO_HOME is set.** The append-system-prompt bridge activates,
-causing `tests/acp-server.test.ts` to see prepended daemon context instead of raw `"hi"`.
+Raw-prompt tests can see prepended daemon context when `PASEO_AGENT_ID` points to
+a live Paseo agent state.
 
 ```bash
-unset PASEO_HOME PASEO_AGENT_ID && npm test   # → 382/382 passing
+env -u PASEO_AGENT_ID -u PASEO_HOME npm test
 ```
 
-This is by design — the bridge is environment-gated.
+This disables the bridge only for the test process.
 
 ## Upgrade / Rollback
 

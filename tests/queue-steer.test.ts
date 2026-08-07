@@ -63,6 +63,7 @@ function setEnv(name: string, value: string | undefined): void {
 
 const ORIGINAL_PASEO_HOME = process.env.PASEO_HOME;
 const ORIGINAL_PASEO_AGENT_ID = process.env.PASEO_AGENT_ID;
+const ORIGINAL_HOME = process.env.HOME;
 
 beforeEach(() => {
   setEnv("PASEO_HOME", undefined);
@@ -72,6 +73,7 @@ beforeEach(() => {
 afterEach(() => {
   setEnv("PASEO_HOME", ORIGINAL_PASEO_HOME);
   setEnv("PASEO_AGENT_ID", ORIGINAL_PASEO_AGENT_ID);
+  setEnv("HOME", ORIGINAL_HOME);
 });
 
 function writePaseoAgentState(home: string, agentId: string, appendSystemPrompt: string): void {
@@ -228,6 +230,65 @@ describe("queue and steer-by-cancel", () => {
       setEnv("PASEO_HOME", oldHome);
       setEnv("PASEO_AGENT_ID", oldAgentId);
       fs.rmSync(home, { recursive: true, force: true });
+    }
+  });
+
+  it.each([
+    ["unset", undefined],
+    ["empty", ""]
+  ] as const)("prepends Paseo daemon context from default home when PASEO_HOME is %s", async (_label, paseoHomeValue) => {
+    const userHome = fs.mkdtempSync(path.join(os.tmpdir(), "agy-acp-user-home-"));
+    const paseoHome = path.join(userHome, ".paseo");
+    const agentId = `agent-default-home-${_label}`;
+    const append = `PASEO_APPEND_DEFAULT_HOME_${_label}`;
+    const forwardedPrompts: string[] = [];
+    writePaseoAgentState(paseoHome, agentId, append);
+    setEnv("HOME", userHome);
+    setEnv("PASEO_HOME", paseoHomeValue);
+    setEnv("PASEO_AGENT_ID", agentId);
+
+    const session = {
+      sessionId: `s-paseo-default-home-${_label}`,
+      cwd: "/repo",
+      additionalDirectories: [],
+      promptQueue: [],
+      v2UserMessageIdsByStep: {},
+      catalog: { models: [], byBase: new Map() },
+      selectedBaseModel: "m",
+      selectedReasoningEffort: "",
+      agy: {
+        lastPromptUserStepIdxs: [],
+        prompt: async (promptText: string) => {
+          forwardedPrompts.push(promptText);
+          return { stopReason: "end_turn" };
+        },
+        cancel: async () => {}
+      }
+    } as unknown as SessionState;
+    const deps = {
+      requireSession: () => session,
+      applyConfigOption: async () => {},
+      persistSession: async () => {},
+      notifyConfigOptionUpdateV2: async () => {}
+    } satisfies PromptV2Deps;
+    const client = { notify: async () => {} } as any;
+
+    try {
+      await expect(handlePromptV2({
+        sessionId: session.sessionId,
+        prompt: [{ type: "text", text: "hello from default home" }]
+      } as any, client, deps)).resolves.toEqual({});
+
+      await waitFor(() => forwardedPrompts.length === 1);
+      expect(forwardedPrompts[0]).toBe([
+        "[Paseo daemon system context]",
+        append,
+        "[/Paseo daemon system context]",
+        "",
+        "hello from default home"
+      ].join("\n"));
+    } finally {
+      fs.rmSync(userHome, { recursive: true, force: true });
     }
   });
 

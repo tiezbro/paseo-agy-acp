@@ -1,6 +1,6 @@
 {
   "name": "paseo-agy-acp",
-  "version": "1.0.0.0",
+  "version": "1.0.0.1",
   "description": "Paseo-focused ACP adapter for Google Antigravity CLI — community derivative of agy-acp (ACP v1 + experimental draft ACP v2)",
   "type": "module",
   "author": {
