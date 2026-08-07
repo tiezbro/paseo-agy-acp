@@ -126,6 +126,12 @@ Antigravity CLI does not currently expose a per-call system/developer prompt
 flag, so this is a model-visible prompt bridge rather than a native system-role
 message.
 
+`agy models` output is parsed using the provider-native model id when the CLI
+prints `modelId<TAB>display name` rows. This keeps Paseo selections such as
+`gemini-3.1-pro` + `high` mapped to Antigravity's exact variant id, instead of
+folding the display label into the model name or adding an unsupported
+`--effort` flag.
+
 ## Paseo Provider Config
 
 ```json

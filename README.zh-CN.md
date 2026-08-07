@@ -122,6 +122,11 @@ Paseo daemon 上下文会前置到发送给 `agy` 的后端 prompt。Antigravity
 当前没有逐调用 system/developer prompt 参数，因此这是模型可见的 prompt
 桥接，不是真正的原生 system-role 消息。
 
+当 `agy models` 输出 `modelId<TAB>显示名称` 两列时，本适配器会优先使用
+provider 原生 model id。这样 Paseo 中的 `gemini-3.1-pro` + `high` 会映射到
+Antigravity 的精确 variant id，不会把显示名称混进模型名，也不会额外追加不被
+支持的 `--effort` 参数。
+
 ## 🔌 Paseo Provider 配置
 
 ```json
