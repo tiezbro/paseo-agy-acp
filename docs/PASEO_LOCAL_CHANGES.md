@@ -12,7 +12,7 @@ Last updated: 2026-08-07
 | Upstream | `https://github.com/shindgew/agy-acp.git` |
 | Upstream HEAD | `6f44500` (release/v0.4.3) |
 | This project | `https://github.com/tiezbro/paseo-agy-acp` |
-| Package | `paseo-agy-acp@1.0.0.2` |
+| Package | `paseo-agy-acp@1.0.0.3` |
 
 ## Source Changes
 

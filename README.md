@@ -5,9 +5,15 @@
 **Paseo × Antigravity — ACP Adapter**
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](./LICENSE)
-[![Version](https://img.shields.io/badge/version-1.0.0.2-blue?style=flat-square)](./package.json)
+[![Version](https://img.shields.io/badge/version-1.0.0.3-blue?style=flat-square)](./package.json)
 [![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen?style=flat-square)](#)
 [![ACP](https://img.shields.io/badge/ACP-v1%20%2B%20draft%20v2-8A2BE2?style=flat-square)](https://agentclientprotocol.com)
+
+</div>
+
+<div align="center">
+
+[🇺🇸 English](./README.md) | [🇨🇳 中文](./README.zh-CN.md)
 
 </div>
 
@@ -31,6 +37,33 @@ for reliable daily use with [Paseo](https://github.com/getpaseo/paseo).
 
 Built on the excellent work of [Shindge Wong](https://github.com/shindgew) and upstream
 contributors. All credit for the original ACP adapter architecture belongs to them.
+
+## ✨ Features
+
+### 🧬 Inherited from upstream
+
+| Feature | Description |
+|---|---|
+| ACP v1 + draft v2 | Full Agent Client Protocol support with fallback negotiation |
+| PTY session management | One PTY per session via `agy --print --conversation <id> --sandbox` |
+| Protobuf streaming | Structured step decoding from SQLite protobuf (never parsing stdout) |
+| Session modes | `default`, `accept-edits`, `plan` passed through `agy --mode` |
+| Slash commands | ACP slash command dispatch (`/mode`, etc.) |
+| Tool calls | `run_command`, `write_to_file`, and other Antigravity tools |
+
+### 🔧 Paseo additions
+
+| # | Feature | Description |
+|---|---------|-------------|
+| 1 | Daemon context bridge | Prepends `daemon.appendSystemPrompt` to backend prompts so Paseo context reaches Antigravity |
+| 2 | Authoritative permissions | ACP "deny" suppresses late provider success rows; denied tools tracked and blocked |
+| 3 | Completion gating | Turn only completes after final assistant output is visible (ignores progress/system rows) |
+| 4 | Foreground task fix | Commands with explicit `exitCode` + `task_details` no longer stuck as "active" |
+| 5 | Revert tolerance | Whole-file revert handles trailing `\n` / `\r\n` from provider |
+| 6 | Permission bypass | Exposes `--dangerously-skip-permissions` as ACP mode id `dangerously-skip-permissions` |
+| 7 | Test coverage | Extended test suite for all Paseo-specific paths |
+
+→ [Full technical detail](./docs/PASEO_LOCAL_CHANGES.md)
 
 ## What This Fixes
 

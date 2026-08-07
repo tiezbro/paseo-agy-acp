@@ -5,9 +5,15 @@
 **Paseo × Antigravity — ACP 适配器**
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](./LICENSE)
-[![Version](https://img.shields.io/badge/version-1.0.0.2-blue?style=flat-square)](./package.json)
+[![Version](https://img.shields.io/badge/version-1.0.0.3-blue?style=flat-square)](./package.json)
 [![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen?style=flat-square)](#)
 [![ACP](https://img.shields.io/badge/ACP-v1%20%2B%20draft%20v2-8A2BE2?style=flat-square)](https://agentclientprotocol.com)
+
+</div>
+
+<div align="center">
+
+[🇺🇸 English](./README.md) | [🇨🇳 中文](./README.zh-CN.md)
 
 </div>
 
@@ -30,6 +36,33 @@
 
 本项目构建于 [Shindge Wong](https://github.com/shindgew) 及上游贡献者的杰出工作之上。
 原始 ACP 适配器架构的全部功劳归他们所有。
+
+## ✨ 功能
+
+### 🧬 继承自上游
+
+| 功能 | 描述 |
+|---|---|
+| ACP v1 + draft v2 | 完整 ACP 协议支持，含降级协商 |
+| PTY 会话管理 | 每会话一个 PTY，通过 `agy --print --conversation <id> --sandbox` |
+| Protobuf 流式 | 从 SQLite protobuf 结构化解码步骤（不解析 stdout） |
+| 会话模式 | `default`、`accept-edits`、`plan` 通过 `agy --mode` 透传 |
+| 斜杠命令 | ACP 斜杠命令分发（`/mode` 等） |
+| 工具调用 | `run_command`、`write_to_file` 等 Antigravity 工具 |
+
+### 🔧 Paseo 新增
+
+| # | 功能 | 描述 |
+|---|------|------|
+| 1 | Daemon 上下文桥接 | 将 `daemon.appendSystemPrompt` 前置到后端 prompt，让 Paseo 上下文传入 Antigravity |
+| 2 | 权限权威决断 | ACP "拒绝"抑制后续 provider 成功行；已拒绝工具被追踪拦截 |
+| 3 | 完成门控 | Turn 仅在最终 assistant 输出可见后才完成（忽略 progress/system 行） |
+| 4 | 前台任务修复 | 带显式 `exitCode` + `task_details` 的命令不再卡在"活跃"状态 |
+| 5 | 回滚容错 | 整文件回滚容忍 provider 添加的 `\n` / `\r\n` |
+| 6 | 权限绕过 | 将 `--dangerously-skip-permissions` 暴露为 ACP mode id `dangerously-skip-permissions` |
+| 7 | 测试覆盖 | 为所有 Paseo 专属路径扩展测试套件 |
+
+→ [完整技术细节](./docs/PASEO_LOCAL_CHANGES.md)
 
 ## 🔧 解决的问题
 
