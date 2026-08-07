@@ -752,6 +752,30 @@ describe("buildModelCatalog", () => {
     expect(catalog.resolve("gemini-3.5-flash", "medium")).toBe("Gemini 3.5 Flash (Medium)");
   });
 
+  it("uses exact model ids from tab-separated agy model lists", () => {
+    const catalog = buildModelCatalog([
+      "gemini-3.6-flash-high\tGemini 3.6 Flash (High)",
+      "gemini-3.6-flash-medium\tGemini 3.6 Flash (Medium)",
+      "gemini-3.1-pro-high\tGemini 3.1 Pro (High)",
+      "gemini-3.1-pro-low\tGemini 3.1 Pro (Low)",
+      "claude-opus-4-6-thinking\tClaude Opus 4.6 (Thinking)"
+    ]);
+
+    expect(catalog.baseModels()).toEqual([
+      "gemini-3.6-flash",
+      "gemini-3.1-pro",
+      "claude-opus-4-6-thinking"
+    ]);
+    expect(catalog.effortsFor("gemini-3.1-pro")).toEqual(["high", "low"]);
+    expect(catalog.displayName("gemini-3.1-pro")).toBe("Gemini 3.1 Pro");
+    expect(catalog.agySelection("gemini-3.1-pro", "high")).toEqual({
+      model: "gemini-3.1-pro-high"
+    });
+    expect(catalog.agySelection("claude-opus-4-6-thinking", "none")).toEqual({
+      model: "claude-opus-4-6-thinking"
+    });
+  });
+
   it("exposes mode, model, and reasoningEffort config options", () => {
     const catalog = buildModelCatalog(["gemini-3.5-flash-medium", "gemini-3.5-flash-high"]);
     const modelConfig = modelConfigOption("gemini-3.5-flash", catalog) as SelectConfigOption;
@@ -1290,6 +1314,46 @@ describe("session model config", () => {
       const promptCall = calls.find((call) => call.args.includes("--print"));
       expect(flagValue(promptCall!.args, "--model")).toBe("gemini-3.5-flash");
       expect(flagValue(promptCall!.args, "--effort")).toBe("high");
+    } finally {
+      connection.close();
+    }
+  });
+
+  it("passes exact tab-list model ids without --effort", async () => {
+    const calls: Array<{ command: string; args: string[]; options: unknown }> = [];
+    const spawnProcess = (command: string, args: string[], options: unknown) => {
+      calls.push({ command, args, options });
+      if (args[0] === "models") {
+        return new FakeProcess([TABBED_MODELS_OUTPUT]);
+      }
+      return new FakeProcess(["ok"]);
+    };
+    const connection = acpClient({ name: "test-client" }).connect(
+      createAcpApp(printModeOptions({ spawnProcess: spawnProcess as unknown as SpawnFactory }))
+    );
+    try {
+      const session = await connection.agent.request(methods.agent.session.new, {
+        cwd: "/repo",
+        additionalDirectories: [],
+        mcpServers: []
+      });
+      await connection.agent.request(methods.agent.session.setConfigOption, {
+        sessionId: session.sessionId,
+        configId: "model",
+        value: "gemini-3.1-pro"
+      });
+      await connection.agent.request(methods.agent.session.setConfigOption, {
+        sessionId: session.sessionId,
+        configId: "reasoningEffort",
+        value: "high"
+      });
+      await connection.agent.request(methods.agent.session.prompt, {
+        sessionId: session.sessionId,
+        prompt: [{ type: "text", text: "hi" }]
+      });
+      const promptCall = calls.find((call) => call.args.includes("--print"));
+      expect(flagValue(promptCall!.args, "--model")).toBe("gemini-3.1-pro-high");
+      expect(promptCall!.args).not.toContain("--effort");
     } finally {
       connection.close();
     }
@@ -2264,6 +2328,11 @@ describe("ACP v2 (experimental draft)", () => {
 
 const TEST_MODELS_OUTPUT =
   "gemini-3.5-flash-medium\ngemini-3.5-flash-high\nclaude-opus-4-6-thinking\nclaude-sonnet-4-6\n";
+const TABBED_MODELS_OUTPUT =
+  "gemini-3.6-flash-high\tGemini 3.6 Flash (High)\n" +
+  "gemini-3.1-pro-high\tGemini 3.1 Pro (High)\n" +
+  "gemini-3.1-pro-low\tGemini 3.1 Pro (Low)\n" +
+  "claude-opus-4-6-thinking\tClaude Opus 4.6 (Thinking)\n";
 
 function printModeOptions(overrides: AcpAgentOptions = {}): AcpAgentOptions {
   return {

@@ -96,19 +96,22 @@ export function applyModelSelection(
   selectedReasoningEffort: string,
   catalog: ModelCatalog
 ): void {
-  // agy ≥1.1.5: --model is the base (slug or legacy display base), --effort is separate.
-  agy.setModel(catalog.agyBaseName(selectedBaseModel));
-
   const effects = catalog.effortsFor(selectedBaseModel);
   if (effects.length === 0) {
+    const selection = catalog.agySelection(selectedBaseModel, NO_REASONING_VALUE);
+    agy.setModel(selection.model);
     agy.setEffort(undefined);
     return;
   }
 
   if (selectedReasoningEffort === NO_REASONING_VALUE || !effects.includes(selectedReasoningEffort)) {
-    agy.setEffort(effects[0]);
+    const selection = catalog.agySelection(selectedBaseModel, effects[0]);
+    agy.setModel(selection.model);
+    agy.setEffort(selection.effort);
     return;
   }
 
-  agy.setEffort(selectedReasoningEffort);
+  const selection = catalog.agySelection(selectedBaseModel, selectedReasoningEffort);
+  agy.setModel(selection.model);
+  agy.setEffort(selection.effort);
 }

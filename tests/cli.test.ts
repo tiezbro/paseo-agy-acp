@@ -1330,6 +1330,71 @@ describe("permission bridge", () => {
     }
   });
 
+  it("does not offer posthoc edit review after switching to dangerous permission bypass", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "agy-acp-pty-danger-posthoc-"));
+    const targetFile = path.join(dir, "created.txt");
+    const requestedContent = "DANGEROUS_BYPASS_KEEP_741";
+    const rawInputJson = JSON.stringify({
+      TargetFile: targetFile,
+      CodeContent: requestedContent,
+      Overwrite: true
+    });
+    let session!: AgyCliSession;
+    const pty = new FakePty(() => {
+      session.setMode("dangerously-skip-permissions");
+      fs.writeFileSync(targetFile, `${requestedContent}\n`, "utf8");
+      const db = createConversationDb(dir, "danger-posthoc");
+      insertStep(db, {
+        idx: 1,
+        stepType: 5,
+        status: 3,
+        stepPayload: encodeStepPayload({
+          toolRun: encodeToolRun({
+            call: encodeToolCall({
+              callId: "danger-posthoc-edit-1",
+              namePrimary: "write_to_file",
+              rawInputJson
+            })
+          })
+        })
+      });
+      insertStep(db, {
+        idx: 2,
+        stepType: 15,
+        status: 3,
+        stepPayload: encodeStepPayload({ agentText: "Done. The file was created successfully." })
+      });
+      db.close();
+      setTimeout(() => pty.emitData("? for shortcuts"), 0);
+    });
+    session = interactiveSession(dir, pty);
+    const updates: SessionUpdate[] = [];
+    let permissionCalls = 0;
+
+    try {
+      const result = session.prompt("create it", async (update) => {
+        updates.push(update);
+      }, async () => {
+        permissionCalls++;
+        return "reject-once";
+      });
+
+      expect((await result).stopReason).toBe("end_turn");
+      expect(permissionCalls).toBe(0);
+      expect(fs.readFileSync(targetFile, "utf8")).toBe(`${requestedContent}\n`);
+      expect(pty.writes).toEqual([]);
+
+      const toolUpdates = updates.filter((update) =>
+        (update as unknown as { toolCallId?: string }).toolCallId === "danger-posthoc-edit-1"
+      );
+      expect(toolUpdates.length).toBeGreaterThan(0);
+      expect((toolUpdates.at(-1) as unknown as { status?: string }).status).toBe("completed");
+    } finally {
+      await session.close();
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("reports the surviving content when a rejected edit's revert cannot restore it", async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "agy-acp-pty-"));
     const conversations = fs.mkdtempSync(path.join(os.tmpdir(), "agy-acp-pty-conv-"));

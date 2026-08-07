@@ -691,6 +691,9 @@ export class AgyCliSession {
           // change. Paths whose content this update no longer accounts for are
           // left for reconciliation to report.
           await observeReported(reportedContents(this.config.cwd, toolCall));
+          if (this.shouldSkipPermissions()) {
+            continue;
+          }
           let restored: DiffBlock[] = [];
           try {
             if (fsBridge) {

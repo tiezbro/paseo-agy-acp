@@ -5,7 +5,7 @@
 **Paseo × Antigravity — ACP 适配器**
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](./LICENSE)
-[![Version](https://img.shields.io/badge/version-1.0.0.3-blue?style=flat-square)](./package.json)
+[![Version](https://img.shields.io/badge/version-1.0.0.4-blue?style=flat-square)](./package.json)
 [![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen?style=flat-square)](#)
 [![ACP](https://img.shields.io/badge/ACP-v1%20%2B%20draft%20v2-8A2BE2?style=flat-square)](https://agentclientprotocol.com)
 
@@ -114,6 +114,9 @@ Paseo / ACP 客户端
 `--sandbox` 默认开启。配置项：`mode`、`model`、`reasoningEffort`。
 `dangerously-skip-permissions` mode 直接映射到 Antigravity CLI 官方
 `--dangerously-skip-permissions` 参数，不经过自定义的 "full access" 名称转义。
+当该绕过模式生效时，`paseo-agy-acp` 也会禁用自身的 completed-edit
+事后审查桥接，避免 Antigravity 已经完成写入后，Paseo 侧又弹出额外 ACP
+批准面板。
 
 Paseo daemon 上下文会前置到发送给 `agy` 的后端 prompt。Antigravity CLI
 当前没有逐调用 system/developer prompt 参数，因此这是模型可见的 prompt

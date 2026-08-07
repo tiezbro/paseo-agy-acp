@@ -5,7 +5,7 @@
 **Paseo × Antigravity — ACP Adapter**
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](./LICENSE)
-[![Version](https://img.shields.io/badge/version-1.0.0.3-blue?style=flat-square)](./package.json)
+[![Version](https://img.shields.io/badge/version-1.0.0.4-blue?style=flat-square)](./package.json)
 [![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen?style=flat-square)](#)
 [![ACP](https://img.shields.io/badge/ACP-v1%20%2B%20draft%20v2-8A2BE2?style=flat-square)](https://agentclientprotocol.com)
 
@@ -117,6 +117,9 @@ One PTY per session. Steps decoded from SQLite protobuf, never from stdout.
 The `dangerously-skip-permissions` mode maps directly to Antigravity CLI's
 native `--dangerously-skip-permissions` flag; it is not translated through a
 custom "full access" name.
+When that bypass is active, `paseo-agy-acp` also suppresses its own posthoc
+completed-edit review bridge so unattended Paseo runs do not surface an extra
+ACP approval panel after Antigravity has already applied an edit.
 
 Paseo daemon context is prepended to the backend prompt sent to `agy`. The
 Antigravity CLI does not currently expose a per-call system/developer prompt

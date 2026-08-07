@@ -2,6 +2,30 @@
 
 All notable changes to `paseo-agy-acp` are recorded here.
 
+## 1.0.0.4 - 2026-08-07
+
+### Fixed
+
+- Suppress the connector's posthoc completed-edit approval bridge when the
+  active Antigravity session mode is `dangerously-skip-permissions`. This keeps
+  Paseo unattended runs fully unattended after Antigravity has already applied
+  an edit through `agy --dangerously-skip-permissions`.
+- Parse tab-separated `agy models` output as `modelId<TAB>display name` and pass
+  the exact provider-native model id to Antigravity. This prevents display
+  labels such as `Gemini 3.6 Flash (High)` from being folded into the model id
+  and avoids sending unsupported `--effort` flags for exact variant ids.
+
+### Verification
+
+- `npx vitest run tests/cli.test.ts --testNamePattern "posthoc edit review|dangerous permission bypass"` — passes.
+- `npx vitest run tests/acp-server.test.ts tests/cli.test.ts --testNamePattern "tab-separated|exact tab-list|modern stable model slugs|passes --effort|parseAgyModels|dangerous permission bypass"` — passes.
+
+## 1.0.0.3 - 2026-08-07
+
+### Changed
+
+- Added bilingual README navigation and refreshed the provider feature table.
+
 ## 1.0.0.2 - 2026-08-07
 
 ### Added

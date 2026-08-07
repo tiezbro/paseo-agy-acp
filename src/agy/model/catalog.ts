@@ -32,6 +32,8 @@ export interface ModelCatalog {
    * Effort is passed separately via `--effort`.
    */
   agyBaseName(slug: string): string;
+  /** Values for `agy --model` and optional `--effort` for one concrete choice. */
+  agySelection(slug: string, reasoningEffort: string): { model: string; effort?: string };
   /** Human-readable label for the model picker. */
   displayName(slug: string): string;
 }
@@ -46,9 +48,10 @@ export function buildModelCatalog(entries: string[]): ModelCatalog {
   const effectsByBase = new Map<string, string[]>();
   const agyBaseBySlug = new Map<string, string>();
   const displayNameBySlug = new Map<string, string>();
+  const agySelectionByBaseAndEffort = new Map<string, { model: string; effort?: string }>();
 
   for (const entry of uniqueEntries) {
-    const { agyBase, base, reasoningEffort, displayBase } = splitModelEntry(entry);
+    const { agyBase, agyModel, base, reasoningEffort, displayBase, effortInModelId } = splitModelEntry(entry);
     if (!effectsByBase.has(base)) {
       baseOrder.push(base);
       effectsByBase.set(base, []);
@@ -60,6 +63,14 @@ export function buildModelCatalog(entries: string[]): ModelCatalog {
       if (!effects.includes(reasoningEffort)) {
         effects.push(reasoningEffort);
       }
+      agySelectionByBaseAndEffort.set(selectionKey(base, reasoningEffort), {
+        model: effortInModelId ? agyModel : agyBase,
+        effort: effortInModelId ? undefined : reasoningEffort
+      });
+    } else {
+      agySelectionByBaseAndEffort.set(selectionKey(base, NO_REASONING_VALUE), {
+        model: agyModel
+      });
     }
   }
 
@@ -96,6 +107,19 @@ export function buildModelCatalog(entries: string[]): ModelCatalog {
         throw new Error(`Unknown model slug: ${slug}`);
       }
       return agyBase;
+    },
+    agySelection: (slug: string, reasoningEffort: string) => {
+      const selection = agySelectionByBaseAndEffort.get(selectionKey(slug, reasoningEffort));
+      if (selection) {
+        return selection;
+      }
+      const agyBase = agyBaseBySlug.get(slug);
+      if (!agyBase) {
+        throw new Error(`Unknown model slug: ${slug}`);
+      }
+      return reasoningEffort === NO_REASONING_VALUE
+        ? { model: agyBase }
+        : { model: agyBase, effort: reasoningEffort };
     },
     displayName: (slug: string) => {
       const name = displayNameBySlug.get(slug);
@@ -156,18 +180,47 @@ export function reasoningEffortValues(selectedBaseModel: string, catalog: ModelC
   return reasoningEffortOptions(selectedBaseModel, catalog).map((option) => option.value);
 }
 
+function selectionKey(base: string, reasoningEffort: string): string {
+  return `${base}\0${reasoningEffort}`;
+}
+
 /** Split one `agy models` line into base model + optional effort. */
 function splitModelEntry(model: string): {
   agyBase: string;
+  agyModel: string;
   base: string;
   displayBase: string;
   reasoningEffort?: string;
+  effortInModelId?: boolean;
 } {
   const trimmed = model.trim();
+  const tabbed = splitTabbedModelEntry(trimmed);
+  if (tabbed) {
+    const slugEffort = tabbed.modelId.match(SLUG_EFFORT_PATTERN);
+    if (slugEffort && isLikelyModelSlug(tabbed.modelId)) {
+      const base = toModelSlug(slugEffort[1]);
+      return {
+        agyBase: base,
+        agyModel: tabbed.modelId,
+        base,
+        displayBase: tabbed.displayBase,
+        reasoningEffort: slugEffort[2].toLowerCase(),
+        effortInModelId: true
+      };
+    }
+
+    const base = toModelSlug(tabbed.modelId);
+    return {
+      agyBase: tabbed.modelId,
+      agyModel: tabbed.modelId,
+      base,
+      displayBase: tabbed.displayBase
+    };
+  }
 
   if (LEGACY_THINKING_PATTERN.test(trimmed)) {
     const base = toModelSlug(trimmed);
-    return { agyBase: trimmed, base, displayBase: trimmed };
+    return { agyBase: trimmed, agyModel: trimmed, base, displayBase: trimmed };
   }
 
   const legacyEffort = trimmed.match(LEGACY_EFFORT_PATTERN);
@@ -175,6 +228,7 @@ function splitModelEntry(model: string): {
     const displayBase = trimmed.slice(0, legacyEffort.index).trim();
     return {
       agyBase: displayBase,
+      agyModel: trimmed,
       base: toModelSlug(displayBase),
       displayBase,
       reasoningEffort: legacyEffort[1].toLowerCase()
@@ -185,6 +239,7 @@ function splitModelEntry(model: string): {
     const base = toModelSlug(trimmed);
     return {
       agyBase: base,
+      agyModel: base,
       base,
       displayBase: prettifyModelSlug(base)
     };
@@ -195,6 +250,7 @@ function splitModelEntry(model: string): {
     const base = toModelSlug(slugEffort[1]);
     return {
       agyBase: base,
+      agyModel: trimmed,
       base,
       displayBase: prettifyModelSlug(base),
       reasoningEffort: slugEffort[2].toLowerCase()
@@ -205,9 +261,23 @@ function splitModelEntry(model: string): {
   const looksLikeSlug = isLikelyModelSlug(trimmed) || trimmed === base;
   return {
     agyBase: looksLikeSlug ? base : trimmed,
+    agyModel: looksLikeSlug ? base : trimmed,
     base,
     displayBase: looksLikeSlug ? prettifyModelSlug(base) : trimmed
   };
+}
+
+function splitTabbedModelEntry(model: string): { modelId: string; displayBase: string } | null {
+  const [modelId, ...displayParts] = model.split(/\t+/).map((part) => part.trim()).filter(Boolean);
+  if (!modelId || displayParts.length === 0 || !isLikelyModelSlug(modelId)) {
+    return null;
+  }
+  const display = displayParts.join(" ");
+  const legacyEffort = display.match(LEGACY_EFFORT_PATTERN);
+  const displayBase = legacyEffort && legacyEffort.index !== undefined
+    ? display.slice(0, legacyEffort.index).trim()
+    : display;
+  return { modelId, displayBase };
 }
 
 export function toModelSlug(model: string): string {
