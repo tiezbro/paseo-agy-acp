@@ -64,6 +64,15 @@
 
 → [完整技术细节](./docs/PASEO_LOCAL_CHANGES.md)
 
+## v2 Admission Controller 开发状态
+
+v2.0.0.0 Admission Controller 已进入源码开发。它将为本机多个 connector
+提供统一准入、保守崩溃恢复和容量错误分类，不修改官方 Paseo 或 Antigravity
+endpoint。当前发布版本尚未把该 Controller 接入真实 prompt。
+
+设计契约和发布门禁见
+[`docs/design/v2.0.0.0-admission-controller.md`](docs/design/v2.0.0.0-admission-controller.md)。
+
 ## 🔧 解决的问题
 
 上游 `agy-acp` 是通用适配器。本分支解决了 5 个 Paseo 专属的可靠性问题：

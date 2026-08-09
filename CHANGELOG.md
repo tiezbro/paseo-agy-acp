@@ -2,6 +2,29 @@
 
 All notable changes to `paseo-agy-acp` are recorded here.
 
+## Unreleased
+
+### Added
+
+- Added the internal SQLite-backed Admission Controller core for the v2.0.0.0
+  development track. Its initial tests cover idempotent admission,
+  cross-instance capacity, parent fairness, cooldown, and conservative
+  pre-dispatch versus post-dispatch recovery. Lease generations fence safe
+  pre-dispatch requeues, and a durable start history enforces global startup
+  spacing.
+- Added authenticated encryption for durable turn payloads and ACP delivery
+  outbox content. Expired payloads are removed, while delivery records retain
+  a stable event ID and require an explicit acknowledgement before they become
+  `delivered`.
+- Added the v2.0.0.0 design baseline in
+  `docs/design/v2.0.0.0-admission-controller.md`.
+
+### Not Yet Enabled
+
+- The Admission Controller is not yet wired into live ACP prompt execution.
+  It does not change installed connector behavior, provider concurrency,
+  retries, lifecycle, or Paseo runtime state in this development increment.
+
 ## 1.0.0.4 - 2026-08-07
 
 ### Fixed

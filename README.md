@@ -65,6 +65,16 @@ contributors. All credit for the original ACP adapter architecture belongs to th
 
 → [Full technical detail](./docs/PASEO_LOCAL_CHANGES.md)
 
+## v2 Admission Controller Development
+
+The v2.0.0.0 Admission Controller is under source development. It will add
+local cross-connector admission, conservative crash recovery, and typed
+capacity errors without changing official Paseo or Antigravity endpoints.
+The current release does not enable this controller for live prompts.
+
+The design contract and release gates are in
+[`docs/design/v2.0.0.0-admission-controller.md`](docs/design/v2.0.0.0-admission-controller.md).
+
 ## What This Fixes
 
 Upstream `agy-acp` is a general-purpose adapter. This fork solves 5 Paseo-specific
