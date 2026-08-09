@@ -19,6 +19,9 @@ All notable changes to `paseo-agy-acp` are recorded here.
 - Added a versioned SQLite schema ledger and a fail-closed preflight parser for
   legacy `sessions.json`; a present but damaged legacy file is rejected rather
   than interpreted as an empty session store.
+- Added queued-request cancellation that atomically removes the encrypted
+  prompt. It intentionally refuses to claim cancellation after provider
+  admission or dispatch, which requires separate process and provider proof.
 - Added the v2.0.0.0 design baseline in
   `docs/design/v2.0.0.0-admission-controller.md`.
 

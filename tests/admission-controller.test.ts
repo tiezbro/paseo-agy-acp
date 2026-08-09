@@ -97,6 +97,17 @@ describe("AdmissionController", () => {
     expect(admission.admitNext(31_001, "connector-a")?.requestId).toBe("blocked");
   });
 
+  it("cancels a queued request before dispatch and erases its durable prompt", () => {
+    const admission = controller({}, Buffer.alloc(32, 3));
+    admission.enqueue(request({ requestId: "queued-cancel", now: 1_000 }));
+    admission.persistPayload("queued-cancel", "do not run this prompt", 1_001, 2_000);
+
+    admission.cancelQueued("queued-cancel", 1_002);
+    expect(admission.getRequest("queued-cancel")?.state).toBe("cancelled");
+    expect(() => admission.readPayload("queued-cancel", 1_003)).toThrow(/no payload/);
+    expect(admission.admitNext(1_004, "connector-a")).toBeNull();
+  });
+
   it("turns an unobserved dispatch into recovery_required and never requeues it", () => {
     const admission = controller();
     admission.enqueue(request({ requestId: "ambiguous" }));

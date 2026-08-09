@@ -41,6 +41,7 @@ export type RequestState =
   | "dispatch_intent"
   | "active"
   | "completed"
+  | "cancelled"
   | "queue_timeout"
   | "recovery_required";
 
@@ -232,6 +233,22 @@ export class AdmissionController {
     if (!row) throw new PayloadExpiredError(requestId);
 
     return this.decrypt({ nonce: row.nonce, ciphertext: row.ciphertext, authTag: row.auth_tag });
+  }
+
+  /** Cancelling after admission needs process and provider-terminal evidence. */
+  cancelQueued(requestId: string, now: number): void {
+    this.transaction(() => {
+      const request = this.#db
+        .prepare("SELECT state FROM turn_requests WHERE request_id = ?")
+        .get(requestId) as { state: RequestState } | undefined;
+      if (!request) throw new Error(`unknown request ${requestId}`);
+      if (request.state !== "queued") throw new Error(`request ${requestId} is no longer queued`);
+
+      this.#db
+        .prepare("UPDATE turn_requests SET state = 'cancelled', terminal_at = ? WHERE request_id = ?")
+        .run(now, requestId);
+      this.#db.prepare("DELETE FROM turn_payloads WHERE request_id = ?").run(requestId);
+    });
   }
 
   enqueueDelivery(input: EnqueueDelivery): { eventId: string; existed: boolean } {
