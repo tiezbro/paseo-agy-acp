@@ -28,6 +28,9 @@ All notable changes to `paseo-agy-acp` are recorded here.
 - Tightened crash recovery evidence: a `starting` request is requeued only
   after both connector loss and pre-dispatch process termination are proven.
   A reservation with no started process can still be safely requeued.
+- Added a restrictive local key-store primitive for future encrypted runtime
+  state. It requires a `0700` state directory and `0600` 32-byte key, and
+  rejects unsafe pre-existing paths rather than silently repairing them.
 - Added the v2.0.0.0 design baseline in
   `docs/design/v2.0.0.0-admission-controller.md`.
 
