@@ -115,7 +115,7 @@ describe("AdmissionController", () => {
 
     admission.markStarting(lease.leaseId, 1_002);
     admission.markDispatchIntent(lease.leaseId, 1_003);
-    admission.recoverOwner(lease.leaseId, 1_004, false);
+    admission.recoverOwner(lease.leaseId, 1_004, { ownerAlive: false, preDispatchProcessTerminated: true });
 
     expect(admission.getRequest("ambiguous")?.state).toBe("recovery_required");
     expect(admission.admitNext(1_005, "connector-b")).toBeNull();
@@ -127,14 +127,35 @@ describe("AdmissionController", () => {
     const lease = admission.admitNext(1_001, "connector-a")!;
 
     admission.markStarting(lease.leaseId, 1_002);
-    admission.recoverOwner(lease.leaseId, 1_003, true);
+    admission.recoverOwner(lease.leaseId, 1_003, { ownerAlive: true, preDispatchProcessTerminated: false });
     expect(admission.getRequest("safe-retry")?.state).toBe("starting");
 
-    admission.recoverOwner(lease.leaseId, 1_004, false);
+    admission.recoverOwner(lease.leaseId, 1_004, { ownerAlive: false, preDispatchProcessTerminated: true });
     expect(admission.getRequest("safe-retry")?.state).toBe("queued");
     const retried = admission.admitNext(1_005, "connector-b")!;
     expect(retried.requestId).toBe("safe-retry");
     expect(retried.generation).toBe(2);
+  });
+
+  it("does not requeue a starting request until its pre-dispatch process is proven terminated", () => {
+    const admission = controller();
+    admission.enqueue(request({ requestId: "residue", now: 1_000 }));
+    const lease = admission.admitNext(1_001, "connector-a")!;
+    admission.markStarting(lease.leaseId, 1_002);
+
+    admission.recoverOwner(lease.leaseId, 1_003, { ownerAlive: false, preDispatchProcessTerminated: false });
+    expect(admission.getRequest("residue")?.state).toBe("recovery_required");
+    expect(admission.admitNext(1_004, "connector-b")).toBeNull();
+  });
+
+  it("requeues an admitted reservation after owner loss because no process has started", () => {
+    const admission = controller();
+    admission.enqueue(request({ requestId: "reservation", now: 1_000 }));
+    const lease = admission.admitNext(1_001, "connector-a")!;
+
+    admission.recoverOwner(lease.leaseId, 1_002, { ownerAlive: false, preDispatchProcessTerminated: false });
+    expect(admission.getRequest("reservation")?.state).toBe("queued");
+    expect(admission.admitNext(1_003, "connector-b")?.generation).toBe(2);
   });
 
   it("globally spaces cold starts even when capacity permits concurrent turns", () => {

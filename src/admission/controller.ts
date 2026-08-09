@@ -62,6 +62,11 @@ export interface AdmissionLease {
   generation: number;
 }
 
+export interface OwnerRecoveryEvidence {
+  ownerAlive: boolean;
+  preDispatchProcessTerminated: boolean;
+}
+
 export interface PendingDelivery {
   eventId: string;
   requestId: string;
@@ -404,12 +409,12 @@ export class AdmissionController {
     });
   }
 
-  recoverOwner(leaseId: string, now: number, ownerAlive: boolean): void {
+  recoverOwner(leaseId: string, now: number, evidence: OwnerRecoveryEvidence): void {
     this.transaction(() => {
       const lease = this.requireLease(leaseId);
-      if (ownerAlive) return;
+      if (evidence.ownerAlive) return;
 
-      if (lease.phase === "starting") {
+      if (lease.phase === "admitted" || (lease.phase === "starting" && evidence.preDispatchProcessTerminated)) {
         this.#db
           .prepare("UPDATE turn_requests SET state = 'queued' WHERE request_id = ?")
           .run(lease.request_id);

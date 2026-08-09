@@ -25,6 +25,9 @@ All notable changes to `paseo-agy-acp` are recorded here.
 - Added OS-process contention coverage and a redacting provider error
   classifier. Recognized `503` capacity and `429` quota evidence is retained
   as a typed outcome; unrecognized raw error text is discarded.
+- Tightened crash recovery evidence: a `starting` request is requeued only
+  after both connector loss and pre-dispatch process termination are proven.
+  A reservation with no started process can still be safely requeued.
 - Added the v2.0.0.0 design baseline in
   `docs/design/v2.0.0.0-admission-controller.md`.
 
