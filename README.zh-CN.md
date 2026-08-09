@@ -68,7 +68,8 @@
 
 v2.0.0.0 Admission Controller 已进入源码开发。它将为本机多个 connector
 提供统一准入、保守崩溃恢复和容量错误分类，不修改官方 Paseo 或 Antigravity
-endpoint。当前发布版本尚未把该 Controller 接入真实 prompt。
+endpoint。当前源码内核已包含加密持久载荷、稳定的 delivery outbox 与严格的
+旧状态预检；当前发布版本尚未把该 Controller 接入真实 prompt。
 
 设计契约和发布门禁见
 [`docs/design/v2.0.0.0-admission-controller.md`](docs/design/v2.0.0.0-admission-controller.md)。

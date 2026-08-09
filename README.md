@@ -70,7 +70,9 @@ contributors. All credit for the original ACP adapter architecture belongs to th
 The v2.0.0.0 Admission Controller is under source development. It will add
 local cross-connector admission, conservative crash recovery, and typed
 capacity errors without changing official Paseo or Antigravity endpoints.
-The current release does not enable this controller for live prompts.
+The current source-only core includes encrypted durable payloads, a stable
+delivery outbox, and strict legacy-state preflight. The current release does
+not enable this controller for live prompts.
 
 The design contract and release gates are in
 [`docs/design/v2.0.0.0-admission-controller.md`](docs/design/v2.0.0.0-admission-controller.md).

@@ -156,6 +156,13 @@ export class AdmissionController {
     this.#db.close();
   }
 
+  get schemaVersion(): number {
+    const row = this.#db
+      .prepare("SELECT MAX(version) AS version FROM schema_migrations")
+      .get() as { version: number | null };
+    return row.version ?? 0;
+  }
+
   enqueue(input: EnqueueRequest): { requestId: string; existed: boolean } {
     return this.transaction(() => {
       const existing = this.#db
@@ -422,7 +429,31 @@ export class AdmissionController {
   }
 
   private migrate(): void {
-    this.#db.exec(`
+    this.transaction(() => {
+      this.#db.exec(`
+        CREATE TABLE IF NOT EXISTS schema_migrations (
+          version INTEGER PRIMARY KEY,
+          name TEXT NOT NULL,
+          applied_at INTEGER NOT NULL
+        );
+      `);
+      const applied = this.schemaVersion;
+      if (applied > 1) {
+        throw new Error(`admission database schema version ${applied} is newer than this connector supports`);
+      }
+      if (applied === 1) return;
+
+      const unversionedCore = this.#db
+        .prepare(
+          `SELECT COUNT(*) AS count FROM sqlite_master
+           WHERE type = 'table' AND name IN ('turn_requests', 'leases', 'turn_payloads', 'delivery_outbox')`
+        )
+        .get() as { count: number };
+      if (unversionedCore.count > 0) {
+        throw new Error("unversioned admission tables require an explicit migration before use");
+      }
+
+      this.#db.exec(`
       CREATE TABLE IF NOT EXISTS turn_requests (
         request_id TEXT PRIMARY KEY,
         session_id TEXT NOT NULL,
@@ -482,6 +513,10 @@ export class AdmissionController {
       CREATE INDEX IF NOT EXISTS delivery_outbox_pending ON delivery_outbox(state, created_at);
       CREATE INDEX IF NOT EXISTS start_history_started ON start_history(started_at);
     `);
+      this.#db
+        .prepare("INSERT INTO schema_migrations (version, name, applied_at) VALUES (1, 'admission-controller-core', ?)")
+        .run(Date.now());
+    });
   }
 
   private transaction<T>(fn: () => T): T {

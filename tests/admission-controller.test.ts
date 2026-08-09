@@ -47,6 +47,14 @@ afterEach(() => {
 });
 
 describe("AdmissionController", () => {
+  it("records a versioned schema migration that survives controller reconnect", () => {
+    const first = controller();
+    expect(first.schemaVersion).toBe(1);
+
+    const second = new AdmissionController({ databasePath: first.databasePath, policy: first.policy });
+    expect(second.schemaVersion).toBe(1);
+  });
+
   it("is idempotent for a stable request identity and rejects an identity conflict", () => {
     const admission = controller();
     const first = request({ requestId: "request-1" });
