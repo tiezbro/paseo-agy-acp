@@ -22,6 +22,9 @@ All notable changes to `paseo-agy-acp` are recorded here.
 - Added queued-request cancellation that atomically removes the encrypted
   prompt. It intentionally refuses to claim cancellation after provider
   admission or dispatch, which requires separate process and provider proof.
+- Added OS-process contention coverage and a redacting provider error
+  classifier. Recognized `503` capacity and `429` quota evidence is retained
+  as a typed outcome; unrecognized raw error text is discarded.
 - Added the v2.0.0.0 design baseline in
   `docs/design/v2.0.0.0-admission-controller.md`.
 
