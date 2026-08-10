@@ -101,7 +101,9 @@ lease identifiers from message strings.
 Concurrent connectors may initialize the active-session registry together.
 The registry retries only bounded SQLite `BUSY`/`LOCKED` contention in its
 idempotent WAL/schema setup; incompatible or damaged schemas still fail closed,
-and this sub-second initialization budget can never replay a business prompt.
+and this initialization retry can never replay a business prompt. Each lock
+wait is capped at 100 ms with at most 8 attempts; the resulting 940 ms nominal
+budget for one continuously held lock is not a global initialization deadline.
 Normal registry writes retain their separate 5000 ms contention timeout.
 
 A source-only production graph builder requires one exact SQLite startup

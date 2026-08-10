@@ -161,9 +161,12 @@ All notable changes to `paseo-agy-acp` are recorded here.
   focused runs after its concurrent first-open initialization repair.
 - A lock-held initialization test proves the retry path rather than relying on
   scheduler timing, and verifies that normal registry operations restore the
-  5000 ms write-contention timeout after the sub-second initialization budget;
-  it passed 5 consecutive focused runs together with incompatible-schema and
-  corrupt-database fail-closed coverage.
+  5000 ms write-contention timeout after initialization. Each initialization
+  lock wait is capped at 100 ms with at most 8 attempts; a continuously held
+  single lock has a nominal 940 ms wait budget, not a global wall-clock
+  deadline across every SQLite statement. The test passed 5 consecutive
+  focused runs together with incompatible-schema and corrupt-database
+  fail-closed coverage.
 - No real Antigravity process, installed connector, Paseo daemon, tag, push, or
   release was used for this source-development verification.
 

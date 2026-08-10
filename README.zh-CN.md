@@ -93,8 +93,9 @@ Controller 错误仍保留 typed class，但 message 字符串不再包含持久
 或 lease 标识符。
 多个 connector 可并发初始化 active-session registry。registry 只会对幂等 WAL/schema
 初始化中的 SQLite `BUSY`/`LOCKED` 竞争做有界重试；不兼容或损坏的 schema 仍立即
-fail closed；初始化竞争预算低于 1 秒，且绝不会重放业务 prompt。正常 registry 写入
-仍使用独立的 5000 ms contention timeout。
+fail closed，且绝不会重放业务 prompt。每次锁等待上限为 100 ms，最多尝试 8 次；
+持续阻塞同一把锁时名义等待预算为 940 ms，但这不是覆盖所有 SQLite statement 的全局
+初始化 deadline。正常 registry 写入仍使用独立的 5000 ms contention timeout。
 
 source-only production graph builder 要求 dispatch 与 recovery 使用同一个 SQLite
 startup launcher，并且 stable request identity、outbox ACK、fresh-PTY 认证证据和
