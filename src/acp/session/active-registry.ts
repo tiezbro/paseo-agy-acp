@@ -11,6 +11,8 @@ const OWNER_INSTANCE_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][
 const BOOT_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const ISO_UTC_TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 const POSITIVE_DECIMAL_PATTERN = /^[1-9][0-9]*$/;
+const SQLITE_OPERATION_BUSY_TIMEOUT_MS = 5000;
+const SQLITE_INITIALIZATION_BUSY_TIMEOUT_MS = 100;
 const SQLITE_INITIALIZATION_RETRY_LIMIT = 8;
 const SQLITE_INITIALIZATION_RETRY_DELAY_MS = 5;
 const sqliteInitializationRetrySignal = new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT));
@@ -179,8 +181,9 @@ export class ActiveSessionRegistry {
     let db: Database.Database | undefined;
     try {
       db = new Database(databasePath);
-      db.pragma("busy_timeout = 5000");
+      db.pragma(`busy_timeout = ${SQLITE_INITIALIZATION_BUSY_TIMEOUT_MS}`);
       initializeRegistrySchema(db);
+      db.pragma(`busy_timeout = ${SQLITE_OPERATION_BUSY_TIMEOUT_MS}`);
 
       this.#db = db;
       this.#insert = db.prepare(

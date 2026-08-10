@@ -1,6 +1,6 @@
 import { execFileSync, spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { once } from "node:events";
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -158,6 +158,22 @@ describe("ActiveSessionRegistry", () => {
     registry.close();
   });
 
+  it("fails closed for incompatible schema or corrupt database content", () => {
+    const incompatible = createRegistryDatabase();
+    const incompatibleDb = new Database(incompatible.databasePath);
+    incompatibleDb.exec(`CREATE TABLE active_antigravity_sessions (request_id TEXT PRIMARY KEY NOT NULL)`);
+    incompatibleDb.close();
+    expect(() => new ActiveSessionRegistry(incompatible.databasePath)).toThrow(
+      "active session registry error: SQLite registry table does not match the canonical schema"
+    );
+
+    const corrupt = createRegistryDatabase();
+    writeFileSync(corrupt.databasePath, "not a SQLite database", { mode: 0o600 });
+    expect(() => new ActiveSessionRegistry(corrupt.databasePath)).toThrow(
+      "active session registry error: SQLite registry could not be configured"
+    );
+  });
+
   it("fences a stale owner before it can advance or terminalize a reclaimed session", () => {
     const { databasePath } = createRegistryDatabase();
     const registry = new ActiveSessionRegistry(databasePath);
@@ -249,6 +265,36 @@ describe("ActiveSessionRegistry", () => {
     expect(registry.listInFlight()).toEqual([
       expect.objectContaining({ requestId: "request-left", sessionId: "session-left", cursor: 79 }),
       expect.objectContaining({ requestId: "request-right", sessionId: "session-right", cursor: 79 })
+    ]);
+    registry.close();
+  });
+
+  it("retries bounded first-open contention before restoring the operational busy timeout", async () => {
+    const { databasePath } = createRegistryDatabase();
+    const blocker = new Database(databasePath);
+    blocker.pragma("journal_mode = DELETE");
+    blocker.exec("BEGIN EXCLUSIVE");
+
+    const child = spawnWriter(databasePath, "left", "11111111-1111-4111-8111-111111111111");
+    await waitForLine(child, "opening");
+    const ready = waitForLine(child, "ready");
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    blocker.exec("COMMIT");
+    blocker.close();
+
+    await ready;
+    const writeBlocker = new Database(databasePath);
+    writeBlocker.exec("BEGIN EXCLUSIVE");
+    const exited = waitForExit(child);
+    child.stdin.end("go\n");
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    writeBlocker.exec("COMMIT");
+    writeBlocker.close();
+    await exited;
+
+    const registry = new ActiveSessionRegistry(databasePath);
+    expect(registry.listInFlight()).toEqual([
+      expect.objectContaining({ requestId: "request-left", sessionId: "session-left", cursor: 79 })
     ]);
     registry.close();
   });

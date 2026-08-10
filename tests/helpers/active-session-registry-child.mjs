@@ -8,6 +8,7 @@ if (!mode || !databasePath || !registryModule) {
 const { ActiveSessionAdvanceError, ActiveSessionLeaseFenceError, ActiveSessionRegistry } = await import(
   pathToFileURL(registryModule).href
 );
+process.stdout.write("opening\n");
 const registry = new ActiveSessionRegistry(databasePath);
 
 process.stdout.write("ready\n");

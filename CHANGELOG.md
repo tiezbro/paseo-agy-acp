@@ -146,7 +146,7 @@ All notable changes to `paseo-agy-acp` are recorded here.
 
 ### Verification
 
-- `npm test` - 61 test files passed: 871 tests passed, 2 skipped, and 1
+- `npm test` - 61 test files passed: 873 tests passed, 2 skipped, and 1
   intentional TODO. The TODO is the production fresh-PTY certificate scan,
   which remains blocked because no accepted real launcher source exists; the
   corresponding runtime path stays fail closed.
@@ -159,6 +159,11 @@ All notable changes to `paseo-agy-acp` are recorded here.
   follow-up audit identifier-minimization finding was closed.
 - The real two-process active-session registry test passed 10 consecutive
   focused runs after its concurrent first-open initialization repair.
+- A lock-held initialization test proves the retry path rather than relying on
+  scheduler timing, and verifies that normal registry operations restore the
+  5000 ms write-contention timeout after the sub-second initialization budget;
+  it passed 5 consecutive focused runs together with incompatible-schema and
+  corrupt-database fail-closed coverage.
 - No real Antigravity process, installed connector, Paseo daemon, tag, push, or
   release was used for this source-development verification.
 
