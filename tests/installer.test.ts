@@ -3,6 +3,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { spawnSync } from "node:child_process";
 import { afterEach, describe, expect, it } from "vitest";
+import type { AgyStartupLauncher } from "../src/agy/startup-launcher.js";
 import {
   DEFAULT_AGY_RELEASES_API,
   ensureAgyInstalled,
@@ -124,19 +125,32 @@ describe("ensureAgyInstalled", () => {
       }
       throw new Error(`unexpected fetch: ${url}`);
     };
+    const startupEvents: string[] = [];
 
     const resolved = await ensureAgyInstalled({
       env,
       installBinDir,
-      fetchImpl
+      fetchImpl,
+      startupLauncher: recordingStartupLauncher(startupEvents)
     });
 
     expect(resolved).toBe(installedAgyPath(installBinDir));
     expect(env.PATH?.split(path.delimiter)).toContain(installBinDir);
     expect(fs.existsSync(resolved!)).toBe(true);
     expect(await resolveAgyExecutable({ env, installBinDir })).toBe(resolved);
+    expect(startupEvents).toEqual(["acquire:auxiliary", "release:auxiliary"]);
   });
 });
+
+function recordingStartupLauncher(events: string[]): AgyStartupLauncher {
+  return {
+    enabled: true,
+    acquire(classification) {
+      events.push(`acquire:${classification}`);
+      return { release: () => events.push(`release:${classification}`) };
+    }
+  };
+}
 
 function sha256Hex(bytes: Buffer): string {
   return spawnSync("shasum", ["-a", "256"], { input: bytes, encoding: "utf-8" })

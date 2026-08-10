@@ -12,7 +12,7 @@ import {
 import type { ReplayCache } from "../../agy/db/replay.js";
 import { buildModelCatalog } from "../../agy/model/catalog.js";
 import { applyModelSelection, initialModelSelection, restoredModelSelection } from "../../agy/model/selection.js";
-import type { SessionStore, StoredSession } from "./store.js";
+import type { SessionStoreBackend, StoredSession } from "./store.js";
 import type { SessionState } from "./types.js";
 import { cancelQueuedPrompts } from "./cancel.js";
 import { sessionTurnBusy } from "./prompt.js";
@@ -128,7 +128,7 @@ export async function reloadSession(
   requestedCwd: string | undefined,
   requestedDirs: string[] | undefined,
   deps: SessionBuildDeps & {
-    store: SessionStore;
+    store: SessionStoreBackend;
     sessions: Map<string, SessionState>;
     maxActiveSessions: number;
   }
@@ -161,7 +161,7 @@ export function sessionRecord(session: SessionState): StoredSession {
 }
 
 export function persistSession(
-  store: SessionStore,
+  store: SessionStoreBackend,
   sessionId: string,
   session: SessionState
 ): Promise<void> {

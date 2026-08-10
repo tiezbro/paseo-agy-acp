@@ -41,6 +41,11 @@ import { MODEL_CONFIG_ID } from "./config-options.js";
 import { MODE_CONFIG_ID } from "./modes.js";
 import { requestPermissionV1, requestPermissionV2 } from "./request-permission.js";
 import type { QueuedPromptV1, QueuedPromptV2, SessionState, TurnIntent } from "./types.js";
+import type { PromptAdmission } from "../../admission/prompt-seam.js";
+import {
+  ACP_REQUEST_IDENTITY_CAPABILITY_KEY,
+  validateRequestIdentityPromptMetadata
+} from "../../admission/request-identity-protocol.js";
 import {
   isTurnCancelled,
   onAbort,
@@ -56,6 +61,8 @@ export interface PromptTurnDeps {
   requireSession(sessionId: string): SessionState;
   applyConfigOption(sessionId: string, configId: string, value: unknown): Promise<void>;
   persistSession(sessionId: string, session: SessionState): Promise<void>;
+  /** Omitted by default so legacy prompt execution stays exactly on its existing path. */
+  admission?: PromptAdmission;
 }
 
 export interface PromptV1Deps extends PromptTurnDeps {
@@ -276,6 +283,8 @@ export async function applyCuratedSlashCommand(
  * between v1 and v2; the ordering, cancellation, and persistence rules do not.
  */
 interface TurnAdapter {
+  /** Enabled admission owns prompt dispatch outside this module. */
+  admit?(promptText: string, claim: TurnClaim): Promise<StopReason>;
   /** v2 foreground only — queued v2 already published it, v1 has no concept. */
   announceUserMessage?(promptText: string): Promise<void>;
   /** v2 only. */
@@ -307,6 +316,22 @@ async function runTurnBody(
 
   ensureLive();
   const promptText = preconverted ?? await guard(contentBlocksToPrompt(promptBlocks, session.cwd));
+  // Curated slash commands reconfigure the local connector and never launch
+  // agy, so they do not consume a global admission request.
+  if (adapter.admit && isClientTextSlashPrompt(promptBlocks)) {
+    const handled = await guard(adapter.applySlash(promptText));
+    if (handled) {
+      ensureLive();
+      return "end_turn";
+    }
+    ensureLive();
+  }
+  if (adapter.admit) {
+    ensureLive();
+    const backendPromptText = await guard(withPaseoDaemonSystemContext(promptText));
+    ensureLive();
+    return guard(adapter.admit(backendPromptText, claim));
+  }
   const backendPromptText = await guard(withPaseoDaemonSystemContext(promptText));
   ensureLive();
 
@@ -360,6 +385,32 @@ async function runTurnBody(
   }
 }
 
+function admissionAdapter(
+  params: { sessionId: string; _meta?: unknown },
+  session: SessionState,
+  deps: PromptTurnDeps
+): TurnAdapter["admit"] {
+  const admission = deps.admission;
+  if (!admission) return undefined;
+
+  return async (promptText, claim) => admission.seam.admit({
+    sessionId: params.sessionId,
+    model: session.selectedBaseModel,
+    promptText,
+    claim,
+    requestIdentity: validateRequestIdentityPromptMetadata(
+      admission.requestIdentity,
+      promptRequestIdentityMetadata(params)
+    )
+  });
+}
+
+function promptRequestIdentityMetadata(params: { _meta?: unknown }): unknown {
+  const meta = params._meta;
+  if (!meta || typeof meta !== "object") return undefined;
+  return (meta as Record<string, unknown>)[ACP_REQUEST_IDENTITY_CAPABILITY_KEY];
+}
+
 function v1Adapter(
   params: V1PromptRequest,
   client: V1AgentContext,
@@ -367,6 +418,7 @@ function v1Adapter(
   deps: PromptV1Deps
 ): TurnAdapter {
   return {
+    admit: admissionAdapter(params, session, deps),
     applySlash: (promptText) => applyCuratedSlashCommand(
       params.sessionId,
       promptText,
@@ -432,6 +484,7 @@ function v2Adapter(
   let userMessageId = options.userMessageId ?? "";
 
   const adapter: TurnAdapter = {
+    admit: admissionAdapter(params, session, deps),
     announceUserMessage: options.announceUserMessage
       ? async (promptText: string) => {
           userMessageId = v2UserMessageId(params.prompt as v1.ContentBlock[], promptText);
@@ -841,6 +894,14 @@ function enqueueV2(
   // concurrently admitted queue requests.
   session.promptQueue.push(queued);
 
+  // Global admission must start only after executeQueuedV2Turn has acquired
+  // the local claim. The legacy path intentionally retains eager conversion
+  // and user-message publication below.
+  if (deps.admission) {
+    notifyIdleAndDrainQueue(session);
+    return queuedId;
+  }
+
   const previousPreparation = session.promptQueuePreparation ?? Promise.resolve();
   queued.ready = previousPreparation
     .catch(() => {})
@@ -906,6 +967,19 @@ async function executeQueuedV2Turn(item: QueuedPromptV2): Promise<void> {
       session,
       claim,
       async () => {
+        if (deps.admission) {
+          const adapter = v2Adapter(params, client, session, deps, {
+            announceUserMessage: true
+          });
+          return runTurnBody(
+            params.sessionId,
+            params.prompt as v1.ContentBlock[],
+            session,
+            claim,
+            adapter,
+            deps
+          );
+        }
         // Preparation (content conversion + user_message) ran at enqueue time.
         await raceClaim(item.ready, claim);
         claim.throwIfAborted();

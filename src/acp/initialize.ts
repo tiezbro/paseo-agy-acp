@@ -12,6 +12,11 @@ import type {
   InitializeResponse as V2InitializeResponse
 } from "@agentclientprotocol/sdk/experimental/v2";
 import { v1AuthMethods, v2AuthMethods } from "../agy/auth.js";
+import {
+  negotiateAcpInitializationProtocolCapabilities,
+  type AcpInitializationProtocolCapabilities,
+  type AcpProtocolCapabilityAvailability
+} from "./protocol-capabilities.js";
 
 const AGENT_INFO = { name: "agy-acp", title: "Google Antigravity CLI" };
 
@@ -72,13 +77,19 @@ function parseClientElicitation(rawCaps: unknown): ClientElicitationCapability {
 /** v1 `initialize`: also returns the client's advertised `fs`, `elicitation`, and `toolCallName` capabilities. */
 export function handleInitializeV1(
   params: V1InitializeRequest,
-  agentVersion: string
+  agentVersion: string,
+  capabilityAvailability: AcpProtocolCapabilityAvailability = {}
 ): {
   response: V1InitializeResponse;
   clientFs: ClientFsCapability;
   clientElicitation: ClientElicitationCapability;
   clientToolCallName: ClientToolCallNameCapability;
+  clientProtocolCapabilities: AcpInitializationProtocolCapabilities;
 } {
+  const clientProtocolCapabilities = negotiateAcpInitializationProtocolCapabilities(
+    params._meta,
+    capabilityAvailability
+  );
   return {
     clientFs: {
       readTextFile: params.clientCapabilities?.fs?.readTextFile ?? false,
@@ -86,6 +97,7 @@ export function handleInitializeV1(
     },
     clientElicitation: parseClientElicitation(params.clientCapabilities),
     clientToolCallName: parseClientToolCallName(params.clientCapabilities, false),
+    clientProtocolCapabilities,
     response: {
       protocolVersion:
         params.protocolVersion === v1.PROTOCOL_VERSION ? params.protocolVersion : v1.PROTOCOL_VERSION,
@@ -113,22 +125,32 @@ export function handleInitializeV1(
         toolCallName: {}
       } as unknown as v1.AgentCapabilities,
       authMethods: v1AuthMethods(),
-      agentInfo: { ...AGENT_INFO, version: agentVersion }
+      agentInfo: { ...AGENT_INFO, version: agentVersion },
+      ...(clientProtocolCapabilities.responseMeta === undefined
+        ? {}
+        : { _meta: clientProtocolCapabilities.responseMeta })
     }
   };
 }
 
 export function handleInitializeV2(
   params: V2InitializeRequest,
-  agentVersion: string
+  agentVersion: string,
+  capabilityAvailability: AcpProtocolCapabilityAvailability = {}
 ): {
   response: V2InitializeResponse;
   clientElicitation: ClientElicitationCapability;
   clientToolCallName: ClientToolCallNameCapability;
+  clientProtocolCapabilities: AcpInitializationProtocolCapabilities;
 } {
+  const clientProtocolCapabilities = negotiateAcpInitializationProtocolCapabilities(
+    params._meta,
+    capabilityAvailability
+  );
   return {
     clientElicitation: parseClientElicitation(params),
     clientToolCallName: parseClientToolCallName(params, true),
+    clientProtocolCapabilities,
     response: {
       protocolVersion:
         params.protocolVersion === v2.PROTOCOL_VERSION ? params.protocolVersion : v2.PROTOCOL_VERSION,
@@ -149,7 +171,10 @@ export function handleInitializeV2(
         }
       } as unknown as v2.AgentCapabilities,
       // Non-empty authMethods commits the agent to auth/login + auth/logout.
-      authMethods: v2AuthMethods()
+      authMethods: v2AuthMethods(),
+      ...(clientProtocolCapabilities.responseMeta === undefined
+        ? {}
+        : { _meta: clientProtocolCapabilities.responseMeta })
     }
   };
 }

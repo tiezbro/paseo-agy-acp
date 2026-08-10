@@ -15,6 +15,7 @@
 // handlers.
 
 import * as fs from "node:fs";
+import { randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
 import * as path from "node:path";
 import { Readable, Writable } from "node:stream";
@@ -73,6 +74,7 @@ import { readTextFile } from "./fs/read-text-file.js";
 import { writeTextFile } from "./fs/write-text-file.js";
 import { ensureAgyInstalled } from "../agy/installer.js";
 import { AUTH_REQUIRED_MESSAGE, isAgyAuthenticated, v1AuthMethods } from "../agy/auth.js";
+import type { AgyStartupLauncher } from "../agy/startup-launcher.js";
 import {
   AgyCliBackend,
   configFromEnv,
@@ -81,7 +83,12 @@ import {
   type SpawnFactory
 } from "../agy/cli.js";
 import { handleInitializeV1, handleInitializeV2 } from "./initialize.js";
-import { defaultStateDir, SessionStore, type StoredSession } from "./session/store.js";
+import {
+  defaultStateDir,
+  SessionStore,
+  type SessionStoreBackend,
+  type StoredSession
+} from "./session/store.js";
 import { handleCloseSession } from "./session/close.js";
 import { handleDeleteSession } from "./session/delete.js";
 import { handleListSessions } from "./session/list.js";
@@ -114,6 +121,21 @@ import {
 } from "./session/update.js";
 import { handlePromptV1, handlePromptV2, type PromptV1Deps, type PromptV2Deps } from "./session/prompt.js";
 import { handleCancel } from "./session/cancel.js";
+import type { AdmissionPromptSeam, PromptAdmission } from "../admission/prompt-seam.js";
+import {
+  negotiateRequestIdentityCapability,
+  type RequestIdentityNegotiationResult
+} from "../admission/request-identity-protocol.js";
+import { ACP_OUTBOX_ACK_METHOD } from "../admission/outbox-protocol.js";
+import { parseAdmissionRuntimeConfig } from "../admission/runtime-config.js";
+import { AcpOutboxDeliveryBridge } from "./outbox-delivery.js";
+import {
+  AcpSessionClientRouteNotFoundError,
+  AcpSessionClientRouteProtocolError,
+  AcpSessionClientRouteRegistry,
+  type AcpSessionClientProtocol,
+  type AcpSessionUpdateSender
+} from "./session/client-route-registry.js";
 
 const require = createRequire(import.meta.url);
 const packageJson = require("../../package.json") as { version?: string };
@@ -137,6 +159,34 @@ export interface AcpAgentOptions {
   conversationsDir?: string;
   maxActiveSessions?: number;
   modelCacheEnabled?: boolean;
+  /** Explicitly injected local agy start gate; absent preserves legacy startup. */
+  startupLauncher?: AgyStartupLauncher;
+  /** Persistence backend selected by explicit runtime composition. */
+  sessionStore?: SessionStoreBackend;
+  /** Durable outbox bridge. It is negotiated only by an app that registers its ACK route. */
+  outboxDelivery?: AcpOutboxDeliveryBridge;
+  /** Injectable clock for the ACK route. */
+  outboxNow?: () => number;
+  /** Explicitly injected admission seam. Omitting it preserves legacy behavior. */
+  admission?: AdmissionPromptSeam;
+  /** Connection-owned standard client.session/update routes for durable delivery. */
+  clientRoutes?: AcpSessionClientRouteRegistry;
+  /** Exact connection fence paired with clientRoutes. */
+  connectionFence?: string;
+}
+
+/** Resources created for the opt-in v2 runtime around one ACP connection. */
+export interface AcpRuntimeComposition {
+  readonly options: AcpAgentOptions;
+  readonly sessionStore: SessionStoreBackend | undefined;
+  close(): void;
+}
+
+export class AcpRuntimeCompositionError extends Error {
+  constructor(message: string) {
+    super(`ACP runtime composition error: ${message}`);
+    this.name = "AcpRuntimeCompositionError";
+  }
 }
 
 export class AcpAgent {
@@ -144,7 +194,7 @@ export class AcpAgent {
   readonly #argv: string[];
   readonly #backend: AgyCliBackend;
   readonly #sessions = new Map<string, SessionState>();
-  readonly #store: SessionStore;
+  readonly #store: SessionStoreBackend;
   readonly #replayCache = new ReplayCache(REPLAY_CACHE_CAPACITY);
   readonly #modelCacheFile: string;
   readonly #modelCacheEnabled: boolean;
@@ -152,21 +202,42 @@ export class AcpAgent {
   readonly #modelRefreshes = new Map<string, Promise<void>>();
   readonly #maxActiveSessions: number;
   readonly #conversationsDir: string | undefined;
+  readonly #admission: AdmissionPromptSeam | undefined;
+  readonly #outboxDelivery: AcpOutboxDeliveryBridge | undefined;
+  readonly #outboxRouteActive: boolean;
+  readonly #outboxNow: () => number;
+  readonly #clientRoutes: AcpSessionClientRouteRegistry | undefined;
+  readonly #connectionFence: string | undefined;
+  readonly #startupLauncher: AgyStartupLauncher | undefined;
+  readonly #v1RouteSenders = new WeakMap<object, AcpSessionUpdateSender>();
+  readonly #v2RouteSenders = new WeakMap<object, AcpSessionUpdateSender>();
   #modelCacheWrite: Promise<void> = Promise.resolve();
   #ensureAgyPromise: Promise<string | null> | undefined;
   /** v1 client's `fs` capability, set from `initialize`. Draft v2 has no fs/* client methods. */
   #clientFs = { readTextFile: false, writeTextFile: false };
   #clientElicitation = { form: false, url: false };
   #clientToolCallName = { name: false };
+  #v1RequestIdentity: RequestIdentityNegotiationResult = negotiateRequestIdentityCapability(undefined);
+  #v2RequestIdentity: RequestIdentityNegotiationResult = negotiateRequestIdentityCapability(undefined);
 
-  constructor(options: AcpAgentOptions = {}) {
+  constructor(options: AcpAgentOptions = {}, outboxRouteActive = false) {
     this.#env = options.env ?? process.env;
     this.#argv = options.argv ?? [];
     this.#backend = new AgyCliBackend(options.spawnProcess, options.ptyFactory);
     const stateDir = options.stateDir ?? defaultStateDir();
-    this.#store = new SessionStore(stateDir);
+    this.#store = options.sessionStore ?? new SessionStore(stateDir);
     this.#modelCacheFile = path.join(stateDir, "models.json");
     this.#modelCacheEnabled = options.modelCacheEnabled ?? (this.#env.NODE_ENV !== "test");
+    this.#admission = options.admission;
+    this.#outboxDelivery = options.outboxDelivery;
+    this.#outboxRouteActive = outboxRouteActive && this.#outboxDelivery !== undefined;
+    this.#outboxNow = options.outboxNow ?? Date.now;
+    this.#clientRoutes = options.clientRoutes;
+    this.#connectionFence = options.connectionFence;
+    this.#startupLauncher = options.startupLauncher;
+    if ((this.#clientRoutes === undefined) !== (this.#connectionFence === undefined)) {
+      throw new AcpRuntimeCompositionError("client routes require an exact connection fence");
+    }
     this.#maxActiveSessions =
       options.maxActiveSessions !== undefined &&
       Number.isInteger(options.maxActiveSessions) &&
@@ -179,37 +250,50 @@ export class AcpAgent {
 
   async initializeV1(params: V1InitializeRequest): Promise<V1InitializeResponse> {
     await this.ensureAgyReady();
-    const { response, clientFs, clientElicitation, clientToolCallName } = handleInitializeV1(params, packageJson.version ?? "0.0.0");
+    const { response, clientFs, clientElicitation, clientToolCallName, clientProtocolCapabilities } = handleInitializeV1(
+      params,
+      packageJson.version ?? "0.0.0",
+      { requestIdentityAvailable: this.#admission !== undefined, outboxAvailable: this.outboxAvailable() }
+    );
     this.#clientFs = clientFs;
     this.#clientElicitation = clientElicitation;
     this.#clientToolCallName = clientToolCallName;
+    this.#v1RequestIdentity = clientProtocolCapabilities.requestIdentity;
     return response;
   }
 
   async initializeV2(params: V2InitializeRequest): Promise<V2InitializeResponse> {
     await this.ensureAgyReady();
-    const { response, clientElicitation, clientToolCallName } = handleInitializeV2(params, packageJson.version ?? "0.0.0");
+    const { response, clientElicitation, clientToolCallName, clientProtocolCapabilities } = handleInitializeV2(
+      params,
+      packageJson.version ?? "0.0.0",
+      { requestIdentityAvailable: this.#admission !== undefined, outboxAvailable: this.outboxAvailable() }
+    );
     this.#clientElicitation = clientElicitation;
     this.#clientToolCallName = clientToolCallName;
+    this.#v2RequestIdentity = clientProtocolCapabilities.requestIdentity;
     return response;
   }
 
   private ensureAgyReady(): Promise<string | null> {
     this.#ensureAgyPromise ??= ensureAgyInstalled({
       env: this.#env,
-      warn: (message) => console.error(message)
+      warn: (message) => console.error(message),
+      startupLauncher: this.#startupLauncher
     });
     return this.#ensureAgyPromise;
   }
 
   /** Probe config for auth checks (cwd only; no workspace roots required). */
   private authProbeConfig(cwd = process.cwd()): AgyCliConfig {
-    return configFromEnv({
+    const config = configFromEnv({
       cwd,
       env: this.#env,
       argv: this.#argv,
       conversationsDir: this.#conversationsDir
     });
+    if (this.#startupLauncher !== undefined) config.startupLauncher = this.#startupLauncher;
+    return config;
   }
 
   /**
@@ -268,18 +352,22 @@ export class AcpAgent {
     };
   }
 
-  newSessionV1(params: V1NewSessionRequest, client?: V1AgentContext): Promise<V1NewSessionResponse> {
-    return handleNewSessionV1(params, client, {
+  async newSessionV1(params: V1NewSessionRequest, client?: V1AgentContext): Promise<V1NewSessionResponse> {
+    const response = await handleNewSessionV1(params, client, {
       ...this.newSessionDeps(),
       notifyAvailableCommandsV1
     });
+    if (client) this.bindClientRoute(response.sessionId, "v1", client);
+    return response;
   }
 
-  newSessionV2(params: V2NewSessionRequest, client?: V2AgentContext): Promise<V2NewSessionResponse> {
-    return handleNewSessionV2(params, client, {
+  async newSessionV2(params: V2NewSessionRequest, client?: V2AgentContext): Promise<V2NewSessionResponse> {
+    const response = await handleNewSessionV2(params, client, {
       ...this.newSessionDeps(),
       notifyAvailableCommandsV2
     });
+    if (client) this.bindClientRoute(response.sessionId, "v2", client);
+    return response;
   }
 
   async listSessions(params: ListSessionsRequest = {}): Promise<ListSessionsResponse> {
@@ -302,27 +390,33 @@ export class AcpAgent {
     };
   }
 
-  loadSession(params: LoadSessionRequest, client: V1AgentContext): Promise<LoadSessionResponse> {
-    return handleLoadSession(params, client, {
+  async loadSession(params: LoadSessionRequest, client: V1AgentContext): Promise<LoadSessionResponse> {
+    const response = await handleLoadSession(params, client, {
       ...this.reloadSessionDeps(),
       clientToolCallNameV1: () => this.#clientToolCallName,
       notifyAvailableCommandsV1
     });
+    this.bindClientRoute(params.sessionId, "v1", client);
+    return response;
   }
 
-  resumeSessionV1(params: V1ResumeSessionRequest, client?: V1AgentContext): Promise<V1ResumeSessionResponse> {
-    return handleResumeSessionV1(params, client, {
+  async resumeSessionV1(params: V1ResumeSessionRequest, client?: V1AgentContext): Promise<V1ResumeSessionResponse> {
+    const response = await handleResumeSessionV1(params, client, {
       ...this.reloadSessionDeps(),
       notifyAvailableCommandsV1
     });
+    if (client) this.bindClientRoute(params.sessionId, "v1", client);
+    return response;
   }
 
-  resumeSessionV2(params: V2ResumeSessionRequest, client: V2AgentContext): Promise<V2ResumeSessionResponse> {
-    return handleResumeSessionV2(params, client, {
+  async resumeSessionV2(params: V2ResumeSessionRequest, client: V2AgentContext): Promise<V2ResumeSessionResponse> {
+    const response = await handleResumeSessionV2(params, client, {
       ...this.reloadSessionDeps(),
       clientToolCallNameV2: () => this.#clientToolCallName,
       notifyAvailableCommandsV2
     });
+    this.bindClientRoute(params.sessionId, "v2", client);
+    return response;
   }
 
   setConfigOptionV1(
@@ -367,7 +461,8 @@ export class AcpAgent {
       notifyConfigOptionUpdateV1,
       clientFileSystemV1: (client, sessionId) => this.clientFileSystemV1(client, sessionId),
       clientElicitationV1: () => this.#clientElicitation,
-      clientToolCallNameV1: () => this.#clientToolCallName
+      clientToolCallNameV1: () => this.#clientToolCallName,
+      admission: this.promptAdmission("v1")
     };
   }
 
@@ -378,7 +473,16 @@ export class AcpAgent {
       persistSession: (id, session) => this.persistSession(id, session),
       notifyConfigOptionUpdateV2,
       clientElicitationV2: () => this.#clientElicitation,
-      clientToolCallNameV2: () => this.#clientToolCallName
+      clientToolCallNameV2: () => this.#clientToolCallName,
+      admission: this.promptAdmission("v2")
+    };
+  }
+
+  private promptAdmission(protocol: "v1" | "v2"): PromptAdmission | undefined {
+    if (!this.#admission) return undefined;
+    return {
+      seam: this.#admission,
+      requestIdentity: protocol === "v1" ? this.#v1RequestIdentity : this.#v2RequestIdentity
     };
   }
 
@@ -405,12 +509,87 @@ export class AcpAgent {
     return handleCancel(params.sessionId, this.#sessions, params._meta);
   }
 
+  /** Reserved durable-outbox ACK route, registered only by ACP app factories. */
+  acknowledgeOutbox(input: unknown): Record<string, never> {
+    if (!this.outboxAvailable()) {
+      throw new Error("durable outbox acknowledgement route is unavailable");
+    }
+    this.#outboxDelivery!.acknowledge(input, this.#outboxNow());
+    return {};
+  }
+
   async closeSession(params: CloseSessionRequest): Promise<CloseSessionResponse> {
-    return handleCloseSession(params, this.#sessions);
+    const response = await handleCloseSession(params, this.#sessions);
+    this.unbindClientRoutes(params.sessionId);
+    return response;
   }
 
   async deleteSession(params: DeleteSessionRequest): Promise<DeleteSessionResponse> {
-    return handleDeleteSession(params, this.#sessions, this.#store);
+    const response = await handleDeleteSession(params, this.#sessions, this.#store);
+    this.unbindClientRoutes(params.sessionId);
+    return response;
+  }
+
+  private bindClientRoute(
+    sessionId: string,
+    protocol: AcpSessionClientProtocol,
+    client: V1AgentContext | V2AgentContext
+  ): void {
+    if (!this.#clientRoutes || !this.#connectionFence) return;
+    const sender = protocol === "v1"
+      ? this.routeSenderV1(client as V1AgentContext)
+      : this.routeSenderV2(client as V2AgentContext);
+    this.#clientRoutes.bind({
+      sessionId,
+      protocol,
+      connectionFence: this.#connectionFence,
+      sender
+    });
+  }
+
+  private routeSenderV1(client: V1AgentContext): AcpSessionUpdateSender {
+    const key = client as object;
+    const existing = this.#v1RouteSenders.get(key);
+    if (existing) return existing;
+    const sender: AcpSessionUpdateSender = (sessionId, update) => client.notify(
+      v1.methods.client.session.update,
+      { sessionId, update: update as v1.SessionUpdate }
+    );
+    this.#v1RouteSenders.set(key, sender);
+    return sender;
+  }
+
+  private routeSenderV2(client: V2AgentContext): AcpSessionUpdateSender {
+    const key = client as object;
+    const existing = this.#v2RouteSenders.get(key);
+    if (existing) return existing;
+    const sender: AcpSessionUpdateSender = (sessionId, update) => client.notify(
+      v2.methods.client.session.update,
+      { sessionId, update: update as v2.SessionUpdate }
+    );
+    this.#v2RouteSenders.set(key, sender);
+    return sender;
+  }
+
+  private unbindClientRoutes(sessionId: string): void {
+    if (!this.#clientRoutes || !this.#connectionFence) return;
+    for (const protocol of ["v1", "v2"] as const) {
+      try {
+        this.#clientRoutes.unbind({
+          sessionId,
+          protocol,
+          connectionFence: this.#connectionFence
+        });
+      } catch (error) {
+        if (
+          error instanceof AcpSessionClientRouteNotFoundError ||
+          error instanceof AcpSessionClientRouteProtocolError
+        ) {
+          continue;
+        }
+        throw error;
+      }
+    }
   }
 
   private createSession(
@@ -573,12 +752,73 @@ export class AcpAgent {
     }
     return persistSession(this.#store, sessionId, session);
   }
+
+  private outboxAvailable(): boolean {
+    return this.#outboxRouteActive && this.#outboxDelivery?.active === true;
+  }
+}
+
+/**
+ * Build the opt-in runtime around one ACP connection. The disabled default
+ * leaves both the legacy JSON store and legacy prompt path untouched.
+ */
+export function composeAcpRuntime(options: AcpAgentOptions = {}): AcpRuntimeComposition {
+  const runtimeConfig = parseAdmissionRuntimeConfig(options.env ?? process.env);
+  if (runtimeConfig.enabled) {
+    throw new AcpRuntimeCompositionError(
+      "production admission remains unavailable until every required runtime bridge is ready"
+    );
+  }
+
+  if (options.sessionStore !== undefined) {
+    return {
+      options,
+      sessionStore: options.sessionStore,
+      close() {}
+    };
+  }
+
+  return {
+    options,
+    sessionStore: undefined,
+    close() {}
+  };
+}
+
+function hasActiveOutboxRoute(options: AcpAgentOptions): boolean {
+  return options.outboxDelivery?.active === true;
+}
+
+function passthroughExtensionParams(params: unknown): unknown {
+  return params;
+}
+
+function registerOutboxAckRouteV1(app: V1AgentApp, agent: AcpAgent, enabled: boolean): V1AgentApp {
+  if (!enabled) return app;
+  return app.onRequest<unknown, Record<string, never>>(
+    ACP_OUTBOX_ACK_METHOD,
+    passthroughExtensionParams,
+    (ctx) => agent.acknowledgeOutbox(ctx.params)
+  );
+}
+
+function registerOutboxAckRouteV2(app: V2AgentApp, agent: AcpAgent, enabled: boolean): V2AgentApp {
+  if (!enabled) return app;
+  return app.onRequest<unknown, Record<string, never>>(
+    ACP_OUTBOX_ACK_METHOD,
+    passthroughExtensionParams,
+    (ctx) => agent.acknowledgeOutbox(ctx.params)
+  );
 }
 
 /** ACP v1 agent app (stable protocol). */
 export function createAcpApp(options: AcpAgentOptions = {}): V1AgentApp {
-  const agent = new AcpAgent(options);
-  return v1
+  const outboxRouteActive = hasActiveOutboxRoute(options);
+  return createAcpAppForAgent(new AcpAgent(options, outboxRouteActive), outboxRouteActive);
+}
+
+function createAcpAppForAgent(agent: AcpAgent, outboxRouteActive: boolean): V1AgentApp {
+  const app = v1
     .agent({ name: "agy-acp" })
     .onRequest(v1.methods.agent.initialize, (ctx) => agent.initializeV1(ctx.params))
     .onRequest(v1.methods.agent.authenticate, (ctx) => agent.authenticate(ctx.params))
@@ -595,6 +835,7 @@ export function createAcpApp(options: AcpAgentOptions = {}): V1AgentApp {
     .onRequest(v1.methods.agent.session.close, (ctx) => agent.closeSession(ctx.params))
     .onRequest(v1.methods.agent.session.delete, (ctx) => agent.deleteSession(ctx.params))
     .onNotification(v1.methods.agent.session.cancel, (ctx) => agent.cancel(ctx.params));
+  return registerOutboxAckRouteV1(app, agent, outboxRouteActive);
 }
 
 /**
@@ -602,8 +843,12 @@ export function createAcpApp(options: AcpAgentOptions = {}): V1AgentApp {
  * Prefer {@link createDualAcpApp} / {@link runAcp} so v1 clients still work.
  */
 export function createAcpV2App(options: AcpAgentOptions = {}): V2AgentApp {
-  const agent = new AcpAgent(options);
-  return v2
+  const outboxRouteActive = hasActiveOutboxRoute(options);
+  return createAcpV2AppForAgent(new AcpAgent(options, outboxRouteActive), outboxRouteActive);
+}
+
+function createAcpV2AppForAgent(agent: AcpAgent, outboxRouteActive: boolean): V2AgentApp {
+  const app = v2
     .agent({ name: "agy-acp" })
     .onRequest(v2.methods.agent.initialize, (ctx) => agent.initializeV2(ctx.params))
     .onRequest(v2.methods.agent.auth.login, (ctx) => agent.loginAuth(ctx.params))
@@ -616,6 +861,7 @@ export function createAcpV2App(options: AcpAgentOptions = {}): V2AgentApp {
     .onRequest(v2.methods.agent.session.close, (ctx) => agent.closeSession(ctx.params))
     .onRequest(v2.methods.agent.session.delete, (ctx) => agent.deleteSession(ctx.params))
     .onNotification(v2.methods.agent.session.cancel, (ctx) => agent.cancel(ctx.params));
+  return registerOutboxAckRouteV2(app, agent, outboxRouteActive);
 }
 
 /**
@@ -623,20 +869,53 @@ export function createAcpV2App(options: AcpAgentOptions = {}): V2AgentApp {
  * the client's `initialize.protocolVersion`.
  */
 export function createDualAcpApp(options: AcpAgentOptions = {}): v2.AgentProtocolRouter {
-  return v2.agentProtocolRouter().withV1(createAcpApp(options)).withV2(createAcpV2App(options));
+  const outboxRouteActive = hasActiveOutboxRoute(options);
+  const connectionFence = options.clientRoutes === undefined
+    ? options.connectionFence
+    : options.connectionFence ?? randomUUID();
+  const sharedOptions = connectionFence === undefined ? options : { ...options, connectionFence };
+  const agent = new AcpAgent(sharedOptions, outboxRouteActive);
+  return v2
+    .agentProtocolRouter()
+    .withV1(createAcpAppForAgent(agent, outboxRouteActive))
+    .withV2(createAcpV2AppForAgent(agent, outboxRouteActive));
 }
 
 export function runAcp(options: AcpAgentOptions = {}) {
-  const stdout = (options.stdout ?? process.stdout) as Writable;
-  const stdin = (options.stdin ?? process.stdin) as Readable;
+  const composition = composeAcpRuntime(options);
+  const stdout = (composition.options.stdout ?? process.stdout) as Writable;
+  const stdin = (composition.options.stdin ?? process.stdin) as Readable;
   // v1 ndJsonStream is sufficient: framing is shared; the router peeks initialize.
   const stream = v1.ndJsonStream(
     Writable.toWeb(stdout) as WritableStream<Uint8Array>,
     Readable.toWeb(stdin) as ReadableStream<Uint8Array>
   );
-  return createDualAcpApp(options).connect(stream);
+  try {
+    const connection = createDualAcpApp(composition.options).connect(stream);
+    const closed = connection.closed;
+    if (closed !== undefined) {
+      void closed.then(() => composition.close()).catch(() => {
+        try {
+          composition.close();
+        } catch {
+          // Connection teardown cannot safely report a second failure.
+        }
+      });
+    }
+    return connection;
+  } catch (error) {
+    composition.close();
+    throw error;
+  }
 }
 
 export { contentBlocksToPrompt, contentBlocksToText } from "./content/index.js";
 export { buildModelCatalog, modelConfigOption, reasoningEffortConfigOption, toModelSlug, prettifyModelSlug } from "../agy/model/catalog.js";
 export { sessionModeState, modeConfigOption } from "./session/modes.js";
+export {
+  AdmissionPromptSeam,
+  type AdmissionPromptDispatchHook,
+  type AdmissionPromptDispatchInput,
+  type AdmissionPromptSeamOptions,
+  type AdmissionQueueProgress
+} from "../admission/prompt-seam.js";

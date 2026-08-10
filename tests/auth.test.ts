@@ -7,20 +7,34 @@ import {
   formatAuthProbeError,
   isKnownAuthMethodId,
   looksUnauthenticated,
+  logoutAgyViaSlashCommand,
   runInteractiveAgyLogin,
   v1AuthMethods,
   v2AuthMethods,
   type InteractiveLoginSpawn
 } from "../src/agy/auth.js";
-import { AgyCliError, type AgyCliBackend } from "../src/agy/cli.js";
+import {
+  AgyCliError,
+  configFromEnv,
+  type AgyCliBackend,
+  type PtyFactory,
+  type PtyProcess
+} from "../src/agy/cli.js";
+import type { AgyStartupLauncher } from "../src/agy/startup-launcher.js";
 
 /** Minimal fake for the login child process: an EventEmitter with a `kill` that
  *  simulates the child exiting shortly after receiving a signal. */
 class FakeLoginChild extends EventEmitter {
   killedWith: string[] = [];
+  exitCode: number | null = null;
+  signalCode: NodeJS.Signals | null = null;
   kill(signal?: NodeJS.Signals | number): boolean {
     this.killedWith.push(String(signal));
-    queueMicrotask(() => this.emit("exit", null, signal ?? "SIGTERM"));
+    queueMicrotask(() => {
+      this.signalCode = typeof signal === "string" ? signal : "SIGTERM";
+      this.emit("exit", null, signal ?? "SIGTERM");
+      this.emit("close", null, signal ?? "SIGTERM");
+    });
     return true;
   }
 }
@@ -83,6 +97,7 @@ describe("runInteractiveAgyLogin", () => {
 
     const child = new FakeLoginChild();
     let listModelsCalls = 0;
+    const startupEvents: string[] = [];
     const backend = {
       listModels: vi.fn(async () => {
         listModelsCalls += 1;
@@ -97,6 +112,7 @@ describe("runInteractiveAgyLogin", () => {
       cwd: "/tmp",
       backend,
       spawnLogin,
+      startupLauncher: recordingStartupLauncher(startupEvents),
       pollIntervalMs: 5,
       killGraceMs: 20
     });
@@ -104,6 +120,7 @@ describe("runInteractiveAgyLogin", () => {
     expect(code).toBe(0);
     expect(child.killedWith).toContain("SIGTERM");
     expect(listModelsCalls).toBeGreaterThanOrEqual(2);
+    expect(startupEvents).toEqual(["acquire:auxiliary", "release:auxiliary"]);
   });
 
   it("returns the child's own exit code when the user quits before login succeeds", async () => {
@@ -125,10 +142,77 @@ describe("runInteractiveAgyLogin", () => {
     });
 
     // The user exits agy manually (e.g. Ctrl+C) before the background poll ever succeeds.
-    setTimeout(() => child.emit("exit", 130, null), 10);
+    setTimeout(() => {
+      child.exitCode = 130;
+      child.emit("exit", 130, null);
+      child.emit("close", 130, null);
+    }, 10);
 
     const code = await codePromise;
     expect(code).toBe(130);
     expect(child.killedWith).toEqual([]);
   });
 });
+
+describe("logoutAgyViaSlashCommand", () => {
+  it("starts its short-lived logout PTY as auxiliary work", async () => {
+    const startupEvents: string[] = [];
+    const pty = new FakeLogoutPty();
+    const ptyFactory: PtyFactory = {
+      spawn: () => {
+        startupEvents.push("spawn");
+        return pty;
+      }
+    };
+
+    await logoutAgyViaSlashCommand({
+      backend: {} as AgyCliBackend,
+      config: configFromEnv({ cwd: "/tmp", env: {} }),
+      ptyFactory,
+      startupLauncher: recordingStartupLauncher(startupEvents)
+    });
+
+    expect(pty.writes).toEqual(["/logout\r"]);
+    expect(startupEvents).toEqual(["acquire:auxiliary", "spawn", "release:auxiliary"]);
+  });
+});
+
+class FakeLogoutPty implements PtyProcess {
+  writes: string[] = [];
+  #exitListeners: Array<(event: { exitCode: number; signal?: number }) => void> = [];
+
+  write(data: string): void {
+    this.writes.push(data);
+    queueMicrotask(() => this.exit());
+  }
+
+  kill(): void {
+    this.exit();
+  }
+
+  onData(listener: (data: string) => void): { dispose(): void } {
+    queueMicrotask(() => listener("for shortcuts"));
+    return { dispose() {} };
+  }
+
+  onExit(listener: (event: { exitCode: number; signal?: number }) => void): { dispose(): void } {
+    this.#exitListeners.push(listener);
+    return { dispose() {} };
+  }
+
+  private exit(): void {
+    for (const listener of this.#exitListeners) listener({ exitCode: 0 });
+  }
+}
+
+function recordingStartupLauncher(events: string[]): AgyStartupLauncher {
+  return {
+    enabled: true,
+    acquire: (classification) => {
+      events.push(`acquire:${classification}`);
+      return {
+        release: () => events.push(`release:${classification}`)
+      };
+    }
+  };
+}

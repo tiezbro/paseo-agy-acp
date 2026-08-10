@@ -66,12 +66,38 @@
 
 ## v2 Admission Controller 开发状态
 
-v2.0.0.0 Admission Controller 已进入源码开发。它将为本机多个 connector
-提供统一准入、保守崩溃恢复和容量错误分类，不修改官方 Paseo 或 Antigravity
-endpoint。当前源码内核已包含加密持久载荷、稳定的 delivery outbox 与严格的
-旧状态预检，以及会脱敏的 provider 错误分类；当前发布版本尚未把该
-Controller 接入真实 prompt。未来使用的本地 key-store 会拒绝不安全的文件
-权限。
+v2.0.0.0 Admission Controller 已进入源码开发。当前默认禁用的基础层包含经过完整
+校验的 SQLite v10 ledger、带行身份认证的加密持久载荷、按用途独立派生的运行时
+密钥、原子 process identity + `dispatch_intent`、只产出证据的恢复层、SQLite ACP
+session、controller-owned outbox claim lease、sanitized HMAC event journal，以及
+显式的 at-least-once outbox ACK 路由。本地 key-store 会拒绝不安全的所有权、
+权限、链接和首次发布竞态。
+
+exact outbox ACK 会依据持久 claim 状态校验，因此 bridge 或 controller 重启后
+仍可幂等确认，且不会重发 payload 或业务 turn。process identity 一旦原子记录
+`dispatch_intent`，后续取消或 fence 校验失败只会保留为
+`dispatch_ambiguous`，绝不会自动回到安全重排路径。
+
+fake-child fresh-PTY canary 会验证启动 argv、环境变量、进程标题、临时路径和诊断
+信息均不包含业务 prompt；其关联证据使用 keyed HMAC。缺失、过期、不匹配或失败的
+证据都会阻断 dispatch。
+
+跨进程 startup permit 现在覆盖 auxiliary 命令与 resident PTY；heartbeat 过期只
+是观测证据，绝不是自动回收槽位的授权。异步 startup barrier 会同时核对 dispatch、
+session、outbox claim、startup permit 与 Linux process residue。串行 outbox pump
+只执行有界投递，不会重复 provider turn。
+队列超时会原子删除加密 prompt payload，同时保留用于阻止自动重放的终态 request
+记录。Linux process lifecycle 代码不再提供启动或 prompt 写入方法；不可逆业务
+prompt 写入仍只归 admission dispatcher 所有。
+Controller 错误仍保留 typed class，但 message 字符串不再包含持久 request、delivery
+或 lease 标识符。
+
+source-only production graph builder 要求 dispatch 与 recovery 使用同一个 SQLite
+startup launcher，并且 stable request identity、outbox ACK、fresh-PTY 认证证据和
+startup recovery barrier 全部通过后才暴露 dispatch surface。已安装的入口仍会拒绝
+启用 Admission；当前没有安装或切换 connector，没有执行真实 Antigravity provider
+测试，也没有批准生产并发。真实、版本专用的 fresh-PTY launcher certificate 与隔离
+验收仍是 release blocker。
 
 设计契约和发布门禁见
 [`docs/design/v2.0.0.0-admission-controller.md`](docs/design/v2.0.0.0-admission-controller.md)。

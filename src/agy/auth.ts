@@ -21,6 +21,7 @@ import {
   type PtyProcess
 } from "./cli.js";
 import { ensureAgyInstalled } from "./installer.js";
+import { launchAgyProcess, type AgyStartupLauncher } from "./startup-launcher.js";
 
 /** ACP method id for interactive terminal login (client runs agent binary with --login). */
 export const AUTH_METHOD_TERMINAL_LOGIN = "agy-login";
@@ -168,6 +169,8 @@ export async function runInteractiveAgyLogin(options: {
   argv?: string[];
   backend?: AgyCliBackend;
   spawnLogin?: InteractiveLoginSpawn;
+  /** Explicitly injected only; absent or disabled preserves direct login startup. */
+  startupLauncher?: AgyStartupLauncher;
   pollIntervalMs?: number;
   killGraceMs?: number;
 }): Promise<number> {
@@ -175,16 +178,25 @@ export async function runInteractiveAgyLogin(options: {
   const cwd = options.cwd ?? process.cwd();
   await ensureAgyInstalled({
     env,
-    warn: (message) => console.error(message)
+    warn: (message) => console.error(message),
+    startupLauncher: options.startupLauncher
   });
 
   const config = configFromEnv({ cwd, env, argv: options.argv ?? [] });
+  if (options.startupLauncher !== undefined) {
+    config.startupLauncher = options.startupLauncher;
+  }
   const backend = options.backend ?? new AgyCliBackend();
   const spawnLogin = options.spawnLogin ?? defaultInteractiveLoginSpawn;
   const pollIntervalMs = options.pollIntervalMs ?? LOGIN_POLL_INTERVAL_MS;
   const killGraceMs = options.killGraceMs ?? LOGIN_KILL_GRACE_MS;
 
-  const child = spawnLogin(config.agyPath, [], { cwd, env: config.env ?? env });
+  const child = launchAgyProcess(
+    config.startupLauncher,
+    "auxiliary",
+    () => spawnLogin(config.agyPath, [], { cwd, env: config.env ?? env }),
+    "child_process"
+  );
 
   let settled = false;
   let autoClosed = false;
@@ -242,6 +254,8 @@ export async function logoutAgyViaSlashCommand(options: {
   backend: AgyCliBackend;
   config: AgyCliConfig;
   ptyFactory?: PtyFactory;
+  /** Optional explicit override for the config-level local-start gate. */
+  startupLauncher?: AgyStartupLauncher;
 }): Promise<void> {
   const factory = options.ptyFactory ?? options.backend.ptyFactory ?? (await defaultPtyFactory());
   const env = {
@@ -254,12 +268,17 @@ export async function logoutAgyViaSlashCommand(options: {
   let idleTail = "";
   let exited = false;
 
-  const pty: PtyProcess = factory.spawn(options.config.agyPath, [], {
-    cwd: options.config.cwd,
-    env,
-    cols: 120,
-    rows: 40
-  });
+  const pty: PtyProcess = launchAgyProcess(
+    options.startupLauncher ?? options.config.startupLauncher,
+    "auxiliary",
+    () => factory.spawn(options.config.agyPath, [], {
+      cwd: options.config.cwd,
+      env,
+      cols: 120,
+      rows: 40
+    }),
+    "pty"
+  );
 
   const exitPromise = new Promise<{ exitCode: number }>((resolve) => {
     pty.onExit((event) => {

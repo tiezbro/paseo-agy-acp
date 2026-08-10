@@ -38,11 +38,23 @@ export interface StoredSession {
   updatedAt: string;
 }
 
+/**
+ * Persistence contract shared by the legacy JSON store and the SQLite runtime
+ * store. AcpAgent uses this contract so the established session API remains
+ * independent of the selected persistence backend.
+ */
+export interface SessionStoreBackend {
+  restore(sessionId: string): Promise<StoredSession | null>;
+  list(filter?: { cwd?: string | null }): Promise<Array<{ sessionId: string } & StoredSession>>;
+  persist(sessionId: string, session: StoredSession): Promise<void>;
+  delete(sessionId: string): Promise<boolean>;
+}
+
 interface DiskStore {
   sessions: Record<string, StoredSession>;
 }
 
-export class SessionStore {
+export class SessionStore implements SessionStoreBackend {
   #writeChain: Promise<void> = Promise.resolve();
   private readonly file: string;
 

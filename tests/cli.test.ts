@@ -19,6 +19,7 @@ import {
   type SpawnFactory,
   type SpawnOptions
 } from "../src/agy/cli.js";
+import type { AgyStartupLauncher } from "../src/agy/startup-launcher.js";
 import {
   canBridgeInteraction,
   interactionKeys,
@@ -893,12 +894,16 @@ describe("permission bridge", () => {
       // Fresh TUI owes a second idle marker before the first turn resolves.
       setTimeout(() => pty.emitData("? for shortcuts"), 60);
     });
-    const session = interactiveSession(dir, pty);
+    const startupEvents: string[] = [];
+    const session = interactiveSession(dir, pty, "3s", {
+      startupLauncher: recordingStartupLauncher(startupEvents)
+    });
 
     // First turn: fresh spawn, prompt rides in argv; PTY writes stay empty.
     await session.prompt("first", async () => {}, async () => "agy-allow-once");
     expect(pty.writes).toEqual([]);
     expect(pty.killed).toBe(false);
+    expect(startupEvents).toEqual(["acquire:resident_pty"]);
 
     // Second turn reuses the live TUI. The only PTY write must be the user's
     // own prompt under bracketed paste — never adapter prose or "continue".
@@ -909,7 +914,9 @@ describe("permission bridge", () => {
 
     await session.prompt("second", async () => {}, async () => "agy-allow-once");
     expect(pty.writes).toEqual(["\x1b[200~second\x1b[201~\r"]);
+    expect(startupEvents).toEqual(["acquire:resident_pty"]);
     await session.close();
+    expect(startupEvents).toEqual(["acquire:resident_pty", "release:resident_pty"]);
     fs.rmSync(dir, { recursive: true, force: true });
   });
 
@@ -1770,6 +1777,7 @@ describe("configFromEnv", () => {
     expect(config.sandbox).toBe(true);
     expect(config.skipPermissions).toBe(false);
     expect(config.promptInArgv).toBe(true);
+    expect(config.promptFreeDispatch).toBeUndefined();
     expect(config.autoInstall).toBe(false);
     expect(config.interactivePermissions).toBe(true);
   });
@@ -1821,23 +1829,37 @@ describe("listModels", () => {
 Fetching available models...
 gemini-3.5-flash-medium
 claude-opus-4-6-thinking
-`]);
+    `]);
     const calls: SpawnCall[] = [];
     const backend = new AgyCliBackend(fake.spawnFactory(calls));
+    const startupEvents: string[] = [];
 
-    const models = await backend.listModels(defaultConfig());
+    const models = await backend.listModels({
+      ...defaultConfig(),
+      startupLauncher: recordingStartupLauncher(startupEvents)
+    });
 
     expect(models).toEqual(["gemini-3.5-flash-medium", "claude-opus-4-6-thinking"]);
     expect(calls[0].command).toBe("agy");
     expect(calls[0].args).toEqual(["models"]);
+    expect(startupEvents).toEqual(["acquire:auxiliary", "release:auxiliary"]);
   });
 });
 
 describe("prompt", () => {
-  it("runs the prompt in argv mode and drains stdout without reading it", async () => {
+  it("preserves the legacy disabled argv dispatch path and drains stdout without reading it", async () => {
     const fake = new FakeProcess(["hello ", "world"]);
     const calls: SpawnCall[] = [];
-    const session = new AgyCliSession(defaultConfig(), fake.spawnFactory(calls));
+    const disabledLauncher: AgyStartupLauncher = {
+      enabled: false,
+      acquire: () => {
+        throw new Error("a disabled launcher must not acquire a permit");
+      }
+    };
+    const session = new AgyCliSession({
+      ...defaultConfig(),
+      startupLauncher: disabledLauncher
+    }, fake.spawnFactory(calls));
 
     const { updates, stopReason } = await collectUpdates(session, "hello");
 
@@ -1848,6 +1870,104 @@ describe("prompt", () => {
     expect(calls[0].args[calls[0].args.indexOf("--print") + 1]).toBe("hello");
     expect(fake.stdinText).toBe("");
     expect(fake.stdinEnded).toBe(true);
+    expect(calls[0].options.launchSpecification).toBeUndefined();
+  });
+
+  it("starts print turns with a model-turn permit", async () => {
+    const fake = new FakeProcess([]);
+    const calls: SpawnCall[] = [];
+    const startupEvents: string[] = [];
+    const spawn = fake.spawnFactory(calls);
+    const session = new AgyCliSession({
+      ...defaultConfig(),
+      startupLauncher: recordingStartupLauncher(startupEvents)
+    }, (command, args, options) => {
+      startupEvents.push("spawn");
+      return spawn(command, args, options);
+    });
+
+    await collectUpdates(session, "hello");
+
+    expect(calls).toHaveLength(1);
+    expect(startupEvents).toEqual(["acquire:model_turn", "spawn", "release:model_turn"]);
+  });
+
+  it("fails closed before spawning or invoking the removed CLI-owned prompt-free boundary", async () => {
+    const prompt = "prompt-secret-742";
+    const calls: SpawnCall[] = [];
+    const hookCalls: string[] = [];
+    const fake = new FakeProcess([]);
+    const session = new AgyCliSession({
+      ...defaultConfig(),
+      interactivePermissions: false,
+      promptFreeDispatch: {
+        enabled: true,
+        fence: {
+          requestId: "request-1",
+          leaseId: "lease-1",
+          generation: 7,
+          ownerInstanceId: "connector-1"
+        },
+        captureProcessIdentity: () => {
+          hookCalls.push("capture");
+          return { startToken: "boot-1:100" };
+        },
+        persistProcessIdentity: () => {
+          hookCalls.push("persist");
+          return { status: "recorded" };
+        },
+        recheckCancellation: () => {
+          hookCalls.push("recheck");
+          return { generationMatches: true, ownerMatches: true, cancelled: false };
+        },
+        commitDispatchIntent: () => {
+          hookCalls.push("commit");
+          return { status: "committed" };
+        },
+        writeInitialPrompt: () => {
+          hookCalls.push("write");
+          return { status: "accepted" };
+        }
+      }
+    }, fake.spawnFactory(calls));
+
+    await expect(collectUpdates(session, prompt)).rejects.toMatchObject({
+      state: "blocked",
+      reason: "dispatcher_owned_prompt_required"
+    });
+    expect(calls).toEqual([]);
+    expect(hookCalls).toEqual([]);
+    expect(fake.stdinText).toBe("");
+    expect(fake.stdinEnded).toBe(false);
+  });
+
+  it("keeps the existing prompt-in-argv PTY path fail closed for production prompt-free dispatch", async () => {
+    const prompt = "pty-prompt-secret";
+    const fake = new FakeProcess([]);
+    const calls: SpawnCall[] = [];
+    const session = new AgyCliSession({
+      ...defaultConfig(),
+      interactivePermissions: true,
+      promptFreeDispatch: {
+        enabled: true,
+        fence: {
+          requestId: "request-pty",
+          leaseId: "lease-pty",
+          generation: 1,
+          ownerInstanceId: "connector-1"
+        },
+        captureProcessIdentity: (child) => ({ pid: child.pid }),
+        persistProcessIdentity: () => ({ status: "recorded" }),
+        recheckCancellation: () => ({ generationMatches: true, ownerMatches: true, cancelled: false }),
+        commitDispatchIntent: () => ({ status: "committed" }),
+        writeInitialPrompt: () => ({ status: "ambiguous" })
+      }
+    }, fake.spawnFactory(calls));
+
+    await expect(session.prompt(prompt, async () => {}, async () => "agy-allow-once"))
+      .rejects.toMatchObject({ state: "blocked", reason: "dispatcher_owned_prompt_required" });
+    expect(calls).toEqual([]);
+    expect(fake.stdinText).toBe("");
   });
 
   it("awaits print-mode reconciled filesystem write-through before ending the turn", async () => {
@@ -2278,30 +2398,35 @@ interface FakeProcessOptions {
   exitCode?: number | null;
   blockStdout?: boolean;
   spawnError?: Error & { code?: string };
+  onStdinWrite?: (text: string) => void;
 }
 
 class FakeProcess extends EventEmitter {
   stdinText = "";
   stdinEnded = false;
-  stdin = new Writable({
-    write: (chunk, _encoding, callback) => {
-      this.stdinText += chunk.toString();
-      callback();
-    },
-    final: (callback) => {
-      this.stdinEnded = true;
-      callback();
-    }
-  });
+  stdin: Writable;
   stdout: Readable;
   stderr: Readable;
   exitCode: number | null;
+  signalCode: NodeJS.Signals | null = null;
   pid = 1;
   killedWith?: string;
   spawnError?: Error & { code?: string };
 
   constructor(chunks: string[], options: FakeProcessOptions = {}) {
     super();
+    this.stdin = new Writable({
+      write: (chunk, _encoding, callback) => {
+        const text = chunk.toString();
+        this.stdinText += text;
+        options.onStdinWrite?.(text);
+        callback();
+      },
+      final: (callback) => {
+        this.stdinEnded = true;
+        callback();
+      }
+    });
     this.spawnError = options.spawnError;
     this.exitCode = options.exitCode === undefined ? 0 : options.exitCode;
     this.stdout = options.blockStdout ? new Readable({ read() {} }) : Readable.from(chunks);
@@ -2313,6 +2438,7 @@ class FakeProcess extends EventEmitter {
 
   kill(signal?: string) {
     this.killedWith = signal;
+    this.signalCode = typeof signal === "string" ? signal as NodeJS.Signals : "SIGTERM";
     this.exitCode = signal === "SIGKILL" ? -9 : -15;
     this.stdout.push(null);
     this.emit("exit", this.exitCode, signal ?? "SIGTERM");
@@ -2336,10 +2462,27 @@ function pendingToolRow(name: string, rawInputJson = '{"CommandLine":"echo hi"}'
   }) };
 }
 
-function interactiveSession(dir: string, pty: FakePty, printTimeout = "3s") {
-  return new AgyCliSession({ ...defaultConfig(), conversationsDir: dir, interactivePermissions: true, printTimeout }, undefined, {
+function interactiveSession(
+  dir: string,
+  pty: FakePty,
+  printTimeout = "3s",
+  config: Partial<AgyCliConfig> = {}
+) {
+  return new AgyCliSession({ ...defaultConfig(), ...config, conversationsDir: dir, interactivePermissions: true, printTimeout }, undefined, {
     spawn: () => { pty.start(); return pty; }
   } as PtyFactory);
+}
+
+function recordingStartupLauncher(events: string[]): AgyStartupLauncher {
+  return {
+    enabled: true,
+    acquire: (classification) => {
+      events.push(`acquire:${classification}`);
+      return {
+        release: () => events.push(`release:${classification}`)
+      };
+    }
+  };
 }
 
 function permissionWriteChunks(keys: string): string[] {

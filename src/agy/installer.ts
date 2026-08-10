@@ -7,6 +7,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { spawn } from "node:child_process";
 import { once } from "node:events";
+import { launchAgyProcess, type AgyStartupLauncher } from "./startup-launcher.js";
 
 export const DEFAULT_AGY_RELEASES_API =
   "https://api.github.com/repos/google-antigravity/antigravity-cli/releases/latest";
@@ -20,6 +21,8 @@ export interface EnsureAgyOptions {
   log?: (message: string) => void;
   warn?: (message: string) => void;
   fetchImpl?: typeof fetch;
+  /** Explicitly injected only; absent or disabled preserves legacy extraction startup. */
+  startupLauncher?: AgyStartupLauncher;
 }
 
 function configuredAgyPath(env: NodeJS.ProcessEnv): string | undefined {
@@ -166,9 +169,9 @@ export async function ensureAgyInstalled(options: EnsureAgyOptions = {}): Promis
     const extractDir = path.join(tmpDir, "extracted");
     fs.mkdirSync(extractDir);
     if (asset.name.endsWith(".zip")) {
-      await extractZip(archivePath, extractDir);
+      await extractZip(archivePath, extractDir, options.startupLauncher);
     } else {
-      await extractTarGz(archivePath, extractDir);
+      await extractTarGz(archivePath, extractDir, options.startupLauncher);
     }
 
     const found = findBinary(extractDir, BINARY_NAMES);
@@ -234,26 +237,43 @@ function sha256Hex(bytes: Buffer): string {
   return crypto.createHash("sha256").update(bytes).digest("hex");
 }
 
-async function extractTarGz(archive: string, destDir: string): Promise<void> {
-  await runCommand("tar", ["-xzf", archive, "-C", destDir]);
+async function extractTarGz(
+  archive: string,
+  destDir: string,
+  startupLauncher?: AgyStartupLauncher
+): Promise<void> {
+  await runCommand("tar", ["-xzf", archive, "-C", destDir], startupLauncher);
 }
 
-async function extractZip(archive: string, destDir: string): Promise<void> {
+async function extractZip(
+  archive: string,
+  destDir: string,
+  startupLauncher?: AgyStartupLauncher
+): Promise<void> {
   if (process.platform === "win32") {
     await runCommand("powershell", [
       "-NoProfile",
       "-NonInteractive",
       "-Command",
       `Expand-Archive -LiteralPath '${archive}' -DestinationPath '${destDir}' -Force`
-    ]);
+    ], startupLauncher);
     return;
   }
-  await runCommand("tar", ["-xf", archive, "-C", destDir]);
+  await runCommand("tar", ["-xf", archive, "-C", destDir], startupLauncher);
 }
 
-async function runCommand(command: string, args: string[]): Promise<void> {
-  const child = spawn(command, args, { stdio: ["ignore", "ignore", "pipe"] });
-  const [code] = await once(child, "exit") as [number | null];
+async function runCommand(
+  command: string,
+  args: string[],
+  startupLauncher?: AgyStartupLauncher
+): Promise<void> {
+  const child = launchAgyProcess(
+    startupLauncher,
+    "auxiliary",
+    () => spawn(command, args, { stdio: ["ignore", "ignore", "pipe"] }),
+    "child_process"
+  );
+  const [code] = await once(child, "close") as [number | null];
   if (code) {
     const stderr = child.stderr ? await readStream(child.stderr) : "";
     throw new Error(`${command} exited ${code}: ${stderr.trim()}`);

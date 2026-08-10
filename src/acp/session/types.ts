@@ -26,7 +26,7 @@ export interface QueuedPromptV2 {
   version: "v2";
   params: import("@agentclientprotocol/sdk/experimental/v2").PromptRequest;
   client: import("@agentclientprotocol/sdk/experimental/v2").AgentContext;
-  /** Preparation starts at admission, but the placeholder enters FIFO first. */
+  /** Legacy preparation starts at local queue admission; global admission defers it until the TurnClaim exists. */
   ready: Promise<void>;
   promptText?: string;
   userMessageId?: string;

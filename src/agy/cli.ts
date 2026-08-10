@@ -6,10 +6,42 @@ import { chmodSync, existsSync, statSync } from "node:fs";
 import * as os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import type {
+  AgyDispatchCancellationRecheck,
+  AgyDispatchFence,
+  AgyDispatchIdentityPersistenceResult,
+  AgyDispatchIntentCommitResult,
+  AgyDispatchProcessRecord,
+  AgyDispatchWriteResult
+} from "./dispatch-boundary.js";
+import {
+  isVerifiedAgyBinary,
+  type AgyLaunchSpecification,
+  type VerifiedAgyBinary
+} from "./launch-spec.js";
+import {
+  startAgyPromptFreeProcess,
+  type AgyPromptFreeProcess,
+  type AgyPromptFreeProcessExit,
+  type AgyPromptFreeProcessWriteResult
+} from "./prompt-free-process.js";
+import { launchAgyProcess, type AgyStartupLauncher } from "./startup-launcher.js";
 import { conversationSnapshot } from "./db/scan.js";
 import { defaultInstallBinDir, ensureAgyInstalled } from "./installer.js";
 import { StreamPoller } from "./db/streaming.js";
 import type { StepRow } from "./db/types.js";
+import {
+  createExactConversationBinder,
+  type ExactConversationBinding
+} from "./db/exact-conversation-binder.js";
+import {
+  createSqliteProviderSnapshotReader,
+  type SqliteProviderSnapshotReader
+} from "./db/provider-observer.js";
+import {
+  observeAgyStreamJsonIdentity,
+  type AgyStreamJsonIdentityChannel
+} from "./stream-json-identity.js";
 import { diffBlocks, revertEditToolCall, type DiffBlock } from "./edit/revert.js";
 import {
   primeEditReadThroughClient,
@@ -44,6 +76,18 @@ const TRAILING_POLL_ATTEMPTS = 3;
 const TRAILING_POLL_DELAY_MS = 100;
 const PERMISSION_RENDER_SETTLE_MS = 20;
 const PERMISSION_REDRAW_TIMEOUT_MS = 500;
+// No entry is added until a real prompt-free PTY spawn exists. The current
+// interactive PTY argv carries the business prompt and must never register.
+const cliProducedPromptFreePtyLaunches = new WeakSet<object>();
+
+/**
+ * A canary source must have been registered by an actual prompt-free PTY
+ * launcher in this module. Generic specs and stdin print launches are not
+ * sources, even when they carry a verified binary identity.
+ */
+export function isCliProducedPromptFreePtyLaunch(value: unknown): value is AgyLaunchSpecification {
+  return typeof value === "object" && value !== null && cliProducedPromptFreePtyLaunches.has(value);
+}
 
 /** Signature of the permission decision agy has recorded for a gated step.
  *  A re-armed status-9 prompt (e.g. the next segment of `a && b`) changes this
@@ -121,6 +165,49 @@ export interface PtyProcess {
 export interface PtyFactory {
   spawn(command: string, args: string[], options: { cwd: string; env?: NodeJS.ProcessEnv; cols: number; rows: number }): PtyProcess;
 }
+
+/**
+ * @deprecated Compatibility-only shape for the removed CLI-owned dispatch
+ * boundary. `enabled: true` fails closed before spawning or invoking any hook;
+ * use `startPromptFreeProcess` and let AdmissionPromptDispatcher own the
+ * durable identity, intent, and irreversible write.
+ */
+export interface AgyPromptFreeDispatchConfig<TProcessIdentity = unknown> {
+  enabled: boolean;
+  fence: AgyDispatchFence;
+  captureProcessIdentity(process: { pid?: number }): TProcessIdentity | null | undefined;
+  persistProcessIdentity(
+    record: AgyDispatchProcessRecord<TProcessIdentity>
+  ): AgyDispatchIdentityPersistenceResult;
+  recheckCancellation(
+    record: AgyDispatchProcessRecord<TProcessIdentity>
+  ): AgyDispatchCancellationRecheck;
+  commitDispatchIntent(
+    record: AgyDispatchProcessRecord<TProcessIdentity>
+  ): AgyDispatchIntentCommitResult;
+  /**
+   * Performs the one prompt write after a durable commit. It may return
+   * accepted only with synchronous proof; undefined, partial, or thrown
+   * writes become terminal dispatch_ambiguous.
+   */
+  writeInitialPrompt(child: SpawnedProcess, prompt: string): AgyDispatchWriteResult;
+}
+
+/** Terminal outcome for an enabled prompt-free dispatch that could not safely proceed. */
+export class AgyPromptFreeDispatchError extends Error {
+  readonly state: "blocked" | "dispatch_ambiguous";
+  readonly reason?: string;
+
+  constructor(state: "blocked" | "dispatch_ambiguous", reason?: string) {
+    super(state === "dispatch_ambiguous"
+      ? "agy prompt dispatch is ambiguous; the prompt will not be retried automatically"
+      : `agy prompt dispatch was blocked${reason ? `: ${reason}` : ""}`);
+    this.name = "AgyPromptFreeDispatchError";
+    this.state = state;
+    this.reason = reason;
+  }
+}
+
 export type PermissionCallback = (
   toolCall: SessionUpdate,
   context: { toolName: string; questionIndex?: number }
@@ -129,6 +216,8 @@ export type PermissionCallback = (
 export interface SpawnOptions {
   cwd: string;
   env?: NodeJS.ProcessEnv;
+  /** Immutable startup proof for the prompt-free production launch path. */
+  launchSpecification?: AgyLaunchSpecification;
 }
 
 export type SpawnFactory = (
@@ -175,6 +264,15 @@ export interface AgyCliConfig {
   interactivePermissions: boolean;
   logFile?: string;
   promptInArgv: boolean;
+  /**
+   * Explicit programmatic input issued from a successful exact `agy --version`
+   * probe. configFromEnv intentionally never supplies it.
+   */
+  verifiedAgyBinary?: VerifiedAgyBinary;
+  /** @deprecated Compatibility-only; enabled configurations fail closed. */
+  promptFreeDispatch?: AgyPromptFreeDispatchConfig;
+  /** Explicitly injected only; configFromEnv never enables a local-start gate. */
+  startupLauncher?: AgyStartupLauncher;
   autoInstall: boolean;
   installBinDir?: string;
   modelList: string[];
@@ -196,6 +294,36 @@ export interface AgyCliConfigInput {
   argv?: string[];
   /** Override the conversations directory (defaults to ~/.gemini/antigravity-cli/conversations). */
   conversationsDir?: string;
+}
+
+/**
+ * Exact binding inputs for one v2 SQLite-primary connector turn. `reader` is
+ * injectable so callers can test this seam without a provider process or a
+ * real conversation database.
+ */
+export interface AgyExactConversationTurnOptions {
+  readonly expectedConversationId: string | null;
+  readonly minimumCursor: number;
+  readonly signal?: AbortSignal;
+  readonly reader?: SqliteProviderSnapshotReader;
+  readonly now?: () => number;
+  readonly timeoutMs?: number;
+  readonly pollIntervalMs?: number;
+  readonly wait?: (milliseconds: number, signal?: AbortSignal) => Promise<void>;
+}
+
+/**
+ * The v2 connector-facing process capability. It intentionally exposes no
+ * stdout or child-process object: stream-json is identity-only, and activity
+ * plus terminal evidence are available only through `binding.observer`.
+ */
+export interface AgyExactConversationTurn {
+  readonly processId: number | undefined;
+  readonly promptChannel: "stdin";
+  readonly exit: Promise<AgyPromptFreeProcessExit>;
+  readonly binding: Promise<ExactConversationBinding>;
+  writeBusinessPrompt(): AgyPromptFreeProcessWriteResult;
+  cancel(): void;
 }
 
 export class AgyCliError extends Error {
@@ -290,12 +418,142 @@ export class AgyCliSession {
   }
 
   commandForPrompt(prompt: string): string[] {
+    return this.commandForPromptValue(prompt, this.config.promptInArgv);
+  }
+
+  /** The request-scoped stdin primitive owns no business write at startup. */
+  private commandForPromptFreeProcess(): string[] {
+    return [
+      ...this.commandForPromptValue(undefined, false),
+      "--output-format",
+      "stream-json"
+    ];
+  }
+
+  /**
+   * Starts the exact verified stdin child without writing the business prompt.
+   * The caller receives the once-only capability and must consume it only after
+   * its own durable admission and dispatch-intent checks have succeeded.
+   */
+  startPromptFreeProcess(businessPrompt: string): AgyPromptFreeProcess<SpawnedProcess> {
+    return this.startPromptFreeProcessInternal(businessPrompt);
+  }
+
+  /**
+   * Starts a v2 SQLite-primary connector turn. The official stream-json
+   * channel is attached inside the spawn callback, before the business prompt
+   * can be written, and supplies only the exact conversation ID to the binder.
+   */
+  startExactConversationTurn(
+    businessPrompt: string,
+    options: AgyExactConversationTurnOptions
+  ): AgyExactConversationTurn {
+    const reader = options.reader ?? createSqliteProviderSnapshotReader(this.config.conversationsDir);
+    const binder = createExactConversationBinder({
+      reader,
+      ...(options.now === undefined ? {} : { now: options.now }),
+      ...(options.timeoutMs === undefined ? {} : { timeoutMs: options.timeoutMs }),
+      ...(options.pollIntervalMs === undefined ? {} : { pollIntervalMs: options.pollIntervalMs }),
+      ...(options.wait === undefined ? {} : { wait: options.wait })
+    });
+    let identityChannel: AgyStreamJsonIdentityChannel | undefined;
+    const process = this.startPromptFreeProcessInternal(businessPrompt, (stdout) => {
+      identityChannel = observeAgyStreamJsonIdentity(stdout);
+    });
+    if (identityChannel === undefined) {
+      process.cancel();
+      throw new Error("prompt-free process did not expose a stream-json identity channel");
+    }
+
+    const channel = identityChannel;
+    const binding = binder.bind({
+      identityChannel: channel,
+      expectedConversationId: options.expectedConversationId,
+      minimumCursor: options.minimumCursor,
+      signal: options.signal
+    });
+    // The dispatcher consumes this promise. Mark it observed here as well so a
+    // failed init cannot become an unhandled rejection before the dispatcher
+    // reaches the returned capability.
+    void binding.catch(() => {});
+
+    const processId = typeof process.child.pid === "number" &&
+      Number.isSafeInteger(process.child.pid) && process.child.pid > 0
+      ? process.child.pid
+      : undefined;
+
+    return Object.freeze({
+      processId,
+      promptChannel: process.promptChannel,
+      exit: process.exit,
+      binding,
+      writeBusinessPrompt: () => process.writeBusinessPrompt(),
+      cancel: () => {
+        channel.close();
+        process.cancel();
+      }
+    });
+  }
+
+  private startPromptFreeProcessInternal(
+    businessPrompt: string,
+    observeStdout?: (stdout: NodeJS.ReadableStream) => void
+  ): AgyPromptFreeProcess<SpawnedProcess> {
+    const command = this.commandForPromptFreeProcess();
+    try {
+      const process = startAgyPromptFreeProcess({
+        verifiedAgyBinary: this.verifiedAgyBinaryForPromptFreeProcess(),
+        argv: command,
+        environment: this.promptFreeEnvironment(businessPrompt),
+        cwd: this.config.cwd,
+        processTitle: "agy-acp:prompt-free-print",
+        temporaryFilePath: path.join(os.tmpdir(), "paseo-agy-acp", "prompt-free-print.launch"),
+        launcherDiagnostics: [
+          "agy-acp launch=prompt-free-print",
+          "transport=stdin"
+        ],
+        businessPrompt,
+        start: (launch) => launchAgyProcess(
+          this.config.startupLauncher,
+          "model_turn",
+          () => {
+            const [program, ...args] = launch.argv;
+            if (!program) throw new Error("prompt-free launch specification has no executable");
+            const child = this.spawnProcess(program, args, {
+              cwd: launch.cwd,
+              env: { ...launch.environment },
+              launchSpecification: launch
+            });
+            try {
+              observeStdout?.(child.stdout);
+            } catch {
+              try {
+                if (globalThis.process.platform === "win32") child.kill();
+                else child.kill("SIGINT");
+              } catch {}
+              throw new Error("failed to attach stream-json identity reader");
+            }
+            return child;
+          }
+        )
+      });
+      this.#process = process.child;
+      void process.exit.then(() => {
+        if (this.#process === process.child) this.#process = undefined;
+      });
+      return process;
+    } catch (error) {
+      throw this.errorForSpawnFailure(command, error as NodeJS.ErrnoException);
+    }
+  }
+
+  private commandForPromptValue(prompt: string | undefined, includePrompt: boolean): string[] {
     const command = [
       this.config.agyPath,
       "--print"
     ];
 
-    if (this.config.promptInArgv) {
+    if (includePrompt && prompt !== undefined) {
       command.push(prompt);
     }
 
@@ -371,6 +629,12 @@ export class AgyCliSession {
     elicitationCap?: ClientElicitationCapability
   ): Promise<PromptOutcome> {
     this.#lastPromptUserStepIdxs = [];
+    // The former CLI-owned boundary combined persistence, intent commit, and
+    // the irreversible write. It is retained only as a compatibility config
+    // surface and must never become a production composition path again.
+    if (this.config.promptFreeDispatch?.enabled === true) {
+      throw new AgyPromptFreeDispatchError("blocked", "dispatcher_owned_prompt_required");
+    }
     if (this.shouldUseInteractivePermissions() && !onPermission) {
       throw new Error("interactive permissions require a permission callback");
     }
@@ -424,7 +688,12 @@ export class AgyCliSession {
       const factory = this.ptyFactory ?? await defaultPtyFactory();
       if (this.#cancelled) { this.#cancelTurn = undefined; return { stopReason: "cancelled" }; }
       const [program, ...args] = this.interactiveCommandForPrompt(prompt);
-      this.#pty = factory.spawn(program, args, { ...this.spawnOptions(), cols: 120, rows: 40 });
+      this.#pty = launchAgyProcess(
+        this.config.startupLauncher,
+        "resident_pty",
+        () => factory.spawn(program, args, { ...this.spawnOptions(), cols: 120, rows: 40 }),
+        "pty"
+      );
       freshPty = true;
       this.#ptyConfig = signature;
       this.#ptyOutput = "";
@@ -922,13 +1191,7 @@ export class AgyCliSession {
     }
     if (this.#cancelled) return { stopReason: "cancelled" };
 
-    let child: SpawnedProcess;
-    try {
-      child = this.spawnProcess(program, args, this.spawnOptions());
-    } catch (error) {
-      throw this.errorForSpawnFailure(command, error as NodeJS.ErrnoException);
-    }
-    this.#process = child;
+    const child = this.startLegacyPrintProcess(command, program, args);
     // Cancel may have landed in the gap between snapshot and spawn assignment.
     if (this.#cancelled) {
       if (process.platform === "win32") child.kill();
@@ -1081,6 +1344,20 @@ export class AgyCliSession {
     ]);
   }
 
+  private startLegacyPrintProcess(command: string[], program: string, args: string[]): SpawnedProcess {
+    try {
+      const child = launchAgyProcess(
+        this.config.startupLauncher,
+        "model_turn",
+        () => this.spawnProcess(program, args, this.spawnOptions())
+      );
+      this.#process = child;
+      return child;
+    } catch (error) {
+      throw this.errorForSpawnFailure(command, error as NodeJS.ErrnoException);
+    }
+  }
+
   private shouldInstallAfterError(error: unknown): boolean {
     return this.config.autoInstall &&
       this.config.agyPath === "agy" &&
@@ -1093,7 +1370,8 @@ export class AgyCliSession {
     const installed = await ensureAgyInstalled({
       env: this.config.env,
       installBinDir: this.config.installBinDir,
-      warn: (message) => console.error(message)
+      warn: (message) => console.error(message),
+      startupLauncher: this.config.startupLauncher
     });
     if (!installed) {
       throw new AgyCliError(
@@ -1109,6 +1387,36 @@ export class AgyCliSession {
   private spawnOptions(): SpawnOptions {
     const env = this.spawnEnv();
     return env ? { cwd: this.config.cwd, env } : { cwd: this.config.cwd };
+  }
+
+  private verifiedAgyBinaryForPromptFreeProcess(): VerifiedAgyBinary {
+    const identity = this.config.verifiedAgyBinary;
+    if (identity === undefined) {
+      throw new Error("prompt-free process requires a verified identity for the configured agy binary");
+    }
+    if (!isVerifiedAgyBinary(identity, this.config.agyPath)) {
+      throw new Error("prompt-free process requires a verified identity for the configured agy binary");
+    }
+    return identity;
+  }
+
+  /**
+   * Prompt-free startup uses an explicit copied environment so an accidental
+   * prompt-bearing value cannot be inherited by the child process.
+   */
+  private promptFreeEnvironment(prompt: string): Record<string, string> {
+    const source = this.spawnEnv() ?? process.env;
+    const env: Record<string, string> = {};
+    for (const [key, value] of Object.entries(source)) {
+      if (
+        prompt.length > 0 &&
+        (key.includes(prompt) || value?.includes(prompt))
+      ) {
+        continue;
+      }
+      if (typeof value === "string") env[key] = value;
+    }
+    return env;
   }
 
   private spawnEnv(): NodeJS.ProcessEnv | undefined {
@@ -1302,11 +1610,39 @@ export class AgyCliBackend {
     return new AgyCliSession(config, this.spawnProcess, this.ptyFactory);
   }
 
+  /**
+   * Starts the dispatcher-owned prompt-free stdin primitive without consuming
+   * its business-prompt capability. The caller owns persistence, intent, and
+   * the sole later write through the returned handle.
+   */
+  startPromptFreeProcess(
+    config: AgyCliConfig,
+    businessPrompt: string
+  ): AgyPromptFreeProcess<SpawnedProcess> {
+    return new AgyCliSession(config, this.spawnProcess, this.ptyFactory)
+      .startPromptFreeProcess(businessPrompt);
+  }
+
+  /** Starts the no-stdout v2 SQLite-primary turn capability for one request. */
+  startExactConversationTurn(
+    config: AgyCliConfig,
+    businessPrompt: string,
+    options: AgyExactConversationTurnOptions
+  ): AgyExactConversationTurn {
+    return new AgyCliSession(config, this.spawnProcess, this.ptyFactory)
+      .startExactConversationTurn(businessPrompt, options);
+  }
+
   async listModels(config: AgyCliConfig): Promise<string[]> {
     const command = [config.agyPath, "models"];
     let child: SpawnedProcess;
     try {
-      child = this.spawnProcess(command[0], command.slice(1), { cwd: config.cwd, env: config.env });
+      child = launchAgyProcess(
+        config.startupLauncher,
+        "auxiliary",
+        () => this.spawnProcess(command[0], command.slice(1), { cwd: config.cwd, env: config.env }),
+        "child_process"
+      );
     } catch (error) {
       throw errorForSpawnFailure(command, error as NodeJS.ErrnoException);
     }

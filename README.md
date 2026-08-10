@@ -67,14 +67,46 @@ contributors. All credit for the original ACP adapter architecture belongs to th
 
 ## v2 Admission Controller Development
 
-The v2.0.0.0 Admission Controller is under source development. It will add
-local cross-connector admission, conservative crash recovery, and typed
-capacity errors without changing official Paseo or Antigravity endpoints.
-The current source-only core includes encrypted durable payloads, a stable
-delivery outbox, strict legacy-state preflight, and redacting typed provider
-error classification. Its future runtime key-store rejects unsafe file
-permissions. The current release does not enable this controller for live
-prompts.
+The v2.0.0.0 Admission Controller is under source development. The current
+disabled-by-default foundation includes a verified SQLite v10 ledger,
+encrypted durable payloads with row-bound authentication, purpose-separated
+runtime keys, atomic process identity plus `dispatch_intent`, proof-only
+recovery, SQLite ACP sessions, controller-owned outbox claim leases, a
+sanitized HMAC event journal, and an explicit at-least-once outbox ACK route.
+The local key store rejects unsafe ownership, permissions, links, and
+publication races.
+
+Exact outbox acknowledgements are checked against durable claim state, so an
+ACK remains idempotent after a bridge or controller restart without resending
+the payload. Once process identity persistence has atomically recorded
+`dispatch_intent`, any later cancellation or fence failure remains
+`dispatch_ambiguous` and is never automatically requeued.
+
+A fake-child fresh-PTY canary verifies that prompt content is absent from
+startup argv, environment, process title, temporary paths, and diagnostics.
+Its prompt correlation uses keyed HMAC evidence; absent, stale, mismatched, or
+failed evidence blocks dispatch.
+
+Cross-process startup permits now cover auxiliary commands and resident PTYs;
+heartbeat expiry is evidence, never automatic permission to reclaim a slot.
+An asynchronous startup barrier reconciles dispatch, session, outbox claim,
+startup permit, and Linux process residue inventories. A serialized outbox
+pump performs bounded delivery work but never repeats the provider turn.
+Queue timeout atomically erases its encrypted prompt payload while retaining a
+terminal request record that blocks automatic replay. Linux process lifecycle
+code has no startup or prompt-write method; the admission dispatcher remains
+the sole owner of the irreversible business prompt write.
+Controller errors retain typed classes but omit durable request, delivery, and
+lease identifiers from message strings.
+
+A source-only production graph builder requires one exact SQLite startup
+launcher for dispatch and recovery, negotiated stable request identity and
+outbox ACK, authenticated fresh-PTY evidence, and an empty startup recovery
+barrier before it exposes any dispatch surface. The installed entrypoint still
+rejects enabled Admission configuration. No new connector has been installed,
+no live Antigravity provider has been tested, and production concurrency is not
+approved. A real version-specific fresh-PTY launcher certificate and isolated
+acceptance remain release blockers.
 
 The design contract and release gates are in
 [`docs/design/v2.0.0.0-admission-controller.md`](docs/design/v2.0.0.0-admission-controller.md).

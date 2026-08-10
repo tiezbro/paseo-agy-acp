@@ -2,7 +2,7 @@
 // Docs: https://agentclientprotocol.com/protocol/v1/session-delete
 
 import type { DeleteSessionRequest, DeleteSessionResponse } from "@agentclientprotocol/sdk";
-import type { SessionStore } from "./store.js";
+import type { SessionStoreBackend } from "./store.js";
 import type { SessionState } from "./types.js";
 import { cancelQueuedPrompts } from "./cancel.js";
 import { turnsOf, type TurnScheduler } from "./turn-scheduler.js";
@@ -21,7 +21,7 @@ export interface SessionDeleteTarget {
 export async function handleDeleteSession(
   params: DeleteSessionRequest,
   activeSessions: Map<string, SessionDeleteTarget>,
-  store: SessionStore
+  store: SessionStoreBackend
 ): Promise<DeleteSessionResponse> {
   const session = activeSessions.get(params.sessionId);
   activeSessions.delete(params.sessionId);

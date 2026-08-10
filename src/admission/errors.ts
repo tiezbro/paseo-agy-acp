@@ -38,7 +38,6 @@ export function classifyProviderFailure(input: ProviderFailureInput): Classified
   const code = safeSignal(input.code);
   const reason = safeSignal(input.reason);
 
-  if (input.timeout === true) return classified("timeout", httpStatus, code, reason);
   if (httpStatus === 503 && (isCapacitySignal(code) || isCapacitySignal(reason))) {
     return classified("provider_capacity", httpStatus, code, reason);
   }
@@ -52,6 +51,7 @@ export function classifyProviderFailure(input: ProviderFailureInput): Classified
     return classified("permission", httpStatus, code, reason);
   }
   if (httpStatus !== undefined) return classified("transport", httpStatus, undefined, undefined);
+  if (input.timeout === true) return classified("timeout", httpStatus, code, reason);
   return classified("unknown", undefined, undefined, undefined);
 }
 
