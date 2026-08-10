@@ -98,6 +98,10 @@ code has no startup or prompt-write method; the admission dispatcher remains
 the sole owner of the irreversible business prompt write.
 Controller errors retain typed classes but omit durable request, delivery, and
 lease identifiers from message strings.
+Concurrent connectors may initialize the active-session registry together.
+The registry retries only bounded SQLite `BUSY`/`LOCKED` contention in its
+idempotent WAL/schema setup; incompatible or damaged schemas still fail closed,
+and this initialization retry can never replay a business prompt.
 
 A source-only production graph builder requires one exact SQLite startup
 launcher for dispatch and recovery, negotiated stable request identity and

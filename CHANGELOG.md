@@ -126,6 +126,11 @@ All notable changes to `paseo-agy-acp` are recorded here.
 - Minimized controller error strings after audit by removing request,
   delivery, and lease identifiers while retaining typed error classes for
   callers.
+- Hardened first-open active-session registry initialization against concurrent
+  connectors. Only SQLite `BUSY`/`LOCKED` contention during idempotent WAL,
+  table, and index setup receives a short bounded retry; schema mismatch,
+  corruption, and every non-contention error still fail closed, and business
+  prompts are never replayed.
 
 ### Not Yet Enabled
 
@@ -152,6 +157,8 @@ All notable changes to `paseo-agy-acp` are recorded here.
   audit repair.
 - A final 78-test controller and sensitive-data matrix run passed after the
   follow-up audit identifier-minimization finding was closed.
+- The real two-process active-session registry test passed 10 consecutive
+  focused runs after its concurrent first-open initialization repair.
 - No real Antigravity process, installed connector, Paseo daemon, tag, push, or
   release was used for this source-development verification.
 

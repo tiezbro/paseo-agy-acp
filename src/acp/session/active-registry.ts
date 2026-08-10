@@ -11,6 +11,9 @@ const OWNER_INSTANCE_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][
 const BOOT_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const ISO_UTC_TIMESTAMP_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
 const POSITIVE_DECIMAL_PATTERN = /^[1-9][0-9]*$/;
+const SQLITE_INITIALIZATION_RETRY_LIMIT = 8;
+const SQLITE_INITIALIZATION_RETRY_DELAY_MS = 5;
+const sqliteInitializationRetrySignal = new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT));
 
 const TERMINAL_STATES = ["completed", "failed", "cancelled"] as const;
 
@@ -177,45 +180,7 @@ export class ActiveSessionRegistry {
     try {
       db = new Database(databasePath);
       db.pragma("busy_timeout = 5000");
-      db.pragma("journal_mode = WAL");
-      db.pragma("synchronous = FULL");
-      db.exec(`
-        CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
-          request_id TEXT PRIMARY KEY NOT NULL,
-          agent_id TEXT NOT NULL,
-          session_id TEXT NOT NULL,
-          conversation_id TEXT,
-          conversation_cursor INTEGER NOT NULL,
-          connector_owner_instance_id TEXT NOT NULL,
-          connector_created_at TEXT NOT NULL,
-          connector_boot_id TEXT NOT NULL,
-          connector_pid INTEGER NOT NULL,
-          connector_start_time_ticks TEXT NOT NULL,
-          connector_pid_namespace_inode INTEGER NOT NULL,
-          connector_ppid INTEGER NOT NULL,
-          connector_pgrp INTEGER NOT NULL,
-          connector_session INTEGER NOT NULL,
-          lease_generation INTEGER NOT NULL CHECK (lease_generation > 0),
-          terminal_state TEXT CHECK (terminal_state IS NULL OR terminal_state IN ('completed', 'failed', 'cancelled')),
-          archived_at INTEGER,
-          created_at INTEGER NOT NULL,
-          updated_at INTEGER NOT NULL,
-          CHECK (
-            (conversation_id IS NULL AND conversation_cursor = -1)
-            OR (conversation_id IS NOT NULL AND conversation_cursor >= 0)
-          ),
-          CHECK (archived_at IS NULL OR terminal_state IS NOT NULL)
-        );
-      `);
-      assertCanonicalTable(db);
-      db.exec(`
-        CREATE UNIQUE INDEX IF NOT EXISTS active_antigravity_sessions_one_inflight_session
-          ON ${TABLE_NAME} (agent_id ASC, session_id ASC)
-          WHERE terminal_state IS NULL AND archived_at IS NULL;
-        CREATE INDEX IF NOT EXISTS active_antigravity_sessions_archived
-          ON ${TABLE_NAME} (archived_at ASC, request_id ASC)
-          WHERE archived_at IS NOT NULL;
-      `);
+      initializeRegistrySchema(db);
 
       this.#db = db;
       this.#insert = db.prepare(
@@ -433,6 +398,76 @@ export class ActiveSessionRegistry {
     const row = this.#selectByRequestId.get(requestId);
     return row === undefined ? null : decodeRow(row);
   }
+}
+
+function initializeRegistrySchema(db: Database.Database): void {
+  for (let attempt = 0; attempt < SQLITE_INITIALIZATION_RETRY_LIMIT; attempt += 1) {
+    try {
+      db.pragma("journal_mode = WAL");
+      db.pragma("synchronous = FULL");
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS ${TABLE_NAME} (
+          request_id TEXT PRIMARY KEY NOT NULL,
+          agent_id TEXT NOT NULL,
+          session_id TEXT NOT NULL,
+          conversation_id TEXT,
+          conversation_cursor INTEGER NOT NULL,
+          connector_owner_instance_id TEXT NOT NULL,
+          connector_created_at TEXT NOT NULL,
+          connector_boot_id TEXT NOT NULL,
+          connector_pid INTEGER NOT NULL,
+          connector_start_time_ticks TEXT NOT NULL,
+          connector_pid_namespace_inode INTEGER NOT NULL,
+          connector_ppid INTEGER NOT NULL,
+          connector_pgrp INTEGER NOT NULL,
+          connector_session INTEGER NOT NULL,
+          lease_generation INTEGER NOT NULL CHECK (lease_generation > 0),
+          terminal_state TEXT CHECK (terminal_state IS NULL OR terminal_state IN ('completed', 'failed', 'cancelled')),
+          archived_at INTEGER,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL,
+          CHECK (
+            (conversation_id IS NULL AND conversation_cursor = -1)
+            OR (conversation_id IS NOT NULL AND conversation_cursor >= 0)
+          ),
+          CHECK (archived_at IS NULL OR terminal_state IS NOT NULL)
+        );
+      `);
+      assertCanonicalTable(db);
+      db.exec(`
+        CREATE UNIQUE INDEX IF NOT EXISTS active_antigravity_sessions_one_inflight_session
+          ON ${TABLE_NAME} (agent_id ASC, session_id ASC)
+          WHERE terminal_state IS NULL AND archived_at IS NULL;
+        CREATE INDEX IF NOT EXISTS active_antigravity_sessions_archived
+          ON ${TABLE_NAME} (archived_at ASC, request_id ASC)
+          WHERE archived_at IS NOT NULL;
+      `);
+      return;
+    } catch (error) {
+      if (!isSqliteInitializationContention(error) || attempt === SQLITE_INITIALIZATION_RETRY_LIMIT - 1) {
+        throw error;
+      }
+      Atomics.wait(
+        sqliteInitializationRetrySignal,
+        0,
+        0,
+        SQLITE_INITIALIZATION_RETRY_DELAY_MS * (attempt + 1)
+      );
+    }
+  }
+}
+
+function isSqliteInitializationContention(error: unknown): boolean {
+  if (!(error instanceof Error) || error.name !== "SqliteError") return false;
+  const code = (error as { code?: unknown }).code;
+  return (
+    code === "SQLITE_BUSY" ||
+    code === "SQLITE_BUSY_RECOVERY" ||
+    code === "SQLITE_BUSY_SNAPSHOT" ||
+    code === "SQLITE_BUSY_TIMEOUT" ||
+    code === "SQLITE_LOCKED" ||
+    code === "SQLITE_LOCKED_SHAREDCACHE"
+  );
 }
 
 function assertDatabasePath(value: unknown): asserts value is string {

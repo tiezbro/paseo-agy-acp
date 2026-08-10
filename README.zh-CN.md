@@ -91,6 +91,9 @@ session、outbox claim、startup permit 与 Linux process residue。串行 outbo
 prompt 写入仍只归 admission dispatcher 所有。
 Controller 错误仍保留 typed class，但 message 字符串不再包含持久 request、delivery
 或 lease 标识符。
+多个 connector 可并发初始化 active-session registry。registry 只会对幂等 WAL/schema
+初始化中的 SQLite `BUSY`/`LOCKED` 竞争做有界重试；不兼容或损坏的 schema 仍立即
+fail closed，且该初始化重试绝不会重放业务 prompt。
 
 source-only production graph builder 要求 dispatch 与 recovery 使用同一个 SQLite
 startup launcher，并且 stable request identity、outbox ACK、fresh-PTY 认证证据和
