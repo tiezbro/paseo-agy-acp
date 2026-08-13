@@ -1,4 +1,4 @@
-import type { AgyCliSession } from "../../agy/cli.js";
+import type { AgyCliSession } from "../../cli.js";
 import type { SessionState } from "./types.js";
 
 const SAFE_SESSION_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,191}$/;

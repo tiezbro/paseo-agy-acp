@@ -4,6 +4,13 @@ All notable changes to `paseo-agy-acp` are recorded here.
 
 ## Unreleased
 
+### Changed
+
+- Converged source ownership into two functional areas without changing
+  runtime behavior: the Admission Controller remains in `src/admission/`, and
+  the ACP connector now lives with the agy adapter in `src/agy/acp/`. Package
+  entrypoints remain at `src/main.ts` and `src/agent.ts`.
+
 ### Added
 
 - Added the internal SQLite-backed Admission Controller core for the v2.0.0.0

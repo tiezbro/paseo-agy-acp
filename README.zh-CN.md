@@ -66,6 +66,10 @@
 
 ## v2 Admission Controller 开发状态
 
+源码所有权明确收敛为两个功能区：`src/admission/` 承载 Admission Controller，
+`src/agy/` 承载 agy 适配器及其 `src/agy/acp/` ACP connector。
+`src/main.ts` 与 `src/agent.ts` 仅为 package entrypoint，不构成第三功能区。
+
 v2.0.0.0 Admission Controller 已进入源码开发。当前默认禁用的基础层包含经过完整
 校验的 SQLite v10 ledger、带行身份认证的加密持久载荷、按用途独立派生的运行时
 密钥、原子 process identity + `dispatch_intent`、只产出证据的恢复层、SQLite ACP

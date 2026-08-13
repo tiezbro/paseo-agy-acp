@@ -11,7 +11,7 @@ import type {
   InitializeRequest as V2InitializeRequest,
   InitializeResponse as V2InitializeResponse
 } from "@agentclientprotocol/sdk/experimental/v2";
-import { v1AuthMethods, v2AuthMethods } from "../agy/auth.js";
+import { v1AuthMethods, v2AuthMethods } from "../auth.js";
 import {
   negotiateAcpInitializationProtocolCapabilities,
   type AcpInitializationProtocolCapabilities,

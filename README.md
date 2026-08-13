@@ -67,6 +67,11 @@ contributors. All credit for the original ACP adapter architecture belongs to th
 
 ## v2 Admission Controller Development
 
+Source ownership is intentionally limited to two functional areas:
+`src/admission/` contains the Admission Controller, while `src/agy/` contains
+the agy adapter and its ACP connector at `src/agy/acp/`. `src/main.ts` and
+`src/agent.ts` are package entrypoints rather than separate functional areas.
+
 The v2.0.0.0 Admission Controller is under source development. The current
 disabled-by-default foundation includes a verified SQLite v10 ledger,
 encrypted durable payloads with row-bound authentication, purpose-separated

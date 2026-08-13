@@ -18,7 +18,7 @@ Last updated: 2026-08-07
 
 ### 1. Paseo Append-System-Prompt Bridge
 
-**Files:** `src/acp/session/prompt.ts`, `tests/queue-steer.test.ts`
+**Files:** `src/agy/acp/session/prompt.ts`, `tests/queue-steer.test.ts`
 
 Recovers Paseo `daemon.appendSystemPrompt` text from agent state when `PASEO_AGENT_ID`
 is present. `PASEO_HOME` is treated as an optional override and falls back to
@@ -78,8 +78,8 @@ post-tool final assistant output, StreamPoller final-output and lifecycle-bounda
 
 ### 7. Native Antigravity Permission Bypass Mode
 
-**Files:** `src/agy/cli.ts`, `src/acp/session/modes.ts`,
-`src/acp/slash-commands/index.ts`, `tests/cli.test.ts`,
+**Files:** `src/agy/cli.ts`, `src/agy/acp/session/modes.ts`,
+`src/agy/acp/slash-commands/index.ts`, `tests/cli.test.ts`,
 `tests/acp-server.test.ts`, `tests/slash-commands.test.ts`
 
 Exposes Antigravity CLI's official unattended permission bypass parameter as ACP
@@ -114,7 +114,7 @@ Verification for `1.0.0.2`:
   `/home/tiezbro/.local/opt/paseo-agy-acp-1.0.0.0-20260806T1159Z`.
 - Verified the installed package can import:
   - `dist/main.js`
-  - `dist/acp/session/prompt.js`
+  - `dist/agy/acp/session/prompt.js`
   - target-local `node-pty`
 - Switched global symlink:
   `/home/tiezbro/.local/bin/agy-acp`
@@ -140,7 +140,7 @@ Verification for `1.0.0.2`:
   `PASEO_AGENT_CWD` for ACP provider processes. `PASEO_HOME` may be unset or
   empty, while the `1.0.0.0` bridge treated it as mandatory and returned an
   empty daemon context before reading Agent state.
-- Source fix: `src/acp/session/prompt.ts` now resolves Paseo home as non-empty
+- Source fix: `src/agy/acp/session/prompt.ts` now resolves Paseo home as non-empty
   `PASEO_HOME`, then `~/.paseo`.
 - Regression: `tests/queue-steer.test.ts` covers both unset and empty
   `PASEO_HOME` with only `PASEO_AGENT_ID` present.

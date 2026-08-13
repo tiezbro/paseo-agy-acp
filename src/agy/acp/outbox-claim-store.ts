@@ -1,7 +1,7 @@
 import { createCipheriv, createDecipheriv, randomBytes, timingSafeEqual } from "node:crypto";
 import Database from "better-sqlite3";
-import type { ClaimedDelivery, DeliveryClaimFence } from "../admission/controller.js";
-import { createOutboxEventMetadata, validateOutboxAck, type OutboxAck } from "../admission/outbox-protocol.js";
+import type { ClaimedDelivery, DeliveryClaimFence } from "../../admission/controller.js";
+import { createOutboxEventMetadata, validateOutboxAck, type OutboxAck } from "../../admission/outbox-protocol.js";
 
 const TOKEN_NONCE_BYTES = 12;
 

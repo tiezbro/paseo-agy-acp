@@ -5,14 +5,14 @@
 
 import type { SessionConfigOption as V1SessionConfigOption } from "@agentclientprotocol/sdk";
 import type { SessionConfigOption as V2SessionConfigOption } from "@agentclientprotocol/sdk/experimental/v2";
-import { isSessionModeId, SESSION_MODE_IDS } from "../../agy/cli.js";
+import { isSessionModeId, SESSION_MODE_IDS } from "../../cli.js";
 import {
   defaultReasoningEffortForBase,
   modelConfigOption,
   reasoningEffortConfigOption,
   reasoningEffortValues
-} from "../../agy/model/catalog.js";
-import { applyModelSelection } from "../../agy/model/selection.js";
+} from "../../model/catalog.js";
+import { applyModelSelection } from "../../model/selection.js";
 import { modeConfigOption, MODE_CONFIG_ID } from "./modes.js";
 import type { SessionState } from "./types.js";
 

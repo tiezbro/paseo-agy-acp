@@ -8,10 +8,10 @@ import {
   isSessionModeId,
   type AgyCliBackend,
   type AgyCliConfig
-} from "../../agy/cli.js";
-import type { ReplayCache } from "../../agy/db/replay.js";
-import { buildModelCatalog } from "../../agy/model/catalog.js";
-import { applyModelSelection, initialModelSelection, restoredModelSelection } from "../../agy/model/selection.js";
+} from "../../cli.js";
+import type { ReplayCache } from "../../db/replay.js";
+import { buildModelCatalog } from "../../model/catalog.js";
+import { applyModelSelection, initialModelSelection, restoredModelSelection } from "../../model/selection.js";
 import type { SessionStoreBackend, StoredSession } from "./store.js";
 import type { SessionState } from "./types.js";
 import { cancelQueuedPrompts } from "./cancel.js";

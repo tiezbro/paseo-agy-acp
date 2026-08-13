@@ -1,5 +1,5 @@
-import type { AgyCliSession } from "../../agy/cli.js";
-import type { ModelCatalog } from "../../agy/model/catalog.js";
+import type { AgyCliSession } from "../../cli.js";
+import type { ModelCatalog } from "../../model/catalog.js";
 import type { PromptV1Deps, PromptV2Deps } from "./prompt.js";
 
 export type TurnIntent = "queue" | "steer";

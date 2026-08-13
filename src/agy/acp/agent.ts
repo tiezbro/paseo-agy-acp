@@ -68,20 +68,20 @@ import type {
   SetSessionConfigOptionRequest as V2SetSessionConfigOptionRequest,
   SetSessionConfigOptionResponse as V2SetSessionConfigOptionResponse
 } from "@agentclientprotocol/sdk/experimental/v2";
-import { ReplayCache } from "../agy/db/replay.js";
-import type { ClientFileSystem } from "../agy/edit/bridge.js";
+import { ReplayCache } from "../db/replay.js";
+import type { ClientFileSystem } from "../edit/bridge.js";
 import { readTextFile } from "./fs/read-text-file.js";
 import { writeTextFile } from "./fs/write-text-file.js";
-import { ensureAgyInstalled } from "../agy/installer.js";
-import { AUTH_REQUIRED_MESSAGE, isAgyAuthenticated, v1AuthMethods } from "../agy/auth.js";
-import type { AgyStartupLauncher } from "../agy/startup-launcher.js";
+import { ensureAgyInstalled } from "../installer.js";
+import { AUTH_REQUIRED_MESSAGE, isAgyAuthenticated, v1AuthMethods } from "../auth.js";
+import type { AgyStartupLauncher } from "../startup-launcher.js";
 import {
   AgyCliBackend,
   configFromEnv,
   type AgyCliConfig,
   type PtyFactory,
   type SpawnFactory
-} from "../agy/cli.js";
+} from "../cli.js";
 import { handleInitializeV1, handleInitializeV2 } from "./initialize.js";
 import {
   defaultStateDir,
@@ -121,13 +121,13 @@ import {
 } from "./session/update.js";
 import { handlePromptV1, handlePromptV2, type PromptV1Deps, type PromptV2Deps } from "./session/prompt.js";
 import { handleCancel } from "./session/cancel.js";
-import type { AdmissionPromptSeam, PromptAdmission } from "../admission/prompt-seam.js";
+import type { AdmissionPromptSeam, PromptAdmission } from "../../admission/prompt-seam.js";
 import {
   negotiateRequestIdentityCapability,
   type RequestIdentityNegotiationResult
-} from "../admission/request-identity-protocol.js";
-import { ACP_OUTBOX_ACK_METHOD } from "../admission/outbox-protocol.js";
-import { parseAdmissionRuntimeConfig } from "../admission/runtime-config.js";
+} from "../../admission/request-identity-protocol.js";
+import { ACP_OUTBOX_ACK_METHOD } from "../../admission/outbox-protocol.js";
+import { parseAdmissionRuntimeConfig } from "../../admission/runtime-config.js";
 import { AcpOutboxDeliveryBridge } from "./outbox-delivery.js";
 import {
   AcpSessionClientRouteNotFoundError,
@@ -138,7 +138,7 @@ import {
 } from "./session/client-route-registry.js";
 
 const require = createRequire(import.meta.url);
-const packageJson = require("../../package.json") as { version?: string };
+const packageJson = require("../../../package.json") as { version?: string };
 /** Conversation replays cached per conversation id before LRU eviction. */
 const REPLAY_CACHE_CAPACITY = 32;
 const MODEL_CACHE_TTL_MS = 5 * 60_000;
@@ -910,7 +910,7 @@ export function runAcp(options: AcpAgentOptions = {}) {
 }
 
 export { contentBlocksToPrompt, contentBlocksToText } from "./content/index.js";
-export { buildModelCatalog, modelConfigOption, reasoningEffortConfigOption, toModelSlug, prettifyModelSlug } from "../agy/model/catalog.js";
+export { buildModelCatalog, modelConfigOption, reasoningEffortConfigOption, toModelSlug, prettifyModelSlug } from "../model/catalog.js";
 export { sessionModeState, modeConfigOption } from "./session/modes.js";
 export {
   AdmissionPromptSeam,
@@ -918,4 +918,4 @@ export {
   type AdmissionPromptDispatchInput,
   type AdmissionPromptSeamOptions,
   type AdmissionQueueProgress
-} from "../admission/prompt-seam.js";
+} from "../../admission/prompt-seam.js";

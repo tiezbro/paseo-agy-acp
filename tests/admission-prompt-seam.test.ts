@@ -4,15 +4,15 @@ import os from "node:os";
 import path from "node:path";
 import { PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
 import * as acpV2 from "@agentclientprotocol/sdk/experimental/v2";
-import { AcpAgent } from "../src/acp/agent.js";
-import type { PromptV1Deps, PromptV2Deps } from "../src/acp/session/prompt.js";
+import { AcpAgent } from "../src/agy/acp/agent.js";
+import type { PromptV1Deps, PromptV2Deps } from "../src/agy/acp/session/prompt.js";
 import {
   handlePromptV1,
   handlePromptV2,
   notifyIdleAndDrainQueue
-} from "../src/acp/session/prompt.js";
-import { turnsOf, TurnClaim, type TurnKind } from "../src/acp/session/turn-scheduler.js";
-import type { SessionState } from "../src/acp/session/types.js";
+} from "../src/agy/acp/session/prompt.js";
+import { turnsOf, TurnClaim, type TurnKind } from "../src/agy/acp/session/turn-scheduler.js";
+import type { SessionState } from "../src/agy/acp/session/types.js";
 import { AdmissionController, type AdmissionPolicy } from "../src/admission/controller.js";
 import { createRequestIdentity } from "../src/admission/identity.js";
 import {

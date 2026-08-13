@@ -2,7 +2,7 @@
 // Docs: https://agentclientprotocol.com/protocol/v1/session-modes
 
 import type { SessionConfigOption as V1SessionConfigOption, SessionModeState } from "@agentclientprotocol/sdk";
-import type { SessionModeId } from "../../agy/cli.js";
+import type { SessionModeId } from "../../cli.js";
 
 export const MODE_CONFIG_ID = "mode";
 

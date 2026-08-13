@@ -2,7 +2,7 @@
 // Docs: https://agentclientprotocol.com/protocol/v1/authentication#logging-out
 
 import type { LogoutAuthRequest, LogoutAuthResponse } from "@agentclientprotocol/sdk/experimental/v2";
-import type { AgyCliBackend, AgyCliConfig } from "../../agy/cli.js";
+import type { AgyCliBackend, AgyCliConfig } from "../../cli.js";
 import { handleLogout } from "../logout.js";
 
 export async function handleLogoutAuth(

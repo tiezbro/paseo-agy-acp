@@ -9,7 +9,7 @@ import * as v1 from "@agentclientprotocol/sdk";
 import type { AgentContext as V1AgentContext } from "@agentclientprotocol/sdk";
 import * as v2 from "@agentclientprotocol/sdk/experimental/v2";
 import type { AgentContext as V2AgentContext } from "@agentclientprotocol/sdk/experimental/v2";
-import type { SessionModeId } from "../../agy/cli.js";
+import type { SessionModeId } from "../../cli.js";
 import { availableCommandsUpdate } from "../slash-commands/index.js";
 import { sessionConfigOptionsV1, sessionConfigOptionsV2 } from "./config-options.js";
 import type { SessionState } from "./types.js";

@@ -11,7 +11,7 @@ import type {
   SetSessionConfigOptionRequest as V2SetSessionConfigOptionRequest,
   SetSessionConfigOptionResponse as V2SetSessionConfigOptionResponse
 } from "@agentclientprotocol/sdk/experimental/v2";
-import type { SessionModeId } from "../../agy/cli.js";
+import type { SessionModeId } from "../../cli.js";
 import { readConfigValue, sessionConfigOptionsV1, sessionConfigOptionsV2 } from "./config-options.js";
 import { MODE_CONFIG_ID } from "./modes.js";
 import type { SessionState } from "./types.js";

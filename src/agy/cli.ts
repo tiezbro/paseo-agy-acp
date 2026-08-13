@@ -66,8 +66,8 @@ import {
   normalizePermissionChoice,
   parseAskQuestion,
   type PermissionChoice
-} from "../acp/tool-calls/permissions.js";
-import type { ClientElicitationCapability } from "../acp/tool-calls/elicitation.js";
+} from "./acp/tool-calls/permissions.js";
+import type { ClientElicitationCapability } from "./acp/tool-calls/elicitation.js";
 export const DEFAULT_AGY_MODEL_LIST_TIMEOUT_MS = 15_000;
 export const DEFAULT_CONVERSATIONS_DIR = path.join(os.homedir(), ".gemini", "antigravity-cli", "conversations");
 const POLL_INTERVAL_MS = 200;

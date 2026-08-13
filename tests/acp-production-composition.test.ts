@@ -9,7 +9,7 @@ import {
   composeAcpProductionRuntime,
   type AcpProductionCompositionDependencies,
   type AcpProductionCompositionFactories
-} from "../src/acp/production-composition.js";
+} from "../src/agy/acp/production-composition.js";
 import type {
   StartupRecoveryBarrierSources,
   StartupRecoveryReadiness

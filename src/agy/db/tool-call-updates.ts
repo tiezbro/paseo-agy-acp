@@ -13,7 +13,7 @@ import {
   planRemovedFromPath,
   planUpdateFromMarkdown,
   type PlanEntry
-} from "../../acp/agent-plan/index.js";
+} from "../acp/agent-plan/index.js";
 import type { SearchHit } from "./step-payload.js";
 import type { StepRow } from "./types.js";
 

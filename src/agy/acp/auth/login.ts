@@ -2,7 +2,7 @@
 // Docs: https://agentclientprotocol.com/protocol/v1/authentication
 
 import type { LoginAuthRequest, LoginAuthResponse } from "@agentclientprotocol/sdk/experimental/v2";
-import type { AgyCliBackend, AgyCliConfig } from "../../agy/cli.js";
+import type { AgyCliBackend, AgyCliConfig } from "../../cli.js";
 import { handleAuthenticate } from "../authenticate.js";
 
 export async function handleLoginAuth(

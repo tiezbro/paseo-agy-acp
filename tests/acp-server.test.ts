@@ -21,11 +21,11 @@ import {
 import { configFromEnv, type AgyCliConfig, type PtyFactory, type SpawnFactory } from "../src/agy/cli.js";
 import { createConversationDb, insertStep } from "./fixtures/conversation-db.js";
 import { encodeCommandResult, encodeStepPayload, encodeToolCall, encodeToolRun } from "./fixtures/step-encoder.js";
-import { createTerminalOutputTracker, createToolCallContentTracker, expandSessionUpdateToV2, sessionUpdateToV1, sessionUpdateToV2 } from "../src/acp/session/update-wire.js";
-import { filterUpdatesForReplayFrom } from "../src/acp/session/setup.js";
-import { turnsOf } from "../src/acp/session/turn-scheduler.js";
-import { terminalIdForToolCall } from "../src/acp/terminal/index.js";
-import { parseClientToolCallName } from "../src/acp/initialize.js";
+import { createTerminalOutputTracker, createToolCallContentTracker, expandSessionUpdateToV2, sessionUpdateToV1, sessionUpdateToV2 } from "../src/agy/acp/session/update-wire.js";
+import { filterUpdatesForReplayFrom } from "../src/agy/acp/session/setup.js";
+import { turnsOf } from "../src/agy/acp/session/turn-scheduler.js";
+import { terminalIdForToolCall } from "../src/agy/acp/terminal/index.js";
+import { parseClientToolCallName } from "../src/agy/acp/initialize.js";
 import type { SessionConfigOption, SessionUpdate } from "@agentclientprotocol/sdk";
 
 type SelectConfigOption = Extract<SessionConfigOption, { type: "select" }>;

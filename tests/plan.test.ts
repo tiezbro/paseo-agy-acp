@@ -7,7 +7,7 @@ import {
   planUpdateFromMarkdown,
   reconcilePlanEntryIds,
   type PlanEntry
-} from "../src/acp/agent-plan/index.js";
+} from "../src/agy/acp/agent-plan/index.js";
 
 describe("isPlanFile", () => {
   it("matches agy brain markdown paths", () => {

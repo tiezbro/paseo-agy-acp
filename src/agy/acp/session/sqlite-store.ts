@@ -1,6 +1,6 @@
 import * as path from "node:path";
 import Database from "better-sqlite3";
-import { isSessionModeId } from "../../agy/cli.js";
+import { isSessionModeId } from "../../cli.js";
 import type { SessionStoreBackend, StoredSession } from "./store.js";
 
 const MAX_ADDITIONAL_DIRECTORIES = 63;

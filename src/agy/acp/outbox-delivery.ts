@@ -1,10 +1,10 @@
-import type { AdmissionController, ClaimedDelivery, DeliveryClaimFence } from "../admission/controller.js";
+import type { AdmissionController, ClaimedDelivery, DeliveryClaimFence } from "../../admission/controller.js";
 import {
   createOutboxEventMetadata,
   validateOutboxAck,
   type OutboxAck,
   type OutboxEventMetadata
-} from "../admission/outbox-protocol.js";
+} from "../../admission/outbox-protocol.js";
 
 const DEFAULT_CLAIM_LEASE_MS = 30_000;
 

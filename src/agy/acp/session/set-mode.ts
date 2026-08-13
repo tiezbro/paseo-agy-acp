@@ -9,7 +9,7 @@ import type {
   SetSessionModeRequest,
   SetSessionModeResponse
 } from "@agentclientprotocol/sdk";
-import type { SessionModeId } from "../../agy/cli.js";
+import type { SessionModeId } from "../../cli.js";
 import { MODE_CONFIG_ID } from "./modes.js";
 import type { SessionState } from "./types.js";
 

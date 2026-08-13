@@ -15,7 +15,7 @@
 // inside it.
 
 import type { SessionUpdate } from "@agentclientprotocol/sdk";
-import type { PlanEntry } from "../../acp/agent-plan/index.js";
+import type { PlanEntry } from "../acp/agent-plan/index.js";
 import { filterNarration, isNarration } from "./narration.js";
 import { isSystemMessage, isSystemMessagePrefix } from "./system-message.js";
 import type { FileContentCache } from "./tool-call-updates.js";

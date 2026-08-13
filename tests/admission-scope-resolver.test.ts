@@ -3,8 +3,8 @@ import {
   AdmissionSessionScopeResolutionError,
   AdmissionSessionScopeResolver,
   type AdmissionSessionScopeFailureCode
-} from "../src/acp/session/admission-scope-resolver.js";
-import type { SessionState } from "../src/acp/session/types.js";
+} from "../src/agy/acp/session/admission-scope-resolver.js";
+import type { SessionState } from "../src/agy/acp/session/types.js";
 
 const SESSION_ID = "7b302919-c1e5-4d14-a8f2-b48ddc2c7c24";
 const OTHER_SESSION_ID = "52b59c05-9120-4102-852d-05ffc9789118";

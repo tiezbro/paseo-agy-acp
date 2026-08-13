@@ -26,8 +26,8 @@ import {
   isBridgeablePermissionTool,
   permissionKeys,
   permissionOptions
-} from "../src/acp/tool-calls/permissions.js";
-import { requestPermissionV1, requestPermissionV2 } from "../src/acp/session/request-permission.js";
+} from "../src/agy/acp/tool-calls/permissions.js";
+import { requestPermissionV1, requestPermissionV2 } from "../src/agy/acp/session/request-permission.js";
 import { createConversationDb, insertStep, updateStep } from "./fixtures/conversation-db.js";
 import {
   encodeCommandResult,

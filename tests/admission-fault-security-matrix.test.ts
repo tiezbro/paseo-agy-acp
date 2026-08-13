@@ -14,9 +14,9 @@ import { PassThrough } from "node:stream";
 import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
-import { AcpOutboxDeliveryBridge, type OutboxDeliveryMessage } from "../src/acp/outbox-delivery.js";
-import { ActiveSessionRegistry, type ActiveConnectorIdentity } from "../src/acp/session/active-registry.js";
-import { ActiveSessionTurnBinding } from "../src/acp/session/active-turn-binding.js";
+import { AcpOutboxDeliveryBridge, type OutboxDeliveryMessage } from "../src/agy/acp/outbox-delivery.js";
+import { ActiveSessionRegistry, type ActiveConnectorIdentity } from "../src/agy/acp/session/active-registry.js";
+import { ActiveSessionTurnBinding } from "../src/agy/acp/session/active-turn-binding.js";
 import {
   AdmissionController,
   type AdmissionControllerFaultInjection,

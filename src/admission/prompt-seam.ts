@@ -1,7 +1,7 @@
 import { createRequestIdentity } from "./identity.js";
 import type { PromptRequestIdentityResult, RequestIdentityNegotiationResult } from "./request-identity-protocol.js";
 import type { AdmissionRuntime } from "./runtime.js";
-import { onAbort, type TurnClaim } from "../acp/session/turn-scheduler.js";
+import { onAbort, type TurnClaim } from "../agy/acp/session/turn-scheduler.js";
 
 export type AdmissionPromptStopReason = "end_turn" | "cancelled";
 

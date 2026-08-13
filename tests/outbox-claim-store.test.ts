@@ -7,7 +7,7 @@ import type { OutboxAck } from "../src/admission/outbox-protocol.js";
 import {
   OutboxClaimStoreFenceError,
   SqliteOutboxClaimStore
-} from "../src/acp/outbox-claim-store.js";
+} from "../src/agy/acp/outbox-claim-store.js";
 
 const stateDirs: string[] = [];
 const stores: SqliteOutboxClaimStore[] = [];

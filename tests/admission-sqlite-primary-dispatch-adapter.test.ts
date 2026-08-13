@@ -1,12 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
-import { AdmissionSessionScopeResolver } from "../src/acp/session/admission-scope-resolver.js";
+import { AdmissionSessionScopeResolver } from "../src/agy/acp/session/admission-scope-resolver.js";
 import type {
   ActiveConnectorIdentity,
   ActiveSessionFence,
   ActiveSessionRegistration
-} from "../src/acp/session/active-registry.js";
-import type { ActiveSessionTurnRegistry } from "../src/acp/session/active-turn-binding.js";
-import type { SessionState } from "../src/acp/session/types.js";
+} from "../src/agy/acp/session/active-registry.js";
+import type { ActiveSessionTurnRegistry } from "../src/agy/acp/session/active-turn-binding.js";
+import type { SessionState } from "../src/agy/acp/session/types.js";
 import type {
   AgyExactConversationTurn,
   AgyExactConversationTurnOptions

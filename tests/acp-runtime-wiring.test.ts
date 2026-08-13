@@ -13,9 +13,9 @@ import {
   createAcpApp,
   createAcpV2App,
   runAcp
-} from "../src/acp/agent.js";
-import { AcpSessionClientRouteRegistry } from "../src/acp/session/client-route-registry.js";
-import { AcpOutboxDeliveryBridge, type OutboxDeliveryMessage } from "../src/acp/outbox-delivery.js";
+} from "../src/agy/acp/agent.js";
+import { AcpSessionClientRouteRegistry } from "../src/agy/acp/session/client-route-registry.js";
+import { AcpOutboxDeliveryBridge, type OutboxDeliveryMessage } from "../src/agy/acp/outbox-delivery.js";
 import { AdmissionController, type AdmissionPolicy, type EnqueueDelivery } from "../src/admission/controller.js";
 import {
   ACP_OUTBOX_ACK_METHOD,

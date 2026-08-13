@@ -3,15 +3,15 @@ import type {
   AdmissionPromptProcessLifecycleOwner,
   AdmissionPromptRecoveryOwner,
   AdmissionRuntimeFreshPtyCanaryOptions
-} from "../admission/dispatcher.js";
+} from "../../admission/dispatcher.js";
 import {
   AdmissionRecoveryCoordinator,
   type AdmissionRecoveryCoordinatorOptions,
   type RecoveryLifecycleObserver
-} from "../admission/recovery-coordinator.js";
-import type { AdmissionPromptSeam } from "../admission/prompt-seam.js";
-import type { AdmissionRuntime } from "../admission/runtime.js";
-import type { AdmissionPromptSeamFactoryOptions } from "../admission/runtime-composition.js";
+} from "../../admission/recovery-coordinator.js";
+import type { AdmissionPromptSeam } from "../../admission/prompt-seam.js";
+import type { AdmissionRuntime } from "../../admission/runtime.js";
+import type { AdmissionPromptSeamFactoryOptions } from "../../admission/runtime-composition.js";
 import {
   SqlitePrimaryDispatchAdapter,
   type SqlitePrimaryBusinessPromptSource,
@@ -19,18 +19,18 @@ import {
   type SqlitePrimaryRequestMetadataSource,
   type SqlitePrimaryTerminalDelivery,
   type SqlitePrimaryTerminalDeliveryInput
-} from "../admission/sqlite-primary-dispatch-adapter.js";
+} from "../../admission/sqlite-primary-dispatch-adapter.js";
 import {
   SqliteAgyStartupLauncher,
   type SqliteStartupLauncherOptions
-} from "../admission/sqlite-startup-launcher.js";
+} from "../../admission/sqlite-startup-launcher.js";
 import {
   StartupRecoveryBarrier,
   type StartupRecoveryBarrierSources,
   type StartupRecoveryReadiness
-} from "../admission/startup-recovery-barrier.js";
-import type { AgyExactConversationTurn } from "../agy/cli.js";
-import type { SqliteProviderSnapshotReader } from "../agy/db/provider-observer.js";
+} from "../../admission/startup-recovery-barrier.js";
+import type { AgyExactConversationTurn } from "../cli.js";
+import type { SqliteProviderSnapshotReader } from "../db/provider-observer.js";
 import { AcpOutboxDeliveryBridge, type AcpOutboxDeliveryBridgeOptions, type OutboxDeliverySender } from "./outbox-delivery.js";
 import { AcpOutboxPump, type AcpOutboxPumpOptions, type OutboxPumpReport } from "./outbox-pump.js";
 import {

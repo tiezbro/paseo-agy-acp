@@ -2,12 +2,12 @@ import {
   ACP_OUTBOX_CAPABILITY_KEY,
   negotiateOutboxCapabilityOffer,
   type OutboxCapabilityNegotiationResult
-} from "../admission/outbox-protocol.js";
+} from "../../admission/outbox-protocol.js";
 import {
   ACP_REQUEST_IDENTITY_CAPABILITY_KEY,
   negotiateRequestIdentityCapability,
   type RequestIdentityNegotiationResult
-} from "../admission/request-identity-protocol.js";
+} from "../../admission/request-identity-protocol.js";
 
 /** ACP baseline method used for all durable outbox writes. */
 export const ACP_OUTBOX_DELIVERY_METHOD = "session/update";

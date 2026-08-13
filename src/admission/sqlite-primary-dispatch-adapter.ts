@@ -1,15 +1,15 @@
 import type {
   ActiveConnectorIdentity
-} from "../acp/session/active-registry.js";
+} from "../agy/acp/session/active-registry.js";
 import {
   createActiveSessionTurnBinding,
   type ActiveSessionTurnBinding,
   type ActiveSessionTurnRegistry
-} from "../acp/session/active-turn-binding.js";
+} from "../agy/acp/session/active-turn-binding.js";
 import {
   AdmissionSessionScopeResolver,
   type AdmissionSessionScope
-} from "../acp/session/admission-scope-resolver.js";
+} from "../agy/acp/session/admission-scope-resolver.js";
 import type {
   AgyCliSession,
   AgyExactConversationTurn

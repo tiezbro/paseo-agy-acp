@@ -7,8 +7,8 @@ import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { AdmissionController, type AdmissionPolicy } from "../src/admission/controller.js";
-import { SQLiteSessionStore, SQLiteSessionStoreError } from "../src/acp/session/sqlite-store.js";
-import type { SessionStoreBackend, StoredSession } from "../src/acp/session/store.js";
+import { SQLiteSessionStore, SQLiteSessionStoreError } from "../src/agy/acp/session/sqlite-store.js";
+import type { SessionStoreBackend, StoredSession } from "../src/agy/acp/session/store.js";
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const workerPath = path.join(repositoryRoot, "tests/helpers/sqlite-session-store-child.mjs");
@@ -43,11 +43,11 @@ beforeAll(() => {
       "src",
       "--outDir",
       workerBuildDir,
-      "src/acp/session/sqlite-store.ts"
+      "src/agy/acp/session/sqlite-store.ts"
     ],
     { cwd: repositoryRoot, stdio: "inherit" }
   );
-  workerStoreModule = path.join(workerBuildDir, "acp/session/sqlite-store.js");
+  workerStoreModule = path.join(workerBuildDir, "agy/acp/session/sqlite-store.js");
 });
 
 afterAll(() => {

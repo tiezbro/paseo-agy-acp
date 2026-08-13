@@ -20,7 +20,7 @@ import {
   negotiateRequestIdentityCapability,
   validateRequestIdentityPromptMetadata
 } from "../src/admission/request-identity-protocol.js";
-import { TurnClaim } from "../src/acp/session/turn-scheduler.js";
+import { TurnClaim } from "../src/agy/acp/session/turn-scheduler.js";
 import type { AgyStartupLauncher } from "../src/agy/startup-launcher.js";
 import {
   createAgyLaunchSpecification,

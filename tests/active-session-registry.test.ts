@@ -13,7 +13,7 @@ import {
   ActiveSessionRegistryError,
   type ActiveConnectorIdentity,
   type ActiveSessionRegistration
-} from "../src/acp/session/active-registry.js";
+} from "../src/agy/acp/session/active-registry.js";
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const workerPath = path.join(repositoryRoot, "tests/helpers/active-session-registry-child.mjs");
@@ -41,11 +41,11 @@ beforeAll(() => {
       "src",
       "--outDir",
       workerBuildDir,
-      "src/acp/session/active-registry.ts"
+      "src/agy/acp/session/active-registry.ts"
     ],
     { cwd: repositoryRoot, stdio: "inherit" }
   );
-  workerRegistryModule = path.join(workerBuildDir, "acp/session/active-registry.js");
+  workerRegistryModule = path.join(workerBuildDir, "agy/acp/session/active-registry.js");
 });
 
 afterAll(() => {

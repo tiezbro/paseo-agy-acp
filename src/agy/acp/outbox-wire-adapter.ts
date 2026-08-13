@@ -1,7 +1,7 @@
 import * as v1 from "@agentclientprotocol/sdk";
 import * as v2 from "@agentclientprotocol/sdk/experimental/v2";
 import { z } from "zod";
-import { createOutboxEventMetadata } from "../admission/outbox-protocol.js";
+import { createOutboxEventMetadata } from "../../admission/outbox-protocol.js";
 import type { OutboxDeliveryMessage, OutboxDeliverySender } from "./outbox-delivery.js";
 import { ACP_OUTBOX_DELIVERY_META_KEY } from "./protocol-capabilities.js";
 import { sessionUpdateToV1, sessionUpdateToV2 } from "./session/update-wire.js";

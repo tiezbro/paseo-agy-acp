@@ -7,7 +7,7 @@ import {
   AcpOutboxDeliveryAcknowledgementError,
   AcpOutboxDeliveryBridge,
   type OutboxDeliveryMessage
-} from "../src/acp/outbox-delivery.js";
+} from "../src/agy/acp/outbox-delivery.js";
 import { AdmissionController, type AdmissionPolicy, type EnqueueDelivery } from "../src/admission/controller.js";
 import {
   ACP_OUTBOX_CAPABILITY,

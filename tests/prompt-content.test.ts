@@ -2,7 +2,7 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { describe, expect, it } from "vitest";
-import { contentBlocksToPrompt, contentBlocksToText } from "../src/acp/content/index.js";
+import { contentBlocksToPrompt, contentBlocksToText } from "../src/agy/acp/content/index.js";
 
 const PNG_PIXEL = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 

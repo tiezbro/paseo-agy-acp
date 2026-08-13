@@ -6,7 +6,7 @@ import {
   ActiveSessionTurnBindingError,
   createActiveSessionTurnBinding,
   type ActiveSessionTurnRegistry
-} from "../src/acp/session/active-turn-binding.js";
+} from "../src/agy/acp/session/active-turn-binding.js";
 import {
   ActiveSessionRegistry,
   type ActiveConnectorIdentity,
@@ -14,7 +14,7 @@ import {
   type ActiveSessionFence,
   type ActiveSessionRegistration,
   type ActiveSessionTerminalState
-} from "../src/acp/session/active-registry.js";
+} from "../src/agy/acp/session/active-registry.js";
 
 const stateDirectories: string[] = [];
 

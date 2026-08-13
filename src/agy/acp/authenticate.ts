@@ -4,8 +4,8 @@
 
 import { RequestError } from "@agentclientprotocol/sdk";
 import type { AuthenticateRequest, AuthenticateResponse } from "@agentclientprotocol/sdk";
-import { AUTH_REQUIRED_MESSAGE, isAgyAuthenticated, isKnownAuthMethodId, v1AuthMethods } from "../agy/auth.js";
-import type { AgyCliBackend, AgyCliConfig } from "../agy/cli.js";
+import { AUTH_REQUIRED_MESSAGE, isAgyAuthenticated, isKnownAuthMethodId, v1AuthMethods } from "../auth.js";
+import type { AgyCliBackend, AgyCliConfig } from "../cli.js";
 
 export async function handleAuthenticate(
   params: AuthenticateRequest,

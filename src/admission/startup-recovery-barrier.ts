@@ -6,7 +6,7 @@ import type {
   VerifiedLinuxProcessIdentity
 } from "./controller.js";
 import type { RecoverableStartupPermit } from "./sqlite-startup-launcher.js";
-import type { ActiveSessionRecord } from "../acp/session/active-registry.js";
+import type { ActiveSessionRecord } from "../agy/acp/session/active-registry.js";
 
 const MAX_IDENTIFIER_LENGTH = 256;
 const MAX_PID = 2_147_483_647;

@@ -3,8 +3,8 @@
 
 import { RequestError } from "@agentclientprotocol/sdk";
 import type { LogoutRequest, LogoutResponse } from "@agentclientprotocol/sdk";
-import { logoutAgyViaSlashCommand } from "../agy/auth.js";
-import type { AgyCliBackend, AgyCliConfig } from "../agy/cli.js";
+import { logoutAgyViaSlashCommand } from "../auth.js";
+import type { AgyCliBackend, AgyCliConfig } from "../cli.js";
 
 export async function handleLogout(
   _params: LogoutRequest = {},

@@ -8,17 +8,17 @@ import * as acp from "@agentclientprotocol/sdk";
 import * as acpV2 from "@agentclientprotocol/sdk/experimental/v2";
 import { client as acpClient, methods, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
 import { createAcpApp, createAcpV2App, type AcpAgentOptions } from "../src/agent.js";
-import { cancelQueuedPrompts, handleCancel } from "../src/acp/session/cancel.js";
-import { handleCloseSession } from "../src/acp/session/close.js";
+import { cancelQueuedPrompts, handleCancel } from "../src/agy/acp/session/cancel.js";
+import { handleCloseSession } from "../src/agy/acp/session/close.js";
 import {
   handlePromptV1,
   handlePromptV2,
   notifyIdleAndDrainQueue,
   type PromptV1Deps,
   type PromptV2Deps
-} from "../src/acp/session/prompt.js";
-import { turnsOf } from "../src/acp/session/turn-scheduler.js";
-import type { SessionState } from "../src/acp/session/types.js";
+} from "../src/agy/acp/session/prompt.js";
+import { turnsOf } from "../src/agy/acp/session/turn-scheduler.js";
+import type { SessionState } from "../src/agy/acp/session/types.js";
 import { createConversationDb, insertStep } from "./fixtures/conversation-db.js";
 import { encodeStepPayload } from "./fixtures/step-encoder.js";
 import type { SpawnFactory } from "../src/agy/cli.js";

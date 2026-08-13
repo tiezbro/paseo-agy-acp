@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { handleInitializeV1, handleInitializeV2 } from "../src/acp/initialize.js";
+import { handleInitializeV1, handleInitializeV2 } from "../src/agy/acp/initialize.js";
 import {
   ACP_OUTBOX_ACK_METHOD,
   ACP_OUTBOX_CAPABILITY,
@@ -15,7 +15,7 @@ import {
   ACP_OUTBOX_DELIVERY_META_KEY,
   ACP_OUTBOX_DELIVERY_METHOD,
   AcpProtocolCapabilityNegotiationError
-} from "../src/acp/protocol-capabilities.js";
+} from "../src/agy/acp/protocol-capabilities.js";
 
 function requestIdentityOffer(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {

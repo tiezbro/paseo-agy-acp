@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { handleInitializeV1, handleInitializeV2 } from "../src/acp/initialize.js";
+import { handleInitializeV1, handleInitializeV2 } from "../src/agy/acp/initialize.js";
 import {
   buildElicitationRequestFromAskQuestion,
   encodeElicitationKeys,
   parseAskQuestionFull
-} from "../src/acp/tool-calls/elicitation.js";
-import { canBridgeInteraction } from "../src/acp/tool-calls/permissions.js";
+} from "../src/agy/acp/tool-calls/elicitation.js";
+import { canBridgeInteraction } from "../src/agy/acp/tool-calls/permissions.js";
 import type { SessionUpdate } from "@agentclientprotocol/sdk";
 
 describe("ACP Elicitation Capabilities", () => {

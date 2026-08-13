@@ -6,7 +6,7 @@ import {
   type StartupRecoveryProcessInventory
 } from "../src/admission/startup-recovery-barrier.js";
 import type { RecoverableDispatch, DeliveryClaimLease } from "../src/admission/controller.js";
-import type { ActiveSessionRecord } from "../src/acp/session/active-registry.js";
+import type { ActiveSessionRecord } from "../src/agy/acp/session/active-registry.js";
 import type { RecoverableStartupPermit } from "../src/admission/sqlite-startup-launcher.js";
 
 const OWNER_ID = "11111111-1111-4111-8111-111111111111";

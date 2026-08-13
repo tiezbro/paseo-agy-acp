@@ -28,9 +28,9 @@ import type {
 } from "@agentclientprotocol/sdk/experimental/v2";
 import type { ClientElicitationCapability } from "../tool-calls/elicitation.js";
 import type { ClientToolCallNameCapability } from "../initialize.js";
-import type { SessionModeId } from "../../agy/cli.js";
+import type { SessionModeId } from "../../cli.js";
 import { contentBlocksToPrompt } from "../content/index.js";
-import type { ClientFileSystem } from "../../agy/edit/bridge.js";
+import type { ClientFileSystem } from "../../edit/bridge.js";
 import {
   interpretSlashCommand,
   isClientTextSlashPrompt,
@@ -41,11 +41,11 @@ import { MODEL_CONFIG_ID } from "./config-options.js";
 import { MODE_CONFIG_ID } from "./modes.js";
 import { requestPermissionV1, requestPermissionV2 } from "./request-permission.js";
 import type { QueuedPromptV1, QueuedPromptV2, SessionState, TurnIntent } from "./types.js";
-import type { PromptAdmission } from "../../admission/prompt-seam.js";
+import type { PromptAdmission } from "../../../admission/prompt-seam.js";
 import {
   ACP_REQUEST_IDENTITY_CAPABILITY_KEY,
   validateRequestIdentityPromptMetadata
-} from "../../admission/request-identity-protocol.js";
+} from "../../../admission/request-identity-protocol.js";
 import {
   isTurnCancelled,
   onAbort,
