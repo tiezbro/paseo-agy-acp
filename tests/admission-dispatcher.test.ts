@@ -13,25 +13,24 @@ import {
   type AdmissionPromptProviderObserver,
   type AdmissionPromptRecoveryOwner,
   type AdmissionPromptTerminalObservation
-} from "../src/admission/dispatcher.js";
+} from "../ACP Connector/admission/dispatcher.js";
 import {
   AdmissionController,
   type AdmissionLease,
   type AdmissionPolicy,
   type EnqueueDelivery,
-  type LeaseFence,
-  type ProviderTerminalObservations
-} from "../src/admission/controller.js";
-import { ACP_OUTBOX_CAPABILITY } from "../src/admission/outbox-protocol.js";
-import type { AdmissionPromptDispatchInput } from "../src/admission/prompt-seam.js";
+  type LeaseFence
+} from "../Admission Controller/controller.js";
+import { ACP_OUTBOX_CAPABILITY } from "../ACP Connector/admission/outbox-protocol.js";
+import type { AdmissionPromptDispatchInput } from "../ACP Connector/admission/prompt-seam.js";
 import type {
   AgyDispatchCancellationRecheck,
   AgyDispatchIdentityPersistenceResult,
   AgyDispatchIntentCommitResult,
   AgyDispatchProcess,
   AgyDispatchWriteResult
-} from "../src/agy/dispatch-boundary.js";
-import type { AgyStartupLauncher } from "../src/agy/startup-launcher.js";
+} from "../ACP Connector/agy/dispatch-boundary.js";
+import type { AgyStartupLauncher } from "../ACP Connector/agy/startup-launcher.js";
 
 const NOW = 1_000;
 const DURABLE_OWNER_INSTANCE_ID = "11111111-1111-4111-8111-111111111111";
@@ -61,7 +60,8 @@ interface ProcessIdentity {
 }
 
 interface RigOptions {
-  readonly lease?: AdmissionLease | null;
+  readonly lease?: AdmissionLease | null | readonly (AdmissionLease | null)[];
+  readonly admissionPollIntervalMs?: number;
   readonly promptChannel?: "stdin" | "pty";
   readonly callerSuppliedVerifier?: boolean;
   readonly payloadError?: boolean;
@@ -321,6 +321,7 @@ function rig(options: RigOptions = {}): Rig {
   const spawnArguments: unknown[][] = [];
   const deliveries: EnqueueDelivery[] = [];
   let admits = 0;
+  let leaseIndex = 0;
   let revalidationIndex = 0;
   const revalidations = options.revalidations ?? [
     { generationMatches: true, ownerMatches: true, cancelled: false },
@@ -331,7 +332,33 @@ function rig(options: RigOptions = {}): Rig {
     admitRequest(requestId, now, ownerInstanceId) {
       events.push(`controller:admit:${requestId}:${now}:${ownerInstanceId}`);
       admits += 1;
+      if (Array.isArray(options.lease)) return options.lease[leaseIndex++] ?? null;
       return options.lease === undefined ? LEASE : options.lease;
+    },
+    getRequest(requestId) {
+      return {
+        requestId,
+        sessionId: "session-1",
+        parentId: "parent-1",
+        fingerprint: "fingerprint-1",
+        provider: "antigravity",
+        model: "model-1",
+        state: "queued",
+        enqueuedAt: NOW
+      };
+    },
+    getQueueSnapshot(requestId, now) {
+      return {
+        requestId,
+        position: 2,
+        eligiblePosition: 1,
+        enqueuedAt: NOW,
+        waitedMs: now - NOW,
+        cooldownUntil: null
+      };
+    },
+    cancelQueued(requestId, now) {
+      events.push(`controller:cancel:${requestId}:${now}`);
     },
     markStarting(fence, now) {
       events.push(`controller:starting:${fence.leaseId}:${now}`);
@@ -446,6 +473,7 @@ function rig(options: RigOptions = {}): Rig {
     agy,
     provider,
     recovery,
+    admissionPollIntervalMs: options.admissionPollIntervalMs,
     now: () => NOW
   } satisfies AdmissionPromptDispatcherOptions<FakeProcess, ProcessIdentity>;
   if (options.callerSuppliedVerifier) {
@@ -524,6 +552,34 @@ describe("AdmissionPromptDispatcher", () => {
       "controller:admit:request-1:1000:owner-1"
     ]);
     expect(subject.admitCalls()).toBe(1);
+    expect(subject.writes).toEqual([]);
+  });
+
+  it("waits for the global SQLite selector and reports queue progress before dispatch", async () => {
+    const subject = rig({ lease: [null, LEASE], admissionPollIntervalMs: 1 });
+    const progress: unknown[] = [];
+    const dispatchInput = {
+      ...input(subject.controller),
+      reportQueueProgress: (snapshot: unknown) => progress.push(snapshot)
+    };
+
+    await expect(subject.dispatcher.run(dispatchInput)).resolves.toEqual({
+      state: "completed",
+      stopReason: "end_turn"
+    });
+    expect(subject.admitCalls()).toBe(2);
+    expect(progress).toEqual([expect.objectContaining({ position: 2, eligiblePosition: 1 })]);
+    expect(subject.events.filter((event) => event.startsWith("controller:admit:"))).toHaveLength(2);
+  });
+
+  it("cancels only its own queued request when the local turn claim aborts while waiting", async () => {
+    const subject = rig({ lease: null, admissionPollIntervalMs: 20 });
+    const abort = new AbortController();
+    const running = subject.dispatcher.run(input(subject.controller, abort.signal));
+    abort.abort();
+
+    await expect(running).resolves.toEqual({ state: "cancelled", stopReason: "cancelled" });
+    expect(subject.events).toContain("controller:cancel:request-1:1000");
     expect(subject.writes).toEqual([]);
   });
 

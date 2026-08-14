@@ -8,7 +8,7 @@ import {
   routeEditThroughClient,
   writeEditThroughClient,
   type ClientFileSystem
-} from "../src/agy/edit/bridge.js";
+} from "../ACP Connector/agy/edit/bridge.js";
 
 function diffToolCall(blocks: Array<{ path: string; oldText: string | null; newText: string }>): SessionUpdate {
   return {

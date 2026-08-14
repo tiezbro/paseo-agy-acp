@@ -11,7 +11,7 @@ import {
   type AcpSessionClientRouteBinding,
   type AcpSessionClientRouteReference,
   type AcpSessionUpdateSender
-} from "../src/agy/acp/session/client-route-registry.js";
+} from "../ACP Connector/acp/session/client-route-registry.js";
 
 describe("AcpSessionClientRouteRegistry", () => {
   it("binds standard session/update senders by exact session, protocol, and connection fence", async () => {

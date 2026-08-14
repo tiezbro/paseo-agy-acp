@@ -1,7 +1,7 @@
 import { EventEmitter } from "node:events";
 import type { ChildProcess } from "node:child_process";
 import { describe, expect, it, vi } from "vitest";
-import * as installer from "../src/agy/installer.js";
+import * as installer from "../ACP Connector/agy/installer.js";
 import {
   AUTH_METHOD_TERMINAL_LOGIN,
   formatAuthProbeError,
@@ -12,15 +12,15 @@ import {
   v1AuthMethods,
   v2AuthMethods,
   type InteractiveLoginSpawn
-} from "../src/agy/auth.js";
+} from "../ACP Connector/agy/auth.js";
 import {
   AgyCliError,
   configFromEnv,
   type AgyCliBackend,
   type PtyFactory,
   type PtyProcess
-} from "../src/agy/cli.js";
-import type { AgyStartupLauncher } from "../src/agy/startup-launcher.js";
+} from "../ACP Connector/agy/cli.js";
+import type { AgyStartupLauncher } from "../ACP Connector/agy/startup-launcher.js";
 
 /** Minimal fake for the login child process: an EventEmitter with a `kill` that
  *  simulates the child exiting shortly after receiving a signal. */

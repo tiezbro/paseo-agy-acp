@@ -3,13 +3,13 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { EventEmitter } from "node:events";
-import { probeExactAgyBinaryVersion } from "../src/agy/launch-spec.js";
+import { probeExactAgyBinaryVersion } from "../ACP Connector/agy/launch-spec.js";
 import {
   AgyStartupLifetimeBindingError,
   launchAgyProcess,
   runRepositoryOwnedPromptFreePtyCanary,
   type AgyStartupLauncher
-} from "../src/agy/startup-launcher.js";
+} from "../ACP Connector/agy/startup-launcher.js";
 
 function probeFakeAgyVersion(startupLauncher?: AgyStartupLauncher) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "agy-startup-launcher-"));

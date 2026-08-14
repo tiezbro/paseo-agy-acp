@@ -11,8 +11,8 @@ import {
   reconcileWorkingTree,
   snapshotWorkingTree,
   type WorkingTreeSnapshot
-} from "../src/agy/edit/reconcile.js";
-import { diffBlocks } from "../src/agy/edit/revert.js";
+} from "../ACP Connector/agy/edit/reconcile.js";
+import { diffBlocks } from "../ACP Connector/agy/edit/revert.js";
 
 function tmpDir(): string {
   return fs.mkdtempSync(path.join(os.tmpdir(), "agy-acp-reconcile-"));

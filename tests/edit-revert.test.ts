@@ -3,7 +3,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import type { SessionUpdate } from "@agentclientprotocol/sdk";
 import { describe, expect, it } from "vitest";
-import { hasUniqueOccurrence, revertEditToolCall } from "../src/agy/edit/revert.js";
+import { hasUniqueOccurrence, revertEditToolCall } from "../ACP Connector/agy/edit/revert.js";
 
 function diffToolCall(blocks: Array<{ path: string; oldText: string | null; newText: string }>): SessionUpdate {
   return {

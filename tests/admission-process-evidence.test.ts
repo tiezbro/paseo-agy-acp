@@ -11,7 +11,7 @@ import {
   type LinuxProcessEvidenceReaders,
   type LinuxProcessIdentity,
   type LinuxPreDispatchProofPayload
-} from "../src/admission/process-evidence.js";
+} from "../Admission Controller/process-evidence.js";
 
 const BOOT_ID = "f4bca3da-9bd5-4f2e-89b8-5e12e5ee8f31";
 const PID = 4182;

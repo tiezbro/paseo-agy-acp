@@ -12,14 +12,14 @@ import {
   type AgyCliConfig,
   type SpawnFactory,
   type SpawnOptions
-} from "../src/agy/cli.js";
+} from "../ACP Connector/agy/cli.js";
 import {
   isExactFreshPtyAgyLaunch,
   probeExactAgyBinaryVersion,
   type VerifiedAgyBinary
-} from "../src/agy/launch-spec.js";
-import { AgyPromptFreeDispatchBoundary } from "../src/agy/dispatch-boundary.js";
-import { observeAgyStreamJsonIdentity } from "../src/agy/stream-json-identity.js";
+} from "../ACP Connector/agy/launch-spec.js";
+import { AgyPromptFreeDispatchBoundary } from "../ACP Connector/agy/dispatch-boundary.js";
+import { observeAgyStreamJsonIdentity } from "../ACP Connector/agy/stream-json-identity.js";
 
 const BUSINESS_PROMPT = "business prompt: request-scoped-zeta-42";
 
@@ -314,7 +314,7 @@ describe("Agy prompt-free process", () => {
   });
 
   it("does not import or invoke the dispatch boundary from the primitive module", () => {
-    const source = fs.readFileSync(path.join(process.cwd(), "src/agy/prompt-free-process.ts"), "utf8");
+    const source = fs.readFileSync(path.join(process.cwd(), "ACP Connector/agy/prompt-free-process.ts"), "utf8");
     expect(source).not.toContain("dispatch-boundary");
     expect(source).not.toContain("AgyPromptFreeDispatchBoundary");
     expect(source).not.toContain("JSON.parse");

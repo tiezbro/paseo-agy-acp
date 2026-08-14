@@ -6,8 +6,8 @@ import {
   verifyPersistedLinuxConnectorOwnerIdentity,
   type LinuxConnectorOwnerIdentity,
   type OwnerInstanceDependencies
-} from "../src/admission/owner-instance.js";
-import type { LinuxProcessEvidenceReaders } from "../src/admission/process-evidence.js";
+} from "../ACP Connector/admission/owner-instance.js";
+import type { LinuxProcessEvidenceReaders } from "../Admission Controller/process-evidence.js";
 
 const BOOT_ID = "f4bca3da-9bd5-4f2e-89b8-5e12e5ee8f31";
 const PID = 4182;

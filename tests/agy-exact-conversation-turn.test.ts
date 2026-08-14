@@ -10,12 +10,12 @@ import {
   type AgyCliConfig,
   type SpawnFactory,
   type SpawnOptions
-} from "../src/agy/cli.js";
+} from "../ACP Connector/agy/cli.js";
 import {
   probeExactAgyBinaryVersion,
   type VerifiedAgyBinary
-} from "../src/agy/launch-spec.js";
-import type { SqliteProviderSnapshotReader } from "../src/agy/db/provider-observer.js";
+} from "../ACP Connector/agy/launch-spec.js";
+import type { SqliteProviderSnapshotReader } from "../ACP Connector/agy/db/provider-observer.js";
 
 const BUSINESS_PROMPT = "connector prompt must stay on stdin";
 const CONVERSATION_ID = "c3b66b04-872b-4fbe-a3a4-058a026ef20a";

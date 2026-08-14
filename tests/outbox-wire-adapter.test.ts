@@ -5,9 +5,9 @@ import {
   AcpOutboxWirePayloadError,
   notifyOutboxDeliveryV1,
   notifyOutboxDeliveryV2
-} from "../src/agy/acp/outbox-wire-adapter.js";
-import { ACP_OUTBOX_CAPABILITY_KEY } from "../src/admission/outbox-protocol.js";
-import type { OutboxDeliveryMessage } from "../src/agy/acp/outbox-delivery.js";
+} from "../ACP Connector/acp/outbox-wire-adapter.js";
+import { ACP_OUTBOX_CAPABILITY_KEY } from "../ACP Connector/admission/outbox-protocol.js";
+import type { OutboxDeliveryMessage } from "../ACP Connector/acp/outbox-delivery.js";
 
 const MESSAGE: Omit<OutboxDeliveryMessage, "payload"> = {
   sessionId: "session-1",

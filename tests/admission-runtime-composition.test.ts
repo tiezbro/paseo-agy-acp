@@ -2,27 +2,27 @@ import { chmodSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
-import { AdmissionRuntimeComposition } from "../src/admission/runtime-composition.js";
-import { createDeliveryEventIdentity, createRequestIdentity } from "../src/admission/identity.js";
-import { deriveAdmissionKeyBundle, zeroAdmissionKeyBundle } from "../src/admission/key-derivation.js";
-import { AdmissionRuntime } from "../src/admission/runtime.js";
+import { AdmissionRuntimeComposition } from "../ACP Connector/admission/runtime-composition.js";
+import { createDeliveryEventIdentity, createRequestIdentity } from "../ACP Connector/admission/identity.js";
+import { deriveAdmissionKeyBundle, zeroAdmissionKeyBundle } from "../Admission Controller/key-derivation.js";
+import { AdmissionRuntime } from "../ACP Connector/admission/runtime.js";
 import {
   issueLinuxPreDispatchTerminationProof,
   verifyLinuxPreDispatchTerminationProof
-} from "../src/admission/process-evidence.js";
+} from "../Admission Controller/process-evidence.js";
 import type {
   AdmissionPromptAgyContract,
   AdmissionPromptProcessLifecycleOwner,
   AdmissionPromptProviderObserver,
   AdmissionPromptRecoveryOwner
-} from "../src/admission/dispatcher.js";
+} from "../ACP Connector/admission/dispatcher.js";
 import {
   ACP_REQUEST_IDENTITY_CAPABILITY_VERSION,
   negotiateRequestIdentityCapability,
   validateRequestIdentityPromptMetadata
-} from "../src/admission/request-identity-protocol.js";
-import { TurnClaim } from "../src/agy/acp/session/turn-scheduler.js";
-import { probeExactAgyBinaryVersion } from "../src/agy/launch-spec.js";
+} from "../ACP Connector/admission/request-identity-protocol.js";
+import { TurnClaim } from "../ACP Connector/acp/session/turn-scheduler.js";
+import { probeExactAgyBinaryVersion } from "../ACP Connector/agy/launch-spec.js";
 
 const stateDirs: string[] = [];
 

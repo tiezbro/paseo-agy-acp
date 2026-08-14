@@ -5,40 +5,43 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   createAdmissionRuntime,
   AdmissionRuntimeError
-} from "../src/admission/runtime.js";
-import { deriveAdmissionKeyBundle, zeroAdmissionKeyBundle } from "../src/admission/key-derivation.js";
-import { ADMISSION_SCHEMA_VERSION } from "../src/admission/schema.js";
+} from "../ACP Connector/admission/runtime.js";
+import { deriveAdmissionKeyBundle, zeroAdmissionKeyBundle } from "../Admission Controller/key-derivation.js";
+import { ADMISSION_SCHEMA_VERSION } from "../Admission Controller/schema.js";
 import type {
   AdmissionPromptAgyContract,
   AdmissionPromptProcessLifecycleOwner,
   AdmissionPromptProviderObserver,
   AdmissionPromptRecoveryOwner
-} from "../src/admission/dispatcher.js";
-import { ACP_OUTBOX_CAPABILITY } from "../src/admission/outbox-protocol.js";
+} from "../ACP Connector/admission/dispatcher.js";
+import {
+  ACP_OUTBOX_CAPABILITY,
+  durableDeliveryProtocol
+} from "../ACP Connector/admission/outbox-protocol.js";
 import {
   ACP_REQUEST_IDENTITY_CAPABILITY_VERSION,
   negotiateRequestIdentityCapability,
   validateRequestIdentityPromptMetadata
-} from "../src/admission/request-identity-protocol.js";
-import { TurnClaim } from "../src/agy/acp/session/turn-scheduler.js";
-import type { AgyStartupLauncher } from "../src/agy/startup-launcher.js";
+} from "../ACP Connector/admission/request-identity-protocol.js";
+import { TurnClaim } from "../ACP Connector/acp/session/turn-scheduler.js";
+import type { AgyStartupLauncher } from "../ACP Connector/agy/startup-launcher.js";
 import {
   createAgyLaunchSpecification,
   probeExactAgyBinaryVersion,
   type AgyLaunchSpecification,
   type VerifiedAgyBinary
-} from "../src/agy/launch-spec.js";
+} from "../ACP Connector/agy/launch-spec.js";
 import type {
   AdmissionDeliveryBridgeContext,
   AdmissionRecoveryBridgeContext
-} from "../src/admission/runtime-composition.js";
+} from "../ACP Connector/admission/runtime-composition.js";
 
 const stateDirs: string[] = [];
 const RUNTIME_AGENT_ID = "paseo-admission-runtime-test";
 const fakePtyCanarySources = vi.hoisted(() => new WeakMap<object, AgyLaunchSpecification>());
 
-vi.mock("../src/agy/startup-launcher.js", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../src/agy/startup-launcher.js")>();
+vi.mock("../ACP Connector/agy/startup-launcher.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../ACP Connector/agy/startup-launcher.js")>();
   return {
     ...actual,
     runRepositoryOwnedPromptFreePtyCanary<TChild>(
@@ -195,7 +198,7 @@ function runtimeDispatchRig(options: {
           payload: "fake provider terminal",
           sequence: 1,
           expiresAt: now + 60_000,
-          protocol: ACP_OUTBOX_CAPABILITY
+          protocol: durableDeliveryProtocol(ACP_OUTBOX_CAPABILITY)
         }
       };
     }
@@ -503,7 +506,7 @@ describe("Admission Controller runtime factory", () => {
                 payload: "provider terminal closed",
                 sequence: 1,
                 expiresAt: now + 60_000,
-                protocol: ACP_OUTBOX_CAPABILITY
+                protocol: durableDeliveryProtocol(ACP_OUTBOX_CAPABILITY)
               }
             };
           }

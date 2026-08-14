@@ -6,7 +6,7 @@ import {
   createRequestIdentity,
   type DeliveryEventIdentityInput,
   type RequestIdentityInput
-} from "../src/admission/identity.js";
+} from "../ACP Connector/admission/identity.js";
 
 const KEY = Buffer.alloc(32, 0x31);
 const REQUEST_DOMAIN = "paseo-agy-acp/admission/request-identity/v1";

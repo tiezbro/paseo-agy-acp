@@ -13,19 +13,24 @@ import {
   createAcpApp,
   createAcpV2App,
   runAcp
-} from "../src/agy/acp/agent.js";
-import { AcpSessionClientRouteRegistry } from "../src/agy/acp/session/client-route-registry.js";
-import { AcpOutboxDeliveryBridge, type OutboxDeliveryMessage } from "../src/agy/acp/outbox-delivery.js";
-import { AdmissionController, type AdmissionPolicy, type EnqueueDelivery } from "../src/admission/controller.js";
+} from "../ACP Connector/acp/agent.js";
+import { AcpSessionClientRouteRegistry } from "../ACP Connector/acp/session/client-route-registry.js";
+import { AcpOutboxDeliveryBridge, type OutboxDeliveryMessage } from "../ACP Connector/acp/outbox-delivery.js";
+import {
+  AdmissionController,
+  DURABLE_DELIVERY_PROTOCOL,
+  type AdmissionPolicy,
+  type EnqueueDelivery
+} from "../Admission Controller/controller.js";
 import {
   ACP_OUTBOX_ACK_METHOD,
   ACP_OUTBOX_CAPABILITY,
   ACP_OUTBOX_CAPABILITY_KEY,
   ACP_OUTBOX_CAPABILITY_VERSION,
   type OutboxAck
-} from "../src/admission/outbox-protocol.js";
-import * as installer from "../src/agy/installer.js";
-import type { AgyStartupLauncher } from "../src/agy/startup-launcher.js";
+} from "../ACP Connector/admission/outbox-protocol.js";
+import * as installer from "../ACP Connector/agy/installer.js";
+import type { AgyStartupLauncher } from "../ACP Connector/agy/startup-launcher.js";
 
 const stateDirs: string[] = [];
 const POLICY: AdmissionPolicy = {
@@ -56,8 +61,7 @@ function outboxOffer(): Record<string, unknown> {
     versions: [ACP_OUTBOX_CAPABILITY_VERSION],
     required: false,
     ackRequests: true,
-    durableEventIdDedupe: true,
-    reconnectReplay: true
+    durableEventIdDedupe: true
   };
 }
 
@@ -89,7 +93,7 @@ function enqueueDelivery(controller: AdmissionController, eventId: string): void
     sequence: 1,
     now: 1_001,
     expiresAt: 10_000,
-    protocol: ACP_OUTBOX_CAPABILITY
+    protocol: DURABLE_DELIVERY_PROTOCOL
   };
   controller.enqueueDelivery(delivery);
 }

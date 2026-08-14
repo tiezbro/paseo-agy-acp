@@ -5,7 +5,7 @@ import {
   type RecoveryClaimToken,
   type RecoveryResolution,
   type RecoveryResolutionContext
-} from "../src/admission/recovery-resolution.js";
+} from "../Admission Controller/recovery-resolution.js";
 
 const ACTOR_HMAC = "a".repeat(64);
 const EVIDENCE_HMAC = "b".repeat(64);

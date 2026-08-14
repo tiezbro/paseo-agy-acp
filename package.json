@@ -21,11 +21,11 @@
     "google",
     "paseo"
   ],
-  "main": "dist/agent.js",
-  "types": "dist/agent.d.ts",
+  "main": "dist/ACP Connector/agent.js",
+  "types": "dist/ACP Connector/agent.d.ts",
   "license": "Apache-2.0",
   "bin": {
-    "agy-acp": "dist/main.js"
+    "agy-acp": "dist/ACP Connector/main.js"
   },
   "files": [
     "dist",
@@ -36,9 +36,11 @@
     "package.json"
   ],
   "scripts": {
-    "build": "tsc",
+    "build": "node scripts/clean-dist.mjs && tsc",
     "typecheck": "tsc -p tsconfig.test.json",
-    "test": "npm run typecheck && vitest run",
+    "test": "npm run typecheck && npm run build && vitest run",
+    "validate:architecture": "node scripts/verify-import-boundaries.mjs",
+    "validate": "npm test && npm run validate:architecture",
     "test:watch": "vitest",
     "prepublishOnly": "npm run build"
   },

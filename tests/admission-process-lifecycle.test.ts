@@ -4,15 +4,15 @@ import {
   type AdmissionProcessLifecycleOwner,
   type AgyProcessLifecycleOwner,
   type LinuxProcessLifecycleRecord
-} from "../src/admission/process-lifecycle.js";
-import type { LocalCancellationPhase, LocalProcessResidueProof } from "../src/admission/cancellation.js";
+} from "../ACP Connector/admission/process-lifecycle.js";
+import type { LocalCancellationPhase, LocalProcessResidueProof } from "../ACP Connector/admission/cancellation.js";
 import {
   createLinuxPreDispatchProofAuthority,
   verifyLinuxPreDispatchTerminationProof,
   type LinuxProcessEvidenceReaders,
   type LinuxProcessIdentity,
   type LinuxPreDispatchProofAuthority
-} from "../src/admission/process-evidence.js";
+} from "../Admission Controller/process-evidence.js";
 
 const BOOT_ID = "f4bca3da-9bd5-4f2e-89b8-5e12e5ee8f31";
 const OWNER_INSTANCE_ID = "4d6f4908-8b36-4d63-bcc0-3d690fcfb9ce";

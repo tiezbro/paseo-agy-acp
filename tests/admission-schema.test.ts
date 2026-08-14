@@ -3,12 +3,12 @@ import os from "node:os";
 import path from "node:path";
 import Database from "better-sqlite3";
 import { afterEach, describe, expect, it } from "vitest";
-import { AdmissionController, type AdmissionPolicy } from "../src/admission/controller.js";
+import { AdmissionController, type AdmissionPolicy } from "../Admission Controller/controller.js";
 import {
   ADMISSION_SCHEMA_VERSION,
   assertAdmissionSchemaIntegrity,
   SchemaIntegrityError
-} from "../src/admission/schema.js";
+} from "../Admission Controller/schema.js";
 
 const stateDirs: string[] = [];
 const databases: Database.Database[] = [];
@@ -170,11 +170,9 @@ function schemaFixture(options: SchemaFixtureOptions = {}): Database.Database {
       request_id TEXT NOT NULL REFERENCES turn_requests(request_id),
       owner_instance_id TEXT NOT NULL,
       claim_generation INTEGER NOT NULL,
-      state TEXT NOT NULL CHECK (state IN ('claimed', 'replay_reserved', 'delivered', 'recovery_required')),
+      state TEXT NOT NULL CHECK (state IN ('claimed', 'delivered', 'recovery_required')),
       heartbeat_at INTEGER NOT NULL,
       lease_expires_at INTEGER NOT NULL,
-      terminal_replay_count INTEGER NOT NULL DEFAULT 0,
-      replay_reserved_at INTEGER,
       settled_at INTEGER,
       updated_at INTEGER NOT NULL${options.deliveryClaimLeaseExtraColumn ? `, ${options.deliveryClaimLeaseExtraColumn}` : ""}
     );
@@ -309,7 +307,7 @@ afterEach(() => {
 });
 
 describe("admission schema integrity", () => {
-  it("fresh creation installs the exact v10 sanitized event journal through a read-only connection", () => {
+  it("fresh creation installs the exact v10 no-replay schema through a read-only connection", () => {
     const db = currentDatabase(true);
 
     expect(ADMISSION_SCHEMA_VERSION).toBe(10);
@@ -364,8 +362,6 @@ describe("admission schema integrity", () => {
       "state",
       "heartbeat_at",
       "lease_expires_at",
-      "terminal_replay_count",
-      "replay_reserved_at",
       "settled_at",
       "updated_at"
     ]);

@@ -3,12 +3,12 @@
     "target": "ES2022",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "rootDir": "src",
+    "rootDir": ".",
     "outDir": "dist",
     "strict": true,
     "declaration": true,
     "sourceMap": true,
     "skipLibCheck": true
   },
-  "include": ["src/**/*.ts"]
+  "include": ["ACP Connector/**/*.ts", "Admission Controller/**/*.ts"]
 }

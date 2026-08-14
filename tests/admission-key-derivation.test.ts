@@ -8,7 +8,7 @@ import {
   deriveAdmissionSubkey,
   zeroAdmissionKeyBundle,
   type AdmissionKeyPurpose
-} from "../src/admission/key-derivation.js";
+} from "../Admission Controller/key-derivation.js";
 
 const MASTER_KEY = Buffer.from(Array.from({ length: 32 }, (_, index) => index));
 const DERIVATION_NAMESPACE = "paseo-agy-acp/admission/key-derivation";

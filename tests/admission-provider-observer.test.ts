@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import {
   createProviderObserver,
   type ProviderObserverSources
-} from "../src/admission/provider-observer.js";
-import { normalizeTerminalObservation } from "../src/admission/terminal-evidence.js";
+} from "../ACP Connector/admission/provider-observer.js";
+import { normalizeTerminalObservation } from "../ACP Connector/admission/terminal-evidence.js";
 
 const CONVERSATION_ID = "conversation-1";
 const OBSERVED_AT = 1_725_000_000_000;

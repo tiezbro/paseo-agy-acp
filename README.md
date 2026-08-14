@@ -67,10 +67,13 @@ contributors. All credit for the original ACP adapter architecture belongs to th
 
 ## v2 Admission Controller Development
 
-Source ownership is intentionally limited to two functional areas:
-`src/admission/` contains the Admission Controller, while `src/agy/` contains
-the agy adapter and its ACP connector at `src/agy/acp/`. `src/main.ts` and
-`src/agent.ts` are package entrypoints rather than separate functional areas.
+Source ownership is intentionally limited to two root-level functional areas:
+`Admission Controller/` contains the implementation-independent shared seat,
+queue, lease, heartbeat, cooldown, and queue-progress kernel. `ACP Connector/`
+contains the Paseo/ACP protocol, session/conversation mapping, Antigravity
+integration, stream-json/SQLite translation, permissions, cancellation,
+recovery coordination, and error classification. Package entrypoints live in
+`ACP Connector/`; there is no third source area.
 
 The v2.0.0.0 Admission Controller is under source development. The current
 disabled-by-default foundation includes a verified SQLite v10 ledger,
@@ -81,9 +84,20 @@ sanitized HMAC event journal, and an explicit at-least-once outbox ACK route.
 The local key store rejects unsafe ownership, permissions, links, and
 publication races.
 
+`maxActiveTurns` is one shared Antigravity account-level seat pool across all
+local connector processes and models. Requests enter one durable, oldest-
+eligible queue with parent fairness; startup rate and concurrent-start limits
+are enforced separately. Provider/model cooldown changes eligibility but never
+creates additional seats. The source default is two seats. The runtime accepts
+one or two seats only; values above two are outside this
+confirmed iteration and fail closed.
+
 Exact outbox acknowledgements are checked against durable claim state, so an
 ACK remains idempotent after a bridge or controller restart without resending
-the payload. Once process identity persistence has atomically recorded
+the payload. The outbox exposes only initial result delivery and exact ACK;
+there is no reconnect resend API or duplicate Connector-owned claim store. An
+unconfirmed delivery becomes `recovery_required`.
+Once process identity persistence has atomically recorded
 `dispatch_intent`, any later cancellation or fence failure remains
 `dispatch_ambiguous` and is never automatically requeued.
 
@@ -103,6 +117,11 @@ code has no startup or prompt-write method; the admission dispatcher remains
 the sole owner of the irreversible business prompt write.
 Controller errors retain typed classes but omit durable request, delivery, and
 lease identifiers from message strings.
+
+A completed turn releases its Antigravity seat immediately. Agent completion,
+notification, and archival remain official Paseo lifecycle responsibilities;
+the connector does not add a second lifecycle supervisor. A later message
+re-enters the same global queue.
 Concurrent connectors may initialize the active-session registry together.
 The registry retries only bounded SQLite `BUSY`/`LOCKED` contention in its
 idempotent WAL/schema setup; incompatible or damaged schemas still fail closed,
@@ -198,7 +217,7 @@ folding the display label into the model name or adding an unsupported
     "antigravity": {
       "type": "acp",
       "command": "node",
-      "args": ["/path/to/paseo-agy-acp/dist/main.js"]
+      "args": ["/path/to/paseo-agy-acp/dist/ACP Connector/main.js"]
     }
   }
 }
@@ -216,8 +235,8 @@ Configure the Paseo daemon to add an ACP provider for Google Antigravity.
 1. Read Paseo config ($PASEO_HOME/config.json or ~/.paseo/config.json).
 2. Add or update providers.antigravity:
    - type: "acp"
-   - command: path to agy-acp binary (e.g. "agy-acp" or full path to dist/main.js)
-   - args: []
+   - command: path to agy-acp binary (e.g. "agy-acp" or node with the full path below)
+   - args: when command is node, ["/path/to/paseo-agy-acp/dist/ACP Connector/main.js"]
 3. If agy-acp is not installed: cd paseo-agy-acp && npm ci && npm run build
 4. Ensure agy CLI is installed: curl -fsSL https://antigravity.google/cli/install.sh | bash
    Then: agy auth login
@@ -230,7 +249,7 @@ Configure the Paseo daemon to add an ACP provider for Google Antigravity.
 ```bash
 # Smoke test
 printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":1}}' \
-  | node dist/main.js
+  | node 'dist/ACP Connector/main.js'
 
 # Full suite
 npm test
@@ -260,7 +279,8 @@ git pull && npm ci && npm run build && npm test
 git checkout <rev> && npm ci && npm run build && npm test
 ```
 
-Point daemon at the desired `dist/main.js` and restart.
+Point daemon at the desired `agy-acp` binary or `dist/ACP Connector/main.js`
+entrypoint and restart.
 
 ## Disclaimer
 

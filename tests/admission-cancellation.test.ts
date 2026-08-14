@@ -6,8 +6,8 @@ import {
   type LocalProcessCancellationDependencies,
   type LocalProcessIdentityState,
   type LocalProcessResidueProof
-} from "../src/admission/cancellation.js";
-import type { LinuxProcessIdentity } from "../src/admission/process-evidence.js";
+} from "../ACP Connector/admission/cancellation.js";
+import type { LinuxProcessIdentity } from "../Admission Controller/process-evidence.js";
 
 const IDENTITY: LinuxProcessIdentity = Object.freeze({
   bootId: "f4bca3da-9bd5-4f2e-89b8-5e12e5ee8f31",

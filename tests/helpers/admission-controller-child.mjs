@@ -16,8 +16,9 @@ if (
 }
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
-const { AdmissionController } = await import(pathToFileURL(path.join(repositoryRoot, "dist/admission/controller.js")).href);
-const { ACP_OUTBOX_CAPABILITY } = await import(pathToFileURL(path.join(repositoryRoot, "dist/admission/outbox-protocol.js")).href);
+const { AdmissionController, DURABLE_DELIVERY_PROTOCOL } = await import(
+  pathToFileURL(path.join(repositoryRoot, "dist/Admission Controller/controller.js")).href
+);
 const controller = new AdmissionController({
   databasePath,
   policy: {
@@ -110,18 +111,12 @@ if (command === "list-recoverable") {
 
 function terminalObservations() {
   return {
-    streamJson: {
-      source: "stream_json",
-      conversationId: "process-test-conversation",
-      observedAt: 1_010,
-      status: "SUCCESS"
-    },
-    sqliteReconciliation: {
-      source: "sqlite_reconciliation",
-      conversationId: "process-test-conversation",
-      observedAt: 1_011,
-      status: "SUCCESS"
-    }
+    outcome: "completed",
+    conversationId: "process-test-conversation",
+    status: "SUCCESS",
+    streamObservedAt: 1_010,
+    sqliteObservedAt: 1_011,
+    failure: null
   };
 }
 
@@ -134,6 +129,6 @@ function terminalDelivery(requestId, now) {
     sequence: 0,
     now,
     expiresAt: now + 60_000,
-    protocol: ACP_OUTBOX_CAPABILITY
+    protocol: DURABLE_DELIVERY_PROTOCOL
   };
 }

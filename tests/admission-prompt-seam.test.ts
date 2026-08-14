@@ -4,32 +4,34 @@ import os from "node:os";
 import path from "node:path";
 import { PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
 import * as acpV2 from "@agentclientprotocol/sdk/experimental/v2";
-import { AcpAgent } from "../src/agy/acp/agent.js";
-import type { PromptV1Deps, PromptV2Deps } from "../src/agy/acp/session/prompt.js";
+import { AcpAgent } from "../ACP Connector/acp/agent.js";
+import type { PromptV1Deps, PromptV2Deps } from "../ACP Connector/acp/session/prompt.js";
 import {
   handlePromptV1,
   handlePromptV2,
   notifyIdleAndDrainQueue
-} from "../src/agy/acp/session/prompt.js";
-import { turnsOf, TurnClaim, type TurnKind } from "../src/agy/acp/session/turn-scheduler.js";
-import type { SessionState } from "../src/agy/acp/session/types.js";
-import { AdmissionController, type AdmissionPolicy } from "../src/admission/controller.js";
-import { createRequestIdentity } from "../src/admission/identity.js";
+} from "../ACP Connector/acp/session/prompt.js";
+import { handleResumeSessionV1 } from "../ACP Connector/acp/session/resume.js";
+import { turnsOf, TurnClaim, type TurnKind } from "../ACP Connector/acp/session/turn-scheduler.js";
+import type { SessionState } from "../ACP Connector/acp/session/types.js";
+import { AdmissionController, type AdmissionPolicy } from "../Admission Controller/controller.js";
+import { createRequestIdentity } from "../ACP Connector/admission/identity.js";
 import {
   AdmissionPromptDispatchIncompleteError,
   AdmissionPromptIdentityRequiredError,
   AdmissionPromptReplayBlockedError,
   AdmissionPromptSeam,
   type PromptAdmission
-} from "../src/admission/prompt-seam.js";
+} from "../ACP Connector/admission/prompt-seam.js";
 import {
   ACP_REQUEST_IDENTITY_CAPABILITY_KEY,
   ACP_REQUEST_IDENTITY_CAPABILITY_VERSION,
   negotiateRequestIdentityCapability,
   validateRequestIdentityPromptMetadata
-} from "../src/admission/request-identity-protocol.js";
-import { AdmissionRuntime } from "../src/admission/runtime.js";
-import * as installer from "../src/agy/installer.js";
+} from "../ACP Connector/admission/request-identity-protocol.js";
+import { AdmissionRuntime } from "../ACP Connector/admission/runtime.js";
+import * as installer from "../ACP Connector/agy/installer.js";
+import { buildModelCatalog } from "../ACP Connector/agy/model/catalog.js";
 
 const NOW = 1_000;
 const POLICY: AdmissionPolicy = {
@@ -60,7 +62,7 @@ function session(sessionId: string): SessionState {
     additionalDirectories: [],
     promptQueue: [],
     v2UserMessageIdsByStep: {},
-    catalog: { models: [], byBase: new Map() },
+    catalog: buildModelCatalog(["claude-opus-4-6-thinking"]),
     selectedBaseModel: "claude-opus-4-6-thinking",
     selectedReasoningEffort: "",
     agy: {
@@ -511,5 +513,44 @@ describe("admission prompt seam", () => {
     for (const current of [v1Foreground, v1Queued, v1Steer, v2Foreground, v2Queued, v2Steer]) {
       expect(current.agy.prompt).not.toHaveBeenCalled();
     }
+  });
+
+  it("routes the first new prompt after a historical-session resume through global admission", async () => {
+    const restored = session("historical-session");
+    const admitted: string[] = [];
+    const admission: PromptAdmission = {
+      requestIdentity: negotiateRequestIdentityCapability(undefined),
+      seam: {
+        admit: async ({ promptText }: { promptText: string }) => {
+          admitted.push(promptText);
+          return "cancelled";
+        }
+      }
+    } as unknown as PromptAdmission;
+    const client = { notify: async () => {} } as any;
+
+    await handleResumeSessionV1({
+      sessionId: restored.sessionId,
+      cwd: restored.cwd
+    } as any, client, {
+      requireAuthenticated: async () => {},
+      reloadSession: async () => ({
+        session: restored,
+        cwd: restored.cwd,
+        stored: { sessionId: restored.sessionId } as any
+      }),
+      replayConversation: async () => {},
+      notifyAvailableCommandsV1: async () => {}
+    });
+
+    await expect(handlePromptV1({
+      sessionId: restored.sessionId,
+      prompt: [{ type: "text", text: "continue the historical task" }]
+    } as any, client, undefined, v1Deps(restored, admission))).resolves.toEqual({
+      stopReason: "cancelled"
+    });
+
+    expect(admitted).toEqual(["continue the historical task"]);
+    expect(restored.agy.prompt).not.toHaveBeenCalled();
   });
 });

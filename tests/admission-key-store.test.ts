@@ -16,11 +16,11 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
-import { loadOrCreateAdmissionKey, AdmissionKeyStoreError } from "../src/admission/key-store.js";
+import { loadOrCreateAdmissionKey, AdmissionKeyStoreError } from "../Admission Controller/key-store.js";
 
 const stateDirs: string[] = [];
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const keyStoreSourcePath = path.join(repositoryRoot, "src/admission/key-store.ts");
+const keyStoreSourcePath = path.join(repositoryRoot, "Admission Controller/key-store.ts");
 const keyStoreChildPath = path.join(repositoryRoot, "tests/helpers/admission-key-store-child.mjs");
 const typeScriptCompilerPath = path.join(repositoryRoot, "node_modules/typescript/bin/tsc");
 

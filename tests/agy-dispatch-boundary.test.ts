@@ -4,7 +4,7 @@ import {
   type AgyDispatchBoundaryDependencies,
   type AgyDispatchFence,
   type AgyDispatchProcess
-} from "../src/agy/dispatch-boundary.js";
+} from "../ACP Connector/agy/dispatch-boundary.js";
 
 interface FakeProcess {
   readonly pid: number;

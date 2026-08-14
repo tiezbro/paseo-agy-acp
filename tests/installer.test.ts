@@ -3,14 +3,14 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { spawnSync } from "node:child_process";
 import { afterEach, describe, expect, it } from "vitest";
-import type { AgyStartupLauncher } from "../src/agy/startup-launcher.js";
+import type { AgyStartupLauncher } from "../ACP Connector/agy/startup-launcher.js";
 import {
   DEFAULT_AGY_RELEASES_API,
   ensureAgyInstalled,
   installedAgyPath,
   releaseAssetName,
   resolveAgyExecutable
-} from "../src/agy/installer.js";
+} from "../ACP Connector/agy/installer.js";
 
 describe("releaseAssetName", () => {
   it("maps platform and arch to GitHub asset names", () => {

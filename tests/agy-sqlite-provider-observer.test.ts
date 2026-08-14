@@ -6,8 +6,8 @@ import {
   createSqliteProviderObserver,
   createSqliteProviderObserverForDirectory,
   type SqliteProviderSnapshotReader
-} from "../src/agy/db/provider-observer.js";
-import { normalizeTerminalObservation } from "../src/admission/terminal-evidence.js";
+} from "../ACP Connector/agy/db/provider-observer.js";
+import { normalizeTerminalObservation } from "../ACP Connector/admission/terminal-evidence.js";
 import { createConversationDb, insertStep } from "./fixtures/conversation-db.js";
 import { encodeModelProviderError, encodeStepPayload } from "./fixtures/step-encoder.js";
 

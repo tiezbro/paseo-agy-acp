@@ -15,7 +15,7 @@ import {
   SqliteStartupPermitFenceError,
   type HeldAgyStartupPermit,
   type SqliteStartupLauncherOptions
-} from "../src/admission/sqlite-startup-launcher.js";
+} from "../Admission Controller/sqlite-startup-launcher.js";
 
 const OWNER_A = "11111111-1111-4111-8111-111111111111";
 const OWNER_B = "22222222-2222-4222-8222-222222222222";
@@ -37,11 +37,11 @@ beforeAll(() => {
     "--moduleResolution", "NodeNext",
     "--strict",
     "--skipLibCheck",
-    "--rootDir", "src",
+    "--rootDir", ".",
     "--outDir", buildDir,
-    "src/admission/sqlite-startup-launcher.ts"
+    "Admission Controller/sqlite-startup-launcher.ts"
   ], { cwd: repositoryRoot, stdio: "inherit" });
-  workerModule = path.join(buildDir, "admission/sqlite-startup-launcher.js");
+  workerModule = path.join(buildDir, "Admission Controller/sqlite-startup-launcher.js");
 });
 
 afterAll(() => rmSync(buildDir, { recursive: true, force: true }));

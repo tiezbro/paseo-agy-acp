@@ -14,30 +14,31 @@ import { PassThrough } from "node:stream";
 import { fileURLToPath } from "node:url";
 import Database from "better-sqlite3";
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
-import { AcpOutboxDeliveryBridge, type OutboxDeliveryMessage } from "../src/agy/acp/outbox-delivery.js";
-import { ActiveSessionRegistry, type ActiveConnectorIdentity } from "../src/agy/acp/session/active-registry.js";
-import { ActiveSessionTurnBinding } from "../src/agy/acp/session/active-turn-binding.js";
+import { AcpOutboxDeliveryBridge, type OutboxDeliveryMessage } from "../ACP Connector/acp/outbox-delivery.js";
+import { ActiveSessionRegistry, type ActiveConnectorIdentity } from "../ACP Connector/acp/session/active-registry.js";
+import { ActiveSessionTurnBinding } from "../ACP Connector/acp/session/active-turn-binding.js";
 import {
   AdmissionController,
+  DURABLE_DELIVERY_PROTOCOL,
   type AdmissionControllerFaultInjection,
   type AdmissionLease,
   type AdmissionPolicy,
   type EnqueueDelivery,
   type VerifiedLinuxProcessRecord
-} from "../src/admission/controller.js";
+} from "../Admission Controller/controller.js";
 import {
   deriveAdmissionKeyBundle,
   zeroAdmissionKeyBundle,
   type AdmissionKeyBundle
-} from "../src/admission/key-derivation.js";
-import { ACP_OUTBOX_CAPABILITY, ACP_OUTBOX_CAPABILITY_VERSION } from "../src/admission/outbox-protocol.js";
-import { AgyPromptFreeDispatchBoundary } from "../src/agy/dispatch-boundary.js";
-import { probeExactAgyBinaryVersion } from "../src/agy/launch-spec.js";
-import { runPromptFreePtyCanary } from "../src/agy/prompt-free-canary.js";
+} from "../Admission Controller/key-derivation.js";
+import { ACP_OUTBOX_CAPABILITY_VERSION } from "../ACP Connector/admission/outbox-protocol.js";
+import { AgyPromptFreeDispatchBoundary } from "../ACP Connector/agy/dispatch-boundary.js";
+import { probeExactAgyBinaryVersion } from "../ACP Connector/agy/launch-spec.js";
+import { runPromptFreePtyCanary } from "../ACP Connector/agy/prompt-free-canary.js";
 import {
   startAgyPromptFreeProcess,
   type AgyPromptFreeProcessChild
-} from "../src/agy/prompt-free-process.js";
+} from "../ACP Connector/agy/prompt-free-process.js";
 
 const repositoryRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const workerScript = path.join(repositoryRoot, "tests/helpers/admission-fault-worker.mjs");
@@ -72,14 +73,14 @@ beforeAll(() => {
       "--strict",
       "--skipLibCheck",
       "--rootDir",
-      "src",
+      ".",
       "--outDir",
       workerBuildDir,
-      "src/admission/controller.ts"
+      "Admission Controller/controller.ts"
     ],
     { cwd: repositoryRoot, stdio: "pipe" }
   );
-  workerControllerModule = path.join(workerBuildDir, "admission/controller.js");
+  workerControllerModule = path.join(workerBuildDir, "Admission Controller/controller.js");
 });
 
 afterEach(() => {
@@ -876,18 +877,12 @@ function connectorIdentity(): ActiveConnectorIdentity {
 
 function terminalObservations() {
   return {
-    streamJson: {
-      source: "stream_json" as const,
-      conversationId: "conversation-terminal",
-      observedAt: 1_008,
-      status: "SUCCESS" as const
-    },
-    sqliteReconciliation: {
-      source: "sqlite_reconciliation" as const,
-      conversationId: "conversation-terminal",
-      observedAt: 1_009,
-      status: "SUCCESS" as const
-    }
+    outcome: "completed" as const,
+    conversationId: "conversation-terminal",
+    status: "SUCCESS" as const,
+    streamObservedAt: 1_008,
+    sqliteObservedAt: 1_009,
+    failure: null
   };
 }
 
@@ -905,7 +900,7 @@ function terminalDelivery(
     sequence: 1,
     now,
     expiresAt: now + 60_000,
-    protocol: ACP_OUTBOX_CAPABILITY
+    protocol: DURABLE_DELIVERY_PROTOCOL
   };
 }
 

@@ -18,7 +18,7 @@ Last updated: 2026-08-07
 
 ### 1. Paseo Append-System-Prompt Bridge
 
-**Files:** `src/agy/acp/session/prompt.ts`, `tests/queue-steer.test.ts`
+**Files:** `ACP Connector/acp/session/prompt.ts`, `tests/queue-steer.test.ts`
 
 Recovers Paseo `daemon.appendSystemPrompt` text from agent state when `PASEO_AGENT_ID`
 is present. `PASEO_HOME` is treated as an optional override and falls back to
@@ -34,7 +34,7 @@ prefix bridge rather than a native system-role message.
 
 ### 2. Permission Decisions Are Authoritative
 
-**Files:** `src/agy/cli.ts`, `tests/cli.test.ts`
+**Files:** `ACP Connector/agy/cli.ts`, `tests/cli.test.ts`
 
 ACP permission denial is treated as authoritative even if Antigravity later writes
 a completed/success row to its conversation database. Denied tool call IDs are tracked
@@ -43,7 +43,7 @@ is emitted for denied commands and edits.
 
 ### 3. Completion Requires Final Assistant Output
 
-**Files:** `src/agy/cli.ts`, `src/agy/db/streaming.ts`, `tests/cli.test.ts`, `tests/db.test.ts`
+**Files:** `ACP Connector/agy/cli.ts`, `ACP Connector/agy/db/streaming.ts`, `tests/cli.test.ts`, `tests/db.test.ts`
 
 `turnCompleteCandidate` strengthened so a turn is complete only after a terminal
 visible assistant message appears after the last tool/system boundary. Progress rows,
@@ -51,7 +51,7 @@ idle markers, terminal lifecycle rows, and system rows are ignored as final outp
 
 ### 4. Foreground Command Task-State Fix
 
-**Files:** `src/agy/db/streaming.ts`, `src/agy/cli.ts`, `tests/cli.test.ts`, `tests/db.test.ts`
+**Files:** `ACP Connector/agy/db/streaming.ts`, `ACP Connector/agy/cli.ts`, `tests/cli.test.ts`, `tests/db.test.ts`
 
 Foreground `run_command` rows that include `task_details` alongside an explicit
 terminal `commandResult.exitCode` are no longer treated as active background tasks.
@@ -60,7 +60,7 @@ final post-tool assistant message exists.
 
 ### 5. Whole-File Edit Revert Tolerates Provider Newlines
 
-**Files:** `src/agy/edit/revert.ts`, `tests/cli.test.ts`
+**Files:** `ACP Connector/agy/edit/revert.ts`, `tests/cli.test.ts`
 
 Antigravity may materialize a whole-file `write_to_file` with a trailing newline or
 CRLF even when the requested content did not include one. Revert now treats `newText`,
@@ -78,8 +78,8 @@ post-tool final assistant output, StreamPoller final-output and lifecycle-bounda
 
 ### 7. Native Antigravity Permission Bypass Mode
 
-**Files:** `src/agy/cli.ts`, `src/agy/acp/session/modes.ts`,
-`src/agy/acp/slash-commands/index.ts`, `tests/cli.test.ts`,
+**Files:** `ACP Connector/agy/cli.ts`, `ACP Connector/acp/session/modes.ts`,
+`ACP Connector/acp/slash-commands/index.ts`, `tests/cli.test.ts`,
 `tests/acp-server.test.ts`, `tests/slash-commands.test.ts`
 
 Exposes Antigravity CLI's official unattended permission bypass parameter as ACP
@@ -140,7 +140,7 @@ Verification for `1.0.0.2`:
   `PASEO_AGENT_CWD` for ACP provider processes. `PASEO_HOME` may be unset or
   empty, while the `1.0.0.0` bridge treated it as mandatory and returned an
   empty daemon context before reading Agent state.
-- Source fix: `src/agy/acp/session/prompt.ts` now resolves Paseo home as non-empty
+- Source fix: `ACP Connector/acp/session/prompt.ts` now resolves Paseo home as non-empty
   `PASEO_HOME`, then `~/.paseo`.
 - Regression: `tests/queue-steer.test.ts` covers both unset and empty
   `PASEO_HOME` with only `PASEO_AGENT_ID` present.

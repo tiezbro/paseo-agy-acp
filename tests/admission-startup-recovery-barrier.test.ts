@@ -4,10 +4,10 @@ import {
   StartupRecoveryBarrierConfigurationError,
   type StartupRecoveryBarrierSources,
   type StartupRecoveryProcessInventory
-} from "../src/admission/startup-recovery-barrier.js";
-import type { RecoverableDispatch, DeliveryClaimLease } from "../src/admission/controller.js";
-import type { ActiveSessionRecord } from "../src/agy/acp/session/active-registry.js";
-import type { RecoverableStartupPermit } from "../src/admission/sqlite-startup-launcher.js";
+} from "../Admission Controller/startup-recovery-barrier.js";
+import type { RecoverableDispatch, DeliveryClaimLease } from "../Admission Controller/controller.js";
+import type { ActiveSessionRecord } from "../ACP Connector/acp/session/active-registry.js";
+import type { RecoverableStartupPermit } from "../Admission Controller/sqlite-startup-launcher.js";
 
 const OWNER_ID = "11111111-1111-4111-8111-111111111111";
 const OTHER_OWNER_ID = "22222222-2222-4222-8222-222222222222";
@@ -480,8 +480,7 @@ function outboxClaim(): DeliveryClaimLease {
     claimGeneration: 2,
     state: "claimed",
     heartbeatAt: 1_000,
-    leaseExpiresAt: 31_000,
-    terminalReplayCount: 0
+    leaseExpiresAt: 31_000
   };
 }
 

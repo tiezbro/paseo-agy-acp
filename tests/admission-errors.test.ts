@@ -4,7 +4,7 @@ import {
   type ClassifiedProviderFailure,
   type ProviderFailureCategory,
   type ProviderFailureInput
-} from "../src/admission/errors.js";
+} from "../ACP Connector/admission/errors.js";
 
 type StructuredTerminalCase = {
   name: string;

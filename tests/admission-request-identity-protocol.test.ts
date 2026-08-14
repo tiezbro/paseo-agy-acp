@@ -7,7 +7,7 @@ import {
   negotiateRequestIdentityCapability,
   validateRequestIdentityPromptMetadata,
   type RequestIdentityNegotiationResult
-} from "../src/admission/request-identity-protocol.js";
+} from "../ACP Connector/admission/request-identity-protocol.js";
 
 function initializationOffer(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {

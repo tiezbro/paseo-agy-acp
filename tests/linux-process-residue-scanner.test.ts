@@ -3,8 +3,8 @@ import {
   LinuxProcessResidueScanner,
   LinuxProcessResidueScannerConfigurationError,
   type LinuxProcessResidueReaders
-} from "../src/admission/linux-process-residue-scanner.js";
-import type { StartupRecoveryProcessSubject } from "../src/admission/startup-recovery-barrier.js";
+} from "../ACP Connector/admission/linux-process-residue-scanner.js";
+import type { StartupRecoveryProcessSubject } from "../Admission Controller/startup-recovery-barrier.js";
 
 const BOOT_ID = "f4bca3da-9bd5-4f2e-89b8-5e12e5ee8f31";
 const OWNER_ID = "4d6f4908-8b36-4d63-bcc0-3d690fcfb9ce";

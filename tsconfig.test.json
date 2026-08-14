@@ -4,5 +4,5 @@
     "rootDir": ".",
     "noEmit": true
   },
-  "include": ["src/**/*.ts", "tests/**/*.ts", "vitest.config.ts"]
+  "include": ["ACP Connector/**/*.ts", "Admission Controller/**/*.ts", "tests/**/*.ts", "vitest.config.ts"]
 }

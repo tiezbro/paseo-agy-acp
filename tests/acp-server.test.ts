@@ -4,7 +4,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { Readable, Writable } from "node:stream";
 import { describe, expect, it, vi } from "vitest";
-import * as installer from "../src/agy/installer.js";
+import * as installer from "../ACP Connector/agy/installer.js";
 import { client as acpClient, methods, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
 import * as acpV2 from "@agentclientprotocol/sdk/experimental/v2";
 import {
@@ -17,15 +17,15 @@ import {
   contentBlocksToText,
   reasoningEffortConfigOption,
   toModelSlug
-} from "../src/agent.js";
-import { configFromEnv, type AgyCliConfig, type PtyFactory, type SpawnFactory } from "../src/agy/cli.js";
+} from "../ACP Connector/agent.js";
+import { configFromEnv, type AgyCliConfig, type PtyFactory, type SpawnFactory } from "../ACP Connector/agy/cli.js";
 import { createConversationDb, insertStep } from "./fixtures/conversation-db.js";
 import { encodeCommandResult, encodeStepPayload, encodeToolCall, encodeToolRun } from "./fixtures/step-encoder.js";
-import { createTerminalOutputTracker, createToolCallContentTracker, expandSessionUpdateToV2, sessionUpdateToV1, sessionUpdateToV2 } from "../src/agy/acp/session/update-wire.js";
-import { filterUpdatesForReplayFrom } from "../src/agy/acp/session/setup.js";
-import { turnsOf } from "../src/agy/acp/session/turn-scheduler.js";
-import { terminalIdForToolCall } from "../src/agy/acp/terminal/index.js";
-import { parseClientToolCallName } from "../src/agy/acp/initialize.js";
+import { createTerminalOutputTracker, createToolCallContentTracker, expandSessionUpdateToV2, sessionUpdateToV1, sessionUpdateToV2 } from "../ACP Connector/acp/session/update-wire.js";
+import { filterUpdatesForReplayFrom } from "../ACP Connector/acp/session/setup.js";
+import { turnsOf } from "../ACP Connector/acp/session/turn-scheduler.js";
+import { terminalIdForToolCall } from "../ACP Connector/acp/terminal/index.js";
+import { parseClientToolCallName } from "../ACP Connector/acp/initialize.js";
 import type { SessionConfigOption, SessionUpdate } from "@agentclientprotocol/sdk";
 
 type SelectConfigOption = Extract<SessionConfigOption, { type: "select" }>;

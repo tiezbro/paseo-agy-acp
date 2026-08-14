@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   AgyStreamJsonIdentityError,
   observeAgyStreamJsonIdentity
-} from "../src/agy/stream-json-identity.js";
+} from "../ACP Connector/agy/stream-json-identity.js";
 
 const CONVERSATION_ID = "c3b66b04-872b-4fbe-a3a4-058a026ef20a";
 const OTHER_CONVERSATION_ID = "055a398f-db14-4c5f-abbb-1bf03f8120a7";

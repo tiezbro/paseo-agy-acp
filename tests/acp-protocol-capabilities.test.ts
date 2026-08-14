@@ -1,21 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { handleInitializeV1, handleInitializeV2 } from "../src/agy/acp/initialize.js";
+import { handleInitializeV1, handleInitializeV2 } from "../ACP Connector/acp/initialize.js";
 import {
   ACP_OUTBOX_ACK_METHOD,
   ACP_OUTBOX_CAPABILITY,
   ACP_OUTBOX_CAPABILITY_KEY,
   ACP_OUTBOX_CAPABILITY_VERSION
-} from "../src/admission/outbox-protocol.js";
+} from "../ACP Connector/admission/outbox-protocol.js";
 import {
   ACP_REQUEST_IDENTITY_CAPABILITY,
   ACP_REQUEST_IDENTITY_CAPABILITY_KEY,
   ACP_REQUEST_IDENTITY_CAPABILITY_VERSION
-} from "../src/admission/request-identity-protocol.js";
+} from "../ACP Connector/admission/request-identity-protocol.js";
 import {
   ACP_OUTBOX_DELIVERY_META_KEY,
   ACP_OUTBOX_DELIVERY_METHOD,
   AcpProtocolCapabilityNegotiationError
-} from "../src/agy/acp/protocol-capabilities.js";
+} from "../ACP Connector/acp/protocol-capabilities.js";
 
 function requestIdentityOffer(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -31,7 +31,6 @@ function outboxOffer(overrides: Record<string, unknown> = {}): Record<string, un
     required: false,
     ackRequests: true,
     durableEventIdDedupe: true,
-    reconnectReplay: true,
     ...overrides
   };
 }

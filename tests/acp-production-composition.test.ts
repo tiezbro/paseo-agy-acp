@@ -2,18 +2,18 @@ import { describe, expect, it, vi } from "vitest";
 import {
   ACP_OUTBOX_CAPABILITY_KEY,
   ACP_OUTBOX_CAPABILITY_VERSION
-} from "../src/admission/outbox-protocol.js";
-import { ACP_REQUEST_IDENTITY_CAPABILITY_KEY } from "../src/admission/request-identity-protocol.js";
+} from "../ACP Connector/admission/outbox-protocol.js";
+import { ACP_REQUEST_IDENTITY_CAPABILITY_KEY } from "../ACP Connector/admission/request-identity-protocol.js";
 import {
   AcpProductionCompositionError,
   composeAcpProductionRuntime,
   type AcpProductionCompositionDependencies,
   type AcpProductionCompositionFactories
-} from "../src/agy/acp/production-composition.js";
+} from "../ACP Connector/acp/production-composition.js";
 import type {
   StartupRecoveryBarrierSources,
   StartupRecoveryReadiness
-} from "../src/admission/startup-recovery-barrier.js";
+} from "../Admission Controller/startup-recovery-barrier.js";
 
 interface ProcessIdentity {
   readonly pid: number;
@@ -508,6 +508,9 @@ function fakeController(): Record<string, (...args: never[]) => unknown> {
   const controller: Record<string, (...args: never[]) => unknown> = {};
   for (const name of [
     "admitRequest",
+    "getRequest",
+    "getQueueSnapshot",
+    "cancelQueued",
     "markStarting",
     "readPayload",
     "markActive",
@@ -520,8 +523,6 @@ function fakeController(): Record<string, (...args: never[]) => unknown> {
     "claimPendingDeliveryAtomically",
     "claimNextPendingDelivery",
     "heartbeatClaimedDelivery",
-    "reserveTerminalReplay",
-    "readClaimedDelivery",
     "acknowledgeDelivery",
     "markDeliveryRecoveryRequired",
     "sweepExpiredDeliveryClaims"
@@ -556,7 +557,6 @@ function outboxOffer() {
     versions: [ACP_OUTBOX_CAPABILITY_VERSION],
     required: true,
     ackRequests: true,
-    durableEventIdDedupe: true,
-    reconnectReplay: true
+    durableEventIdDedupe: true
   };
 }

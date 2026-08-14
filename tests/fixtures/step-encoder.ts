@@ -1,5 +1,5 @@
 // Minimal protobuf encoder for building `steps` table fixtures in tests. Only
-// covers the fields our decoder (src/agy/db/step-payload.ts) actually reads;
+// covers the fields our decoder (ACP Connector/agy/db/step-payload.ts) actually reads;
 // field numbers must match that module's decode side exactly.
 
 import { BinaryWriter } from "@bufbuild/protobuf/wire";

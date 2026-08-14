@@ -24,7 +24,7 @@ import {
   LegacyStatePreflightError,
   migrateLegacySessions,
   rollbackLegacySessionMigration
-} from "../src/admission/migration.js";
+} from "../ACP Connector/admission/migration.js";
 
 const stateDirs: string[] = [];
 

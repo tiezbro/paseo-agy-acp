@@ -14,7 +14,7 @@ import {
   type OutboxAckInput,
   type OutboxEventMetadata,
   type OutboxEventMetadataInput
-} from "../src/admission/outbox-protocol.js";
+} from "../ACP Connector/admission/outbox-protocol.js";
 
 function capabilityOffer(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -22,7 +22,6 @@ function capabilityOffer(overrides: Record<string, unknown> = {}): Record<string
     required: false,
     ackRequests: true,
     durableEventIdDedupe: true,
-    reconnectReplay: true,
     ...overrides
   };
 }
@@ -73,7 +72,7 @@ describe("admission ACP outbox protocol", () => {
     expect(Object.isFrozen(ACP_OUTBOX_CAPABILITY)).toBe(true);
   });
 
-  it("negotiates only an exact offer that supports v1 and all recovery guarantees", () => {
+  it("negotiates only an exact offer that supports v1 dedupe and ACK guarantees", () => {
     const negotiated = negotiateOutboxCapability(capabilityOffer({ versions: [2, 1] }));
 
     expect(negotiated).toBe(ACP_OUTBOX_CAPABILITY);
@@ -111,8 +110,7 @@ describe("admission ACP outbox protocol", () => {
       capabilityOffer({ ackRequests: false }),
       capabilityOffer({ ackRequests: 1 }),
       capabilityOffer({ durableEventIdDedupe: false }),
-      capabilityOffer({ reconnectReplay: false }),
-      capabilityOffer({ reconnectReplay: "true" }),
+      capabilityOffer({ reconnectReplay: true }),
       capabilityOffer({ prompt: "must not become outbox metadata" }),
       capabilityOffer({ reasoning: "must not become outbox metadata" }),
       capabilityOffer({ headers: { authorization: "secret" } }),

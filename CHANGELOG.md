@@ -6,10 +6,26 @@ All notable changes to `paseo-agy-acp` are recorded here.
 
 ### Changed
 
-- Converged source ownership into two functional areas without changing
-  runtime behavior: the Admission Controller remains in `src/admission/`, and
-  the ACP connector now lives with the agy adapter in `src/agy/acp/`. Package
-  entrypoints remain at `src/main.ts` and `src/agent.ts`.
+- Converged source ownership into exactly two root-level functional areas:
+  `Admission Controller/` owns the shared seats, queue, start-rate, leases,
+  heartbeat, cooldown, recovery proofs, and queue progress; `ACP Connector/`
+  owns Paseo/ACP, session/conversation mapping, Antigravity integration,
+  stream-json/SQLite translation, permissions, cancellation, recovery
+  coordination, and error classification. Package entrypoints live inside
+  `ACP Connector/`.
+- Narrowed durable result delivery to initial send plus exact ACK fencing. No
+  reconnect resend API or duplicate Connector-owned claim store remains;
+  unconfirmed delivery becomes `recovery_required` without another provider
+  turn.
+- Made `maxActiveTurns` one shared account-level pool across connector
+  processes and models. Targeted waiters can only claim the controller's
+  oldest eligible, parent-fair request; provider/model cooldown affects queue
+  eligibility without creating additional capacity. The source default follows
+  the confirmed plan: two active seats and one concurrent start. Runtime
+  configuration accepts one or two seats and rejects larger values.
+- Removed unconfirmed follow-on scope from this iteration: Agent archival and
+  compensating supervision remain Paseo responsibilities, and live-parity or
+  seat-expansion stages are not part of the Admission Controller plan.
 
 ### Added
 
@@ -45,7 +61,7 @@ All notable changes to `paseo-agy-acp` are recorded here.
   keyed fingerprints. A master key now derives independent encryption,
   fingerprint, identity, recovery, and audit keys through versioned HKDF
   domains.
-- Hardened the Admission SQLite schema to a fully verified v10 ledger. Startup
+- Hardened the Admission SQLite schema to a fully verified v11 ledger. Startup
   checks the complete migration history, tables, columns, foreign keys, and
   indexes inside a rollback-safe migration transaction rather than trusting a
   maximum version number. The current schema includes SQLite-backed ACP
@@ -60,8 +76,8 @@ All notable changes to `paseo-agy-acp` are recorded here.
   at-least-once outbox acknowledgement. ACP writer completion is explicitly
   not treated as a remote acknowledgement, and JSON-RPC request IDs are not
   accepted as reconnect-stable business identities.
-- Added a disabled runtime factory with conservative source defaults of two
-  active turns and one concurrent start. These values are not approved for
+- Added a disabled runtime factory with conservative source defaults of one
+  active turn and one concurrent start. These values are not approved for
   production use until the isolated acceptance gates pass.
 - Added an atomic, lease-fenced process-identity plus `dispatch_intent`
   transaction. Exact repeats are idempotent; stale leases, conflicting process
@@ -153,11 +169,13 @@ All notable changes to `paseo-agy-acp` are recorded here.
 
 ### Verification
 
-- `npm test` - 61 test files passed: 873 tests passed, 2 skipped, and 1
+- `npm run validate` - typecheck, clean package build, 60 test files with 873
+  tests passed, 2 skipped, and 1
   intentional TODO. The TODO is the production fresh-PTY certificate scan,
   which remains blocked because no accepted real launcher source exists; the
   corresponding runtime path stays fail closed.
-- `npm run build` - passed.
+- The architecture boundary gate passed and confirmed exactly two physical
+  source/build areas with package entrypoints under `ACP Connector/`.
 - A final 126-test admission/dispatch/recovery/outbox/production-composition
   focused integration run passed after the two independent-audit LOW findings
   were fixed. The earlier 212-test integration baseline also passed before the

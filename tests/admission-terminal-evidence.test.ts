@@ -4,7 +4,7 @@ import {
   normalizeTerminalObservation,
   reconcileTerminalEvidence,
   TerminalEvidenceError
-} from "../src/admission/terminal-evidence.js";
+} from "../ACP Connector/admission/terminal-evidence.js";
 
 type ObservationOverrides = Partial<{
   source: "stream_json" | "sqlite_reconciliation";

@@ -6,25 +6,25 @@ import {
   AdmissionController,
   type AdmissionLease,
   type AdmissionPolicy
-} from "../src/admission/controller.js";
+} from "../Admission Controller/controller.js";
 import {
   AdmissionRecoveryCoordinator,
   type AdmissionRecoveryController,
   type AdmissionRecoveryRequired,
   type RecoveryLifecycleObserver
-} from "../src/admission/recovery-coordinator.js";
+} from "../ACP Connector/admission/recovery-coordinator.js";
 import {
   createLinuxPreDispatchProofAuthority,
   issueLinuxPreDispatchTerminationProof,
   type LinuxPreDispatchProofAuthority,
   type LinuxPreDispatchProofBinding,
   type LinuxPreDispatchProofSubject
-} from "../src/admission/process-evidence.js";
+} from "../Admission Controller/process-evidence.js";
 import type {
   LinuxPreDispatchRecoveryRequest,
   LinuxPreDispatchRecoveryResult,
   LinuxProcessLifecycleRecord
-} from "../src/admission/process-lifecycle.js";
+} from "../ACP Connector/admission/process-lifecycle.js";
 
 const stateDirs: string[] = [];
 const DEFAULT_POLICY: AdmissionPolicy = {

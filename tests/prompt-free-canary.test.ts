@@ -10,18 +10,18 @@ import {
   probeExactAgyBinaryVersion,
   type AgyLaunchSpecification,
   type VerifiedAgyBinary
-} from "../src/agy/launch-spec.js";
+} from "../ACP Connector/agy/launch-spec.js";
 import {
   asAgyFreshPtyCanaryVerifier,
   runPromptFreePtyCanary,
   verifyPromptFreePtyCanary,
   type PromptFreePtyCanaryOptions
-} from "../src/agy/prompt-free-canary.js";
+} from "../ACP Connector/agy/prompt-free-canary.js";
 import {
   AgyPromptFreeDispatchBoundary,
   type AgyDispatchFence,
   type AgyDispatchProcess
-} from "../src/agy/dispatch-boundary.js";
+} from "../ACP Connector/agy/dispatch-boundary.js";
 
 const BUSINESS_PROMPT = "business prompt: hand off client key zeta-42";
 const CANARY_KEY = Buffer.from("purpose-specific-canary-key-0001", "utf8");

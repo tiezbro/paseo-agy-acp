@@ -3,15 +3,20 @@ import os from "node:os";
 import path from "node:path";
 import Database from "better-sqlite3";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { AcpOutboxDeliveryBridge, type OutboxDeliveryMessage } from "../src/agy/acp/outbox-delivery.js";
+import { AcpOutboxDeliveryBridge, type OutboxDeliveryMessage } from "../ACP Connector/acp/outbox-delivery.js";
 import {
   AcpOutboxPump,
   type OutboxPumpBridge,
   type OutboxPumpReport,
   type OutboxPumpScheduledTrigger
-} from "../src/agy/acp/outbox-pump.js";
-import { AdmissionController, type AdmissionPolicy, type EnqueueDelivery } from "../src/admission/controller.js";
-import { ACP_OUTBOX_CAPABILITY } from "../src/admission/outbox-protocol.js";
+} from "../ACP Connector/acp/outbox-pump.js";
+import {
+  AdmissionController,
+  DURABLE_DELIVERY_PROTOCOL,
+  type AdmissionPolicy,
+  type EnqueueDelivery
+} from "../Admission Controller/controller.js";
+import { ACP_OUTBOX_CAPABILITY } from "../ACP Connector/admission/outbox-protocol.js";
 
 const stateDirs: string[] = [];
 const POLICY: AdmissionPolicy = {
@@ -264,7 +269,7 @@ function enqueueDeliveries(admission: AdmissionController, eventIds: readonly st
       sequence: index,
       now: 1_001 + index,
       expiresAt: 10_000,
-      protocol: ACP_OUTBOX_CAPABILITY
+      protocol: DURABLE_DELIVERY_PROTOCOL
     };
     admission.enqueueDelivery(delivery);
   }

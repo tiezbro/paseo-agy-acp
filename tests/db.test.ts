@@ -2,12 +2,12 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { ConversationDb, type DbStat, statConversation } from "../src/agy/db/database.js";
-import { ReplayCache, isDbStatUnchanged } from "../src/agy/db/replay.js";
-import { conversationSnapshot, newConversationId } from "../src/agy/db/scan.js";
-import { StreamPoller } from "../src/agy/db/streaming.js";
-import { Translator } from "../src/agy/db/translator.js";
-import { sessionUpdateFromStep } from "../src/agy/db/updates.js";
+import { ConversationDb, type DbStat, statConversation } from "../ACP Connector/agy/db/database.js";
+import { ReplayCache, isDbStatUnchanged } from "../ACP Connector/agy/db/replay.js";
+import { conversationSnapshot, newConversationId } from "../ACP Connector/agy/db/scan.js";
+import { StreamPoller } from "../ACP Connector/agy/db/streaming.js";
+import { Translator } from "../ACP Connector/agy/db/translator.js";
+import { sessionUpdateFromStep } from "../ACP Connector/agy/db/updates.js";
 import { createConversationDb, insertStep, updateStep, updateStepPayload } from "./fixtures/conversation-db.js";
 import {
   encodeAgentText,

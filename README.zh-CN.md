@@ -66,9 +66,11 @@
 
 ## v2 Admission Controller 开发状态
 
-源码所有权明确收敛为两个功能区：`src/admission/` 承载 Admission Controller，
-`src/agy/` 承载 agy 适配器及其 `src/agy/acp/` ACP connector。
-`src/main.ts` 与 `src/agent.ts` 仅为 package entrypoint，不构成第三功能区。
+源码所有权明确收敛为两个根级功能区：`Admission Controller/` 承载与实现无关的
+共享席位、队列、lease、heartbeat、cooldown 和排队进度内核；`ACP Connector/`
+承载 Paseo/ACP 协议、session/conversation 映射、Antigravity 集成、stream-json/SQLite
+转换、权限、取消、恢复协调和错误分类。package entrypoint 位于 `ACP Connector/`
+内部，不存在第三个源码功能区。
 
 v2.0.0.0 Admission Controller 已进入源码开发。当前默认禁用的基础层包含经过完整
 校验的 SQLite v10 ledger、带行身份认证的加密持久载荷、按用途独立派生的运行时
@@ -77,8 +79,16 @@ session、controller-owned outbox claim lease、sanitized HMAC event journal，�
 显式的 at-least-once outbox ACK 路由。本地 key-store 会拒绝不安全的所有权、
 权限、链接和首次发布竞态。
 
+`maxActiveTurns` 是同一 Antigravity 账号在所有本地 connector 进程与模型之间共享的
+总席位池。所有请求进入同一持久 oldest-eligible 队列，并带 parent fairness；启动速率
+与并发启动上限分别控制。provider/model cooldown 只改变请求资格，绝不会增加席位。
+源码默认值为 2，运行时只接受 1 或 2；高于 2 的值不属于本次确认方案并会 fail closed。
+
 exact outbox ACK 会依据持久 claim 状态校验，因此 bridge 或 controller 重启后
-仍可幂等确认，且不会重发 payload 或业务 turn。process identity 一旦原子记录
+仍可幂等确认，且不会重发 payload 或业务 turn。outbox 只暴露首次结果投递和精确
+ACK，不提供重连补发 API，也不保留 Connector 自有的重复 claim store；未确认投递
+只能进入 `recovery_required`。
+process identity 一旦原子记录
 `dispatch_intent`，后续取消或 fence 校验失败只会保留为
 `dispatch_ambiguous`，绝不会自动回到安全重排路径。
 
@@ -95,6 +105,10 @@ session、outbox claim、startup permit 与 Linux process residue。串行 outbo
 prompt 写入仍只归 admission dispatcher 所有。
 Controller 错误仍保留 typed class，但 message 字符串不再包含持久 request、delivery
 或 lease 标识符。
+
+turn 完成后立即释放 Antigravity 席位。Agent 完成通知与归档继续由 Paseo 官方
+生命周期负责，connector 不增加第二套生命周期监督。重新发送消息时必须再次进入
+同一全局队列。
 多个 connector 可并发初始化 active-session registry。registry 只会对幂等 WAL/schema
 初始化中的 SQLite `BUSY`/`LOCKED` 竞争做有界重试；不兼容或损坏的 schema 仍立即
 fail closed，且绝不会重放业务 prompt。每次锁等待上限为 100 ms，最多尝试 8 次；
@@ -182,7 +196,7 @@ Antigravity 的精确 variant id，不会把显示名称混进模型名，也不
     "antigravity": {
       "type": "acp",
       "command": "node",
-      "args": ["/path/to/paseo-agy-acp/dist/main.js"]
+      "args": ["/path/to/paseo-agy-acp/dist/ACP Connector/main.js"]
     }
   }
 }
@@ -200,8 +214,8 @@ Antigravity 的精确 variant id，不会把显示名称混进模型名，也不
 1. 读取 Paseo 配置（$PASEO_HOME/config.json 或 ~/.paseo/config.json）。
 2. 添加或更新 providers.antigravity：
    - type: "acp"
-   - command: agy-acp 二进制路径（如 "agy-acp" 或 dist/main.js 完整路径）
-   - args: []
+   - command: agy-acp 二进制路径（如 "agy-acp"，或使用 node 加载下述完整路径）
+   - args: command 为 node 时使用 ["/path/to/paseo-agy-acp/dist/ACP Connector/main.js"]
 3. 如 agy-acp 未安装：cd paseo-agy-acp && npm ci && npm run build
 4. 确保 agy CLI 已安装：curl -fsSL https://antigravity.google/cli/install.sh | bash
    然后：agy auth login
@@ -214,7 +228,7 @@ Antigravity 的精确 variant id，不会把显示名称混进模型名，也不
 ```bash
 # 冒烟测试
 printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":1}}' \
-  | node dist/main.js
+  | node 'dist/ACP Connector/main.js'
 
 # 完整测试套件
 npm test
@@ -242,7 +256,8 @@ git pull && npm ci && npm run build && npm test
 git checkout <版本> && npm ci && npm run build && npm test
 ```
 
-将 daemon 指向目标版本的 `dist/main.js` 并重启。
+将 daemon 指向目标版本的 `agy-acp` 或 `dist/ACP Connector/main.js` entrypoint
+并重启。
 
 ## ⚖️ 免责声明
 

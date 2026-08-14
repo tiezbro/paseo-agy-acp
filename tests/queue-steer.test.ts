@@ -7,21 +7,21 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import * as acp from "@agentclientprotocol/sdk";
 import * as acpV2 from "@agentclientprotocol/sdk/experimental/v2";
 import { client as acpClient, methods, PROTOCOL_VERSION } from "@agentclientprotocol/sdk";
-import { createAcpApp, createAcpV2App, type AcpAgentOptions } from "../src/agent.js";
-import { cancelQueuedPrompts, handleCancel } from "../src/agy/acp/session/cancel.js";
-import { handleCloseSession } from "../src/agy/acp/session/close.js";
+import { createAcpApp, createAcpV2App, type AcpAgentOptions } from "../ACP Connector/agent.js";
+import { cancelQueuedPrompts, handleCancel } from "../ACP Connector/acp/session/cancel.js";
+import { handleCloseSession } from "../ACP Connector/acp/session/close.js";
 import {
   handlePromptV1,
   handlePromptV2,
   notifyIdleAndDrainQueue,
   type PromptV1Deps,
   type PromptV2Deps
-} from "../src/agy/acp/session/prompt.js";
-import { turnsOf } from "../src/agy/acp/session/turn-scheduler.js";
-import type { SessionState } from "../src/agy/acp/session/types.js";
+} from "../ACP Connector/acp/session/prompt.js";
+import { turnsOf } from "../ACP Connector/acp/session/turn-scheduler.js";
+import type { SessionState } from "../ACP Connector/acp/session/types.js";
 import { createConversationDb, insertStep } from "./fixtures/conversation-db.js";
 import { encodeStepPayload } from "./fixtures/step-encoder.js";
-import type { SpawnFactory } from "../src/agy/cli.js";
+import type { SpawnFactory } from "../ACP Connector/agy/cli.js";
 
 const TEST_MODELS_OUTPUT =
   "gemini-3.5-flash-medium\ngemini-3.5-flash-high\nclaude-opus-4-6-thinking\nclaude-sonnet-4-6\n";

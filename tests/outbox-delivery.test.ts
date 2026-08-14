@@ -7,14 +7,19 @@ import {
   AcpOutboxDeliveryAcknowledgementError,
   AcpOutboxDeliveryBridge,
   type OutboxDeliveryMessage
-} from "../src/agy/acp/outbox-delivery.js";
-import { AdmissionController, type AdmissionPolicy, type EnqueueDelivery } from "../src/admission/controller.js";
+} from "../ACP Connector/acp/outbox-delivery.js";
+import {
+  AdmissionController,
+  DURABLE_DELIVERY_PROTOCOL,
+  type AdmissionPolicy,
+  type EnqueueDelivery
+} from "../Admission Controller/controller.js";
 import {
   ACP_OUTBOX_CAPABILITY,
   ACP_OUTBOX_CAPABILITY_VERSION,
   AcpOutboxProtocolError,
   type OutboxAck
-} from "../src/admission/outbox-protocol.js";
+} from "../ACP Connector/admission/outbox-protocol.js";
 
 const stateDirs: string[] = [];
 const POLICY: AdmissionPolicy = {
@@ -67,7 +72,7 @@ function enqueueDelivery(admission: AdmissionController, eventId: string, payloa
     sequence: 9,
     now: 1_001,
     expiresAt: 10_000,
-    protocol: ACP_OUTBOX_CAPABILITY
+    protocol: DURABLE_DELIVERY_PROTOCOL
   };
   admission.enqueueDelivery(delivery);
 }
@@ -86,14 +91,12 @@ function deliveryLease(admission: AdmissionController, eventId: string): {
   state: string;
   heartbeatAt: number;
   leaseExpiresAt: number;
-  terminalReplayCount: number;
 } {
   const database = new Database(admission.databasePath, { readonly: true });
   const row = database
     .prepare(
       `SELECT request_id AS requestId, owner_instance_id AS ownerInstanceId, claim_generation AS claimGeneration,
-              state, heartbeat_at AS heartbeatAt, lease_expires_at AS leaseExpiresAt,
-              terminal_replay_count AS terminalReplayCount
+              state, heartbeat_at AS heartbeatAt, lease_expires_at AS leaseExpiresAt
        FROM delivery_claim_leases WHERE event_id = ?`
     )
     .get(eventId) as {
@@ -103,7 +106,6 @@ function deliveryLease(admission: AdmissionController, eventId: string): {
     state: string;
     heartbeatAt: number;
     leaseExpiresAt: number;
-    terminalReplayCount: number;
   };
   database.close();
   return row;
@@ -172,8 +174,7 @@ describe("AcpOutboxDeliveryBridge", () => {
       claimGeneration: 1,
       state: "claimed",
       heartbeatAt: 1_002,
-      leaseExpiresAt: 1_102,
-      terminalReplayCount: 0
+      leaseExpiresAt: 1_102
     });
     expect(readFileSync(admission.databasePath, "utf8")).not.toContain(secretPayload);
   });
@@ -282,7 +283,6 @@ describe("AcpOutboxDeliveryBridge", () => {
     });
 
     await first.deliver("event-1", 1_002);
-    const exactAcknowledgement = acknowledgement(sent!);
     first.close();
     const afterCrash = restartController(initial);
     const recovery = new AcpOutboxDeliveryBridge({
@@ -295,15 +295,11 @@ describe("AcpOutboxDeliveryBridge", () => {
     expect(recovery.sweepExpiredDeliveryClaims(1_012)).toEqual([
       { status: "recovery_required", eventId: "event-1", claimGeneration: 1 }
     ]);
-    await expect(recovery.replayClaimedDelivery(exactAcknowledgement, "request-1", 1_013)).resolves.toEqual({
-      status: "not_replayable",
-      eventId: "event-1"
-    });
     expect(deliveryState(afterCrash, "event-1")).toBe("recovery_required");
     expect(sender).toHaveBeenCalledOnce();
   });
 
-  it("heartbeats an exact controller lease and reserves one replay only for the same request", async () => {
+  it("heartbeats an exact controller lease without exposing a reconnect resend path", async () => {
     const initial = controller();
     enqueueDelivery(initial, "event-1", "private terminal update");
     const sent: OutboxDeliveryMessage[] = [];
@@ -318,39 +314,25 @@ describe("AcpOutboxDeliveryBridge", () => {
     });
 
     await first.deliver("event-1", 1_002);
-    const exactAcknowledgement = acknowledgement(sent[0]!);
     first.heartbeatClaimedDelivery("event-1", 1_003);
     expect(deliveryLease(initial, "event-1")).toMatchObject({ heartbeatAt: 1_003, leaseExpiresAt: 1_103 });
     first.close();
     const afterCrash = restartController(initial);
+    const reconnectedSender = vi.fn(async (_message: OutboxDeliveryMessage) => undefined);
     const reconnected = new AcpOutboxDeliveryBridge({
       admission: afterCrash,
       ownerInstanceId: "delivery-worker-1",
-      sender,
+      sender: reconnectedSender,
       claimLeaseMs: 100
     });
 
-    await expect(reconnected.replayClaimedDelivery(exactAcknowledgement, "other-request", 1_004)).resolves.toEqual({
-      status: "not_replayable",
-      eventId: "event-1"
-    });
-    await expect(reconnected.replayClaimedDelivery(exactAcknowledgement, "request-1", 1_004)).resolves.toEqual({
-      status: "replayed",
-      eventId: "event-1",
-      claimGeneration: 1
-    });
-    await expect(reconnected.replayClaimedDelivery(exactAcknowledgement, "request-1", 1_005)).resolves.toEqual({
-      status: "not_replayable",
-      eventId: "event-1"
-    });
-
-    expect(sender).toHaveBeenCalledTimes(2);
-    expect(sent[1]).toMatchObject({ sessionId: "session-1", metadata: sent[0]!.metadata });
-    expect(reconnected.acknowledge(acknowledgement(sent[1]!), 1_006)).toEqual(acknowledgement(sent[1]!));
-    expect(deliveryState(afterCrash, "event-1")).toBe("delivered");
+    expect(await reconnected.deliver("event-1", 1_004)).toEqual({ status: "not_pending", eventId: "event-1" });
+    expect(reconnectedSender).not.toHaveBeenCalled();
+    expect(sender).toHaveBeenCalledOnce();
+    expect(deliveryState(afterCrash, "event-1")).toBe("claimed");
   });
 
-  it("keeps a controller-atomically settled ACK invisible to later sweep or replay", async () => {
+  it("keeps a controller-atomically settled ACK invisible to later sweep or delivery", async () => {
     const initial = controller();
     enqueueDelivery(initial, "event-1", "private terminal update");
     let sent: OutboxDeliveryMessage | undefined;
@@ -377,10 +359,7 @@ describe("AcpOutboxDeliveryBridge", () => {
     });
 
     expect(recovery.sweepExpiredDeliveryClaims(1_012)).toEqual([]);
-    await expect(recovery.replayClaimedDelivery(exactAcknowledgement, "request-1", 1_013)).resolves.toEqual({
-      status: "not_replayable",
-      eventId: "event-1"
-    });
+    await expect(recovery.deliver("event-1", 1_013)).resolves.toEqual({ status: "not_pending", eventId: "event-1" });
     expect(deliveryState(afterCrash, "event-1")).toBe("delivered");
     expect(deliveryLease(afterCrash, "event-1").state).toBe("delivered");
     expect(sender).toHaveBeenCalledOnce();

@@ -3,9 +3,9 @@ import { describe, expect, it, vi } from "vitest";
 import {
   createExactConversationBinder,
   ExactConversationBindingError
-} from "../src/agy/db/exact-conversation-binder.js";
-import type { SqliteProviderSnapshotReader } from "../src/agy/db/provider-observer.js";
-import { observeAgyStreamJsonIdentity } from "../src/agy/stream-json-identity.js";
+} from "../ACP Connector/agy/db/exact-conversation-binder.js";
+import type { SqliteProviderSnapshotReader } from "../ACP Connector/agy/db/provider-observer.js";
+import { observeAgyStreamJsonIdentity } from "../ACP Connector/agy/stream-json-identity.js";
 
 const CONVERSATION_ID = "c3b66b04-872b-4fbe-a3a4-058a026ef20a";
 const OTHER_CONVERSATION_ID = "055a398f-db14-4c5f-abbb-1bf03f8120a7";

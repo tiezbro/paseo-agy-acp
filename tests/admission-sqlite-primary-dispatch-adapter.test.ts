@@ -1,41 +1,41 @@
 import { describe, expect, it, vi } from "vitest";
-import { AdmissionSessionScopeResolver } from "../src/agy/acp/session/admission-scope-resolver.js";
+import { AdmissionSessionScopeResolver } from "../ACP Connector/acp/session/admission-scope-resolver.js";
 import type {
   ActiveConnectorIdentity,
   ActiveSessionFence,
   ActiveSessionRegistration
-} from "../src/agy/acp/session/active-registry.js";
-import type { ActiveSessionTurnRegistry } from "../src/agy/acp/session/active-turn-binding.js";
-import type { SessionState } from "../src/agy/acp/session/types.js";
+} from "../ACP Connector/acp/session/active-registry.js";
+import type { ActiveSessionTurnRegistry } from "../ACP Connector/acp/session/active-turn-binding.js";
+import type { SessionState } from "../ACP Connector/acp/session/types.js";
 import type {
   AgyExactConversationTurn,
   AgyExactConversationTurnOptions
-} from "../src/agy/cli.js";
-import { createSqliteProviderObserver } from "../src/agy/db/provider-observer.js";
+} from "../ACP Connector/agy/cli.js";
+import { createSqliteProviderObserver } from "../ACP Connector/agy/db/provider-observer.js";
 import type {
   ExactConversationBinding
-} from "../src/agy/db/exact-conversation-binder.js";
+} from "../ACP Connector/agy/db/exact-conversation-binder.js";
 import type {
   AgyDispatchFence
-} from "../src/agy/dispatch-boundary.js";
-import type { AgyPromptFreeProcessWriteResult } from "../src/agy/prompt-free-process.js";
+} from "../ACP Connector/agy/dispatch-boundary.js";
+import type { AgyPromptFreeProcessWriteResult } from "../ACP Connector/agy/prompt-free-process.js";
 import {
   createSqlitePrimaryDispatchAdapter,
   SqlitePrimaryDispatchAdapterError,
   type SqlitePrimaryDispatchAdapter,
   type SqlitePrimaryRequestMetadata,
   type SqlitePrimaryTerminalDeliveryInput
-} from "../src/admission/sqlite-primary-dispatch-adapter.js";
+} from "../ACP Connector/admission/sqlite-primary-dispatch-adapter.js";
 import type {
   AdmissionPromptAgyContract,
   AdmissionPromptAgySpawnContext,
   AdmissionPromptDispatchController,
   AdmissionPromptProviderContext,
   AdmissionPromptProviderObserver
-} from "../src/admission/dispatcher.js";
-import { AdmissionPromptDispatcher } from "../src/admission/dispatcher.js";
-import type { AdmissionPromptDispatchInput } from "../src/admission/prompt-seam.js";
-import { ACP_OUTBOX_CAPABILITY } from "../src/admission/outbox-protocol.js";
+} from "../ACP Connector/admission/dispatcher.js";
+import { AdmissionPromptDispatcher } from "../ACP Connector/admission/dispatcher.js";
+import type { AdmissionPromptDispatchInput } from "../ACP Connector/admission/prompt-seam.js";
+import { ACP_OUTBOX_CAPABILITY } from "../ACP Connector/admission/outbox-protocol.js";
 
 const AGENT_ID = "agent-1";
 const REQUEST_ID = "request-1";
@@ -453,7 +453,7 @@ describe("SQLite-primary dispatcher adapter", () => {
         payload: "encrypted terminal event",
         sequence: 3,
         expiresAt: 1_725_000_060_000,
-        protocol: ACP_OUTBOX_CAPABILITY
+        protocol: { version: 1, semantics: "at-least-once" }
       }
     });
     expect(current.registry.registrations[0]).toMatchObject({
@@ -504,7 +504,9 @@ describe("SQLite-primary dispatcher adapter", () => {
     await current.adapter.observeProviderActivity(context());
     const result = await current.adapter.observeTerminal(context());
 
-    expect(result.observations.sqliteReconciliation.status).toBe("CANCELED");
+    expect(result.observations).toMatchObject({
+      sqliteReconciliation: { status: "CANCELED" }
+    });
     expect(current.registry.terminals).toEqual(["cancelled"]);
     expect(current.registry.advances.at(-1)).toEqual({ conversationId: CONVERSATION_ID, cursor: 11 });
   });

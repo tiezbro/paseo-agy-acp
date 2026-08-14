@@ -13,13 +13,14 @@ import {
   LeaseFenceError,
   PayloadConflictError,
   RecoverableOutboxClaimInventoryError,
+  DURABLE_DELIVERY_PROTOCOL,
   type AdmissionControllerFaultInjection,
-  type AdmissionPolicy
-} from "../src/admission/controller.js";
-import type { EnqueueDelivery } from "../src/admission/controller.js";
-import { ACP_OUTBOX_CAPABILITY, type OutboxAck } from "../src/admission/outbox-protocol.js";
-import { SchemaIntegrityError } from "../src/admission/schema.js";
-import type { LegacyDualSourceTerminalObservations } from "../src/admission/terminal-evidence.js";
+  type AdmissionPolicy,
+  type ConfirmedProviderTerminal
+} from "../Admission Controller/controller.js";
+import type { EnqueueDelivery } from "../Admission Controller/controller.js";
+import type { OutboxAck } from "../ACP Connector/admission/outbox-protocol.js";
+import { SchemaIntegrityError } from "../Admission Controller/schema.js";
 
 const stateDirs: string[] = [];
 const DEFAULT_POLICY: AdmissionPolicy = {
@@ -121,20 +122,16 @@ function enqueueReady(
 
 function terminalObservations(
   status: "SUCCESS" | "ERROR" | "CANCELED" | "INTERRUPTED" = "SUCCESS"
-): LegacyDualSourceTerminalObservations {
+): ConfirmedProviderTerminal {
   return {
-    streamJson: {
-      source: "stream_json",
-      conversationId: "conversation-1",
-      observedAt: 1_500,
-      status
-    },
-    sqliteReconciliation: {
-      source: "sqlite_reconciliation",
-      conversationId: "conversation-1",
-      observedAt: 1_501,
-      status
-    }
+    outcome: status === "SUCCESS" ? "completed" : status === "ERROR" ? "failed" : "cancelled",
+    conversationId: "conversation-1",
+    status,
+    streamObservedAt: 1_500,
+    sqliteObservedAt: 1_501,
+    failure: status === "ERROR"
+      ? { category: "unknown", httpStatus: undefined, code: undefined, reason: undefined }
+      : null
   };
 }
 
@@ -147,7 +144,7 @@ function delivery(requestId: string, overrides: Partial<EnqueueDelivery> = {}): 
     sequence: overrides.sequence ?? 0,
     now: overrides.now ?? 1_000,
     expiresAt: overrides.expiresAt ?? 61_000,
-    protocol: overrides.protocol ?? ACP_OUTBOX_CAPABILITY
+    protocol: overrides.protocol ?? DURABLE_DELIVERY_PROTOCOL
   };
 }
 
@@ -263,7 +260,6 @@ describe("AdmissionController", () => {
       contentFingerprintKey: Buffer.from(contentKeyA),
       claimTokenKey: Buffer.from(claimKeyB)
     });
-    expect(() => foreignClaimKey.readClaimedDelivery(claimFenceA, 1_003)).toThrow(DeliveryClaimFenceError);
     expect(() => foreignClaimKey.markDeliveryRecoveryRequired(claimFenceA, 1_003)).toThrow(DeliveryClaimFenceError);
     expect(() => foreignClaimKey.acknowledgeDelivery(acknowledgement(claimFenceA), 1_003)).toThrow(DeliveryClaimFenceError);
     foreignClaimKey.close();
@@ -751,13 +747,7 @@ describe("AdmissionController", () => {
   });
 
   it("purges only a timed-out queued payload while preserving its nonreplayable tombstone", () => {
-    const admission = controller({ maxActiveTurns: 4, maxConcurrentStarts: 4, queueTimeoutMs: 1 });
-    const admittedInput = request({
-      requestId: "timeout-admitted-private",
-      sessionId: "timeout-admitted-session",
-      parentId: "timeout-admitted-parent",
-      now: 1_000
-    });
+    const admission = controller({ maxActiveTurns: 2, maxConcurrentStarts: 2, queueTimeoutMs: 1 });
     const dispatchInput = request({
       requestId: "timeout-dispatch-private",
       sessionId: "timeout-dispatch-session",
@@ -778,8 +768,6 @@ describe("AdmissionController", () => {
     });
     const timeoutPrompt = "timeout-prompt-private";
 
-    enqueueReady(admission, admittedInput, "admitted-prompt-private");
-    const admitted = admission.admitRequest(admittedInput.requestId, 1_000, "timeout-admitted-owner")!;
     enqueueReady(admission, dispatchInput, "dispatch-prompt-private");
     const dispatch = admission.admitRequest(dispatchInput.requestId, 1_001, "timeout-dispatch-owner")!;
     admission.markStarting(dispatch, 1_001);
@@ -813,29 +801,17 @@ describe("AdmissionController", () => {
     expect(reconnectFailure).not.toContain(timeoutPrompt);
     expect(admission.getRequest(timedOutInput.requestId)?.state).toBe("queue_timeout");
 
-    const nextInput = request({
-      requestId: "timeout-next-private",
-      sessionId: "timeout-next-session",
-      parentId: "timeout-next-parent",
-      now: 1_004
-    });
-    admission.enqueueWithPayload(nextInput, "next-prompt-private", 61_004);
-    expect(admission.admitNext(1_004, "timeout-next-owner")?.requestId).toBe(nextInput.requestId);
-
-    expect(admission.getRequest(admittedInput.requestId)?.state).toBe("admitted");
     expect(admission.getRequest(dispatchInput.requestId)?.state).toBe("dispatch_intent");
     expect(admission.getRequest(recoveryInput.requestId)?.state).toBe("recovery_required");
-    expect(admission.readPayload(admittedInput.requestId, 1_004)).toBe("admitted-prompt-private");
     expect(admission.readPayload(dispatchInput.requestId, 1_004)).toBe("dispatch-prompt-private");
     expect(admission.readPayload(recoveryInput.requestId, 1_004)).toBe("recovery-prompt-private");
 
     const raw = new Database(admission.databasePath, { readonly: true });
     expect(
       raw
-        .prepare("SELECT request_id FROM turn_payloads WHERE request_id IN (?, ?, ?, ?) ORDER BY request_id ASC")
-        .all(admittedInput.requestId, dispatchInput.requestId, recoveryInput.requestId, timedOutInput.requestId)
+        .prepare("SELECT request_id FROM turn_payloads WHERE request_id IN (?, ?, ?) ORDER BY request_id ASC")
+        .all(dispatchInput.requestId, recoveryInput.requestId, timedOutInput.requestId)
     ).toEqual([
-      { request_id: admittedInput.requestId },
       { request_id: dispatchInput.requestId },
       { request_id: recoveryInput.requestId }
     ]);
@@ -923,7 +899,7 @@ describe("AdmissionController", () => {
     raw.close();
   });
 
-  it("does not let a later request bypass a cooldown-blocked FIFO head", () => {
+  it("admits the oldest eligible request past a cooldown-blocked queue head", () => {
     const admission = controller();
     enqueueReady(admission, request({ requestId: "blocked-a", provider: "provider-a", model: "model-a", now: 1_000 }));
     enqueueReady(
@@ -939,9 +915,42 @@ describe("AdmissionController", () => {
     );
     admission.setCapacityCooldown("provider-a", "model-a", 2_000, 1_001);
 
-    expect(admission.admitRequest("waiting-b", 1_002, "connector-b")).toBeNull();
+    expect(admission.admitRequest("waiting-b", 1_002, "connector-b")?.requestId).toBe("waiting-b");
     expect(admission.getRequest("blocked-a")?.state).toBe("queued");
-    expect(admission.getRequest("waiting-b")?.state).toBe("queued");
+    expect(admission.getRequest("waiting-b")?.state).toBe("admitted");
+  });
+
+  it("reports durable queue position and cooldown without granting mutation authority", () => {
+    const admission = controller();
+    enqueueReady(admission, request({ requestId: "queue-a", provider: "provider-a", model: "model-a", now: 1_000 }));
+    enqueueReady(admission, request({
+      requestId: "queue-b",
+      sessionId: "session-b",
+      parentId: "parent-b",
+      provider: "provider-b",
+      model: "model-b",
+      now: 1_001
+    }));
+    admission.setCapacityCooldown("provider-a", "model-a", 2_000, 1_001);
+
+    expect(admission.getQueueSnapshot("queue-a", 1_010)).toEqual({
+      requestId: "queue-a",
+      position: 1,
+      eligiblePosition: null,
+      enqueuedAt: 1_000,
+      waitedMs: 10,
+      cooldownUntil: 2_000
+    });
+    expect(admission.getQueueSnapshot("queue-b", 1_010)).toEqual({
+      requestId: "queue-b",
+      position: 2,
+      eligiblePosition: 1,
+      enqueuedAt: 1_001,
+      waitedMs: 9,
+      cooldownUntil: null
+    });
+    expect(admission.getRequest("queue-a")?.state).toBe("queued");
+    expect(admission.getRequest("queue-b")?.state).toBe("queued");
   });
 
   it("admits one targeted lease across controller instances", () => {
@@ -964,7 +973,7 @@ describe("AdmissionController", () => {
     const expired = controller({ queueTimeoutMs: 1 });
     enqueueReady(expired, request({ requestId: "expired-target", now: 1_000 }));
     expect(expired.admitRequest("expired-target", 1_001, "connector-a")).toBeNull();
-    expect(expired.getRequest("expired-target")?.state).toBe("queued");
+    expect(expired.getRequest("expired-target")?.state).toBe("queue_timeout");
 
     const cooled = controller();
     enqueueReady(cooled, request({ requestId: "cooled-target", now: 1_000 }));
@@ -1234,7 +1243,7 @@ describe("AdmissionController", () => {
   });
 
   it("orders nonterminal recovery candidates deterministically and excludes provider-terminal leases", () => {
-    const admission = controller({ maxActiveTurns: 3, maxConcurrentStarts: 3 });
+    const admission = controller({ maxActiveTurns: 2, maxConcurrentStarts: 2 });
     const later = request({
       requestId: "inventory-later",
       sessionId: "inventory-session-later",
@@ -1257,26 +1266,26 @@ describe("AdmissionController", () => {
 
     const firstLease = admission.admitNext(1_002, "connector-a")!;
     const terminalLease = admission.admitNext(1_003, "connector-b")!;
-    const laterLease = admission.admitNext(1_004, "connector-c")!;
-    expect([firstLease.requestId, terminalLease.requestId, laterLease.requestId]).toEqual([
+    expect([firstLease.requestId, terminalLease.requestId]).toEqual([
       firstById.requestId,
-      terminal.requestId,
-      later.requestId
+      terminal.requestId
     ]);
 
     admission.markStarting(firstLease, 1_005);
     admission.markDispatchIntent(firstLease, 1_006);
-    admission.markStarting(laterLease, 1_007);
-    admission.markDispatchIntent(laterLease, 1_008);
-    admission.markStarting(terminalLease, 1_009);
-    admission.markDispatchIntent(terminalLease, 1_010);
-    admission.markActive(terminalLease, 1_011);
+    admission.markStarting(terminalLease, 1_007);
+    admission.markDispatchIntent(terminalLease, 1_008);
+    admission.markActive(terminalLease, 1_009);
     admission.markProviderTerminal(
       terminalLease,
-      1_012,
+      1_010,
       terminalObservations(),
-      delivery(terminal.requestId, { now: 1_012 })
+      delivery(terminal.requestId, { now: 1_010 })
     );
+    const laterLease = admission.admitNext(1_011, "connector-c")!;
+    expect(laterLease.requestId).toBe(later.requestId);
+    admission.markStarting(laterLease, 1_012);
+    admission.markDispatchIntent(laterLease, 1_013);
 
     expect(admission.listRecoverableDispatches().map((entry) => entry.requestId)).toEqual([
       firstById.requestId,
@@ -1313,7 +1322,7 @@ describe("AdmissionController", () => {
   });
 
   it("prefers an eligible parent with no active turn over a parent that already owns capacity", () => {
-    const admission = controller({ maxActiveTurns: 2 });
+    const admission = controller({ maxActiveTurns: 2, maxConcurrentStarts: 2 });
     enqueueReady(admission, request({ requestId: "a-1", parentId: "parent-a", now: 1_000 }));
     enqueueReady(
       admission,
@@ -1346,6 +1355,7 @@ describe("AdmissionController", () => {
 
   it("rejects fractional policy values", () => {
     expect(() => controller({ maxActiveTurns: 1.5 })).toThrow(/maxActiveTurns/);
+    expect(() => controller({ maxActiveTurns: 3 })).toThrow(/maxActiveTurns/);
     expect(() => controller({ minStartIntervalMs: 0.5 })).toThrow(/minStartIntervalMs/);
   });
 
@@ -1531,14 +1541,16 @@ describe("AdmissionController", () => {
       lease,
       1_005,
       {
-        mode: "sqlite_primary",
-        sqliteReconciliation: {
-          source: "sqlite_reconciliation",
-          conversationId: "conversation-sqlite-primary",
-          observedAt: 1_504,
-          status: "ERROR",
+        outcome: "failed",
+        conversationId: "conversation-sqlite-primary",
+        status: "ERROR",
+        streamObservedAt: null,
+        sqliteObservedAt: 1_504,
+        failure: {
+          category: "provider_capacity",
           httpStatus: 503,
-          code: "UNAVAILABLE"
+          code: "UNAVAILABLE",
+          reason: undefined
         }
       },
       delivery("terminal-sqlite-primary", { now: 1_005 })
@@ -1579,13 +1591,12 @@ describe("AdmissionController", () => {
     admission.markDispatchIntent(lease, 1_004);
     admission.markActive(lease, 1_005);
     const evidence = {
-      mode: "sqlite_primary" as const,
-      sqliteReconciliation: {
-        source: "sqlite_reconciliation" as const,
-        conversationId: "conversation-terminal-fenced",
-        observedAt: 1_005,
-        status: "SUCCESS" as const
-      }
+      outcome: "completed" as const,
+      conversationId: "conversation-terminal-fenced",
+      status: "SUCCESS" as const,
+      streamObservedAt: null,
+      sqliteObservedAt: 1_005,
+      failure: null
     };
 
     expect(() =>
@@ -1616,7 +1627,7 @@ describe("AdmissionController", () => {
     raw.close();
   });
 
-  it("requires reconciled structured terminal evidence and preserves provider failure", () => {
+  it("requires a self-consistent confirmed terminal record and preserves provider failure", () => {
     const admission = controller();
     enqueueReady(admission, request({ requestId: "terminal-error", now: 1_000 }));
     const lease = admission.admitNext(1_001, "connector-a")!;
@@ -1624,22 +1635,20 @@ describe("AdmissionController", () => {
     admission.markDispatchIntent(lease, 1_003);
     admission.markActive(lease, 1_004);
 
-    const mismatched = terminalObservations("ERROR");
-    mismatched.sqliteReconciliation = {
-      ...mismatched.sqliteReconciliation,
-      conversationId: "different-conversation"
-    };
+    const mismatched = { ...terminalObservations("ERROR"), outcome: "completed" as const };
     expect(() => admission.markProviderTerminal(lease, 1_005, mismatched, delivery("terminal-error", { now: 1_005 }))).toThrow(
-      /requires recovery/
+      /inconsistent/
     );
     expect(admission.getRequest("terminal-error")?.state).toBe("active");
 
-    const capacity = terminalObservations("ERROR");
-    capacity.streamJson = { ...capacity.streamJson, httpStatus: 503, code: "UNAVAILABLE" };
-    capacity.sqliteReconciliation = {
-      ...capacity.sqliteReconciliation,
-      httpStatus: 503,
-      code: "UNAVAILABLE"
+    const capacity: ConfirmedProviderTerminal = {
+      ...terminalObservations("ERROR"),
+      failure: {
+        category: "provider_capacity",
+        httpStatus: 503,
+        code: "UNAVAILABLE",
+        reason: undefined
+      }
     };
     admission.markProviderTerminal(lease, 1_006, capacity, delivery("terminal-error", { now: 1_006 }));
 
@@ -1783,15 +1792,15 @@ describe("AdmissionController", () => {
     expect(admission.admitNext(1_003, "connector-b")).toBeNull();
   });
 
-  it("globally spaces cold starts even when capacity permits concurrent turns", () => {
+  it("globally spaces admission reservations before they consume concurrent turn capacity", () => {
     const admission = controller({ maxActiveTurns: 2, maxConcurrentStarts: 2, minStartIntervalMs: 100 });
     enqueueReady(admission, request({ requestId: "first", now: 1_000 }));
     enqueueReady(admission, request({ requestId: "second", sessionId: "session-b", parentId: "parent-b", now: 1_001 }));
     const first = admission.admitNext(1_002, "connector-a")!;
-    const second = admission.admitNext(1_003, "connector-b")!;
-
     admission.markStarting(first, 1_010);
-    expect(() => admission.markStarting(second, 1_109)).toThrow(/start interval/);
+    expect(admission.admitNext(1_109, "connector-b")).toBeNull();
+    expect(admission.getRequest("second")?.state).toBe("queued");
+    const second = admission.admitNext(1_110, "connector-b")!;
     admission.markStarting(second, 1_110);
   });
 
@@ -1866,9 +1875,6 @@ describe("AdmissionController", () => {
     expect(readFileSync(admission.databasePath, "utf8")).not.toContain(secret);
     expect(() => admission.enqueueDelivery({ ...event, fingerprint: "different" })).toThrow(DeliveryConflictError);
     expect(() => admission.enqueueDelivery({ ...event, requestId: "different-request" })).toThrow(DeliveryConflictError);
-    expect(() => admission.readClaimedDelivery({ ...claim, ownerInstanceId: "delivery-worker-b" }, 1_003)).toThrow(
-      DeliveryClaimFenceError
-    );
     expect(() => admission.acknowledgeDelivery({ ...acknowledgement(claim), claimToken: "0".repeat(64) }, 1_003)).toThrow(
       DeliveryClaimFenceError
     );
@@ -1885,7 +1891,7 @@ describe("AdmissionController", () => {
       admission.enqueueDelivery({
         ...event,
         eventId: "event-unnegotiated",
-        protocol: { ...ACP_OUTBOX_CAPABILITY, semantics: "exactly-once" }
+        protocol: { version: 1, semantics: "exactly-once" }
       } as unknown as EnqueueDelivery)
     ).toThrow(/negotiated at-least-once/i);
   });
@@ -1908,7 +1914,7 @@ describe("AdmissionController", () => {
       claimed
         .prepare(
           `SELECT event_id, request_id, owner_instance_id, claim_generation, state,
-                  heartbeat_at, lease_expires_at, terminal_replay_count
+                  heartbeat_at, lease_expires_at
            FROM delivery_claim_leases WHERE event_id = ?`
         )
         .get(event.eventId)
@@ -1919,8 +1925,7 @@ describe("AdmissionController", () => {
       claim_generation: 1,
       state: "claimed",
       heartbeat_at: 1_002,
-      lease_expires_at: 1_022,
-      terminal_replay_count: 0
+      lease_expires_at: 1_022
     });
     claimed.close();
 
@@ -1929,36 +1934,11 @@ describe("AdmissionController", () => {
       ownerInstanceId: "delivery-worker-a",
       claimGeneration: 1,
       heartbeatAt: 1_005,
-      leaseExpiresAt: 1_025,
-      terminalReplayCount: 0
+      leaseExpiresAt: 1_025
     });
     expect(() => admission.heartbeatClaimedDelivery({ ...claim, claimGeneration: 2 }, 1_006, 20)).toThrow(
       DeliveryClaimFenceError
     );
-
-    const reservation = admission.reserveTerminalReplay({
-      requestId: input.requestId,
-      ownerInstanceId: claim.ownerInstanceId,
-      fence: claim,
-      now: 1_007
-    });
-    expect(reservation).toMatchObject({
-      eventId: event.eventId,
-      requestId: input.requestId,
-      ownerInstanceId: "delivery-worker-a",
-      claimGeneration: 1,
-      state: "replay_reserved",
-      terminalReplayCount: 1
-    });
-    expect(reservation).not.toHaveProperty("payload");
-    expect(
-      admission.reserveTerminalReplay({
-        requestId: input.requestId,
-        ownerInstanceId: claim.ownerInstanceId,
-        fence: claim,
-        now: 1_008
-      })
-    ).toBeNull();
 
     admission.acknowledgeDelivery(acknowledgement(claim), 1_009);
     const delivered = new Database(admission.databasePath, { readonly: true });
@@ -1970,9 +1950,9 @@ describe("AdmissionController", () => {
     });
     expect(
       delivered
-        .prepare("SELECT state, settled_at, terminal_replay_count FROM delivery_claim_leases WHERE event_id = ?")
+        .prepare("SELECT state, settled_at FROM delivery_claim_leases WHERE event_id = ?")
         .get(event.eventId)
-    ).toEqual({ state: "delivered", settled_at: 1_009, terminal_replay_count: 1 });
+    ).toEqual({ state: "delivered", settled_at: 1_009 });
     delivered.close();
   });
 
@@ -2041,7 +2021,7 @@ describe("AdmissionController", () => {
 
   it("enumerates every non-delivered outbox claim without reading payload material", () => {
     const admission = controller();
-    const states = ["claimed", "replay", "recovery", "delivered"] as const;
+    const states = ["claimed", "recovery", "delivered"] as const;
     const claims = new Map<string, ReturnType<AdmissionController["claimPendingDeliveryAtomically"]>>();
     for (const [index, name] of states.entries()) {
       const input = request({
@@ -2066,21 +2046,13 @@ describe("AdmissionController", () => {
       }));
     }
 
-    const replay = claims.get("replay")!;
-    admission.reserveTerminalReplay({
-      requestId: replay!.requestId,
-      ownerInstanceId: replay!.ownerInstanceId,
-      fence: replay!,
-      now: 1_030
-    });
     admission.markDeliveryRecoveryRequired(claims.get("recovery")!, 1_031);
     admission.acknowledgeDelivery(acknowledgement(claims.get("delivered")!), 1_032);
 
     const inventory = admission.listRecoverableOutboxClaims();
     expect(inventory.map((claim) => [claim.eventId, claim.state])).toEqual([
       ["inventory-claimed-event", "claimed"],
-      ["inventory-recovery-event", "recovery_required"],
-      ["inventory-replay-event", "replay_reserved"]
+      ["inventory-recovery-event", "recovery_required"]
     ]);
     expect(JSON.stringify(inventory)).not.toContain("private-");
     for (const claim of inventory) {
@@ -2165,8 +2137,6 @@ describe("AdmissionController", () => {
     const swept = admission.sweepExpiredDeliveryClaims(1_013);
     expect(swept.map((record) => record.eventId)).toEqual([atomicEvent.eventId, legacyEvent.eventId]);
     for (const record of swept) expect(record).not.toHaveProperty("payload");
-    expect(() => admission.readClaimedDelivery(atomicClaim, 1_014)).toThrow(DeliveryClaimFenceError);
-
     const recovered = new Database(admission.databasePath, { readonly: true });
     expect(
       recovered
@@ -2284,7 +2254,7 @@ describe("AdmissionController", () => {
     restarted.close();
   });
 
-  it("does not reserve terminal replay after an ACK claimant process crashes", () => {
+  it("does not expose terminal replay after an ACK claimant process crashes", () => {
     const first = controller();
     const input = request({ requestId: "ack-crash-request", now: 1_000 });
     const event = delivery(input.requestId, { eventId: "ack-crash-event", now: 1_001, expiresAt: 3_000 });
@@ -2303,19 +2273,6 @@ describe("AdmissionController", () => {
     expect(child.stderr).toBe("");
 
     const restarted = reopenController(databasePath, policy);
-    expect(
-      restarted.reserveTerminalReplay({
-        requestId: input.requestId,
-        ownerInstanceId: "crashed-worker",
-        fence: {
-          eventId: event.eventId,
-          ownerInstanceId: "crashed-worker",
-          claimGeneration: 1,
-          claimToken: "0".repeat(64)
-        },
-        now: 2_002
-      })
-    ).toBeNull();
     expect(restarted.sweepExpiredDeliveryClaims(2_002)).toEqual([]);
     const durable = new Database(databasePath, { readonly: true });
     expect(durable.prepare("SELECT state FROM delivery_outbox WHERE event_id = ?").get(event.eventId)).toEqual({ state: "delivered" });
