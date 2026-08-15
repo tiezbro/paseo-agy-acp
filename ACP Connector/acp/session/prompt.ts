@@ -41,11 +41,11 @@ import { MODEL_CONFIG_ID } from "./config-options.js";
 import { MODE_CONFIG_ID } from "./modes.js";
 import { requestPermissionV1, requestPermissionV2 } from "./request-permission.js";
 import type { QueuedPromptV1, QueuedPromptV2, SessionState, TurnIntent } from "./types.js";
-import type { PromptAdmission } from "../../admission/prompt-seam.js";
-import {
-  ACP_REQUEST_IDENTITY_CAPABILITY_KEY,
-  validateRequestIdentityPromptMetadata
-} from "../../admission/request-identity-protocol.js";
+import type {
+  AdmissionTurnCoordinator,
+  AdmissionTurnProgress
+} from "../../admission/turn-coordinator.js";
+import type { AgyAdmissionDispatchBoundary } from "../../agy/cli.js";
 import {
   isTurnCancelled,
   onAbort,
@@ -61,8 +61,8 @@ export interface PromptTurnDeps {
   requireSession(sessionId: string): SessionState;
   applyConfigOption(sessionId: string, configId: string, value: unknown): Promise<void>;
   persistSession(sessionId: string, session: SessionState): Promise<void>;
-  /** Omitted by default so legacy prompt execution stays exactly on its existing path. */
-  admission?: PromptAdmission;
+  /** Final-plan queue wrapper around the existing online ACP output path. */
+  turnAdmission?: Pick<AdmissionTurnCoordinator, "admit">;
 }
 
 export interface PromptV1Deps extends PromptTurnDeps {
@@ -283,13 +283,20 @@ export async function applyCuratedSlashCommand(
  * between v1 and v2; the ordering, cancellation, and persistence rules do not.
  */
 interface TurnAdapter {
-  /** Enabled admission owns prompt dispatch outside this module. */
-  admit?(promptText: string, claim: TurnClaim): Promise<StopReason>;
+  coordinate?(
+    promptText: string,
+    claim: TurnClaim,
+    execute: (boundary: AgyAdmissionDispatchBoundary) => Promise<{ stopReason: StopReason }>
+  ): Promise<StopReason>;
   /** v2 foreground only — queued v2 already published it, v1 has no concept. */
   announceUserMessage?(promptText: string): Promise<void>;
   /** v2 only. */
   announceRunning?(): Promise<void>;
-  forwardUpdates(promptText: string, claim: TurnClaim): Promise<{ stopReason: string }>;
+  forwardUpdates(
+    promptText: string,
+    claim: TurnClaim,
+    boundary?: AgyAdmissionDispatchBoundary
+  ): Promise<{ stopReason: string }>;
   applySlash(promptText: string): Promise<boolean>;
 }
 
@@ -318,19 +325,13 @@ async function runTurnBody(
   const promptText = preconverted ?? await guard(contentBlocksToPrompt(promptBlocks, session.cwd));
   // Curated slash commands reconfigure the local connector and never launch
   // agy, so they do not consume a global admission request.
-  if (adapter.admit && isClientTextSlashPrompt(promptBlocks)) {
+  if (adapter.coordinate && isClientTextSlashPrompt(promptBlocks)) {
     const handled = await guard(adapter.applySlash(promptText));
     if (handled) {
       ensureLive();
       return "end_turn";
     }
     ensureLive();
-  }
-  if (adapter.admit) {
-    ensureLive();
-    const backendPromptText = await guard(withPaseoDaemonSystemContext(promptText));
-    ensureLive();
-    return guard(adapter.admit(backendPromptText, claim));
   }
   const backendPromptText = await guard(withPaseoDaemonSystemContext(promptText));
   ensureLive();
@@ -339,11 +340,6 @@ async function runTurnBody(
     await guard(adapter.announceUserMessage(promptText));
     ensureLive();
   }
-  if (adapter.announceRunning) {
-    await guard(adapter.announceRunning());
-    ensureLive();
-  }
-
   // Only intercept pure client text blocks; a resource or image payload whose
   // flattened body happens to read `/plan` must be forwarded to agy verbatim.
   if (isClientTextSlashPrompt(promptBlocks)) {
@@ -355,60 +351,72 @@ async function runTurnBody(
     ensureLive();
   }
 
-  // The backend is now the thing to stop, so route aborts to it. `onAbort`
-  // fires immediately if the claim is already aborted.
-  const stopBackend = () => {
-    session.agy.cancel().catch(() => {
-      // The prompt loop surfaces process failures through its own result.
-    });
+  const executeBackend = async (
+    boundary?: AgyAdmissionDispatchBoundary
+  ): Promise<{ stopReason: StopReason }> => {
+    if (adapter.announceRunning) {
+      await guard(adapter.announceRunning());
+      ensureLive();
+    }
+    // The backend is now the thing to stop, so route aborts to it. `onAbort`
+    // fires immediately if the claim is already aborted.
+    const stopBackend = () => {
+      session.agy.cancel().catch(() => {
+        // The prompt loop surfaces process failures through its own result.
+      });
+    };
+    const detach = onAbort(claim.signal, stopBackend);
+    try {
+      ensureLive();
+      const outcome = await adapter.forwardUpdates(backendPromptText, claim, boundary);
+      if (!session.closed) await deps.persistSession(sessionId, session);
+      return {
+        stopReason: outcome.stopReason === "cancelled" || claim.aborted || session.closed
+          ? "cancelled"
+          : "end_turn"
+      };
+    } catch (error) {
+      if (!claim.aborted && !session.closed) {
+        await deps.persistSession(sessionId, session).catch(() => {});
+      }
+      throw error;
+    } finally {
+      detach();
+    }
   };
-  const detach = onAbort(claim.signal, stopBackend);
-  try {
-    ensureLive();
-    const outcome = await adapter.forwardUpdates(backendPromptText, claim);
-    if (!session.closed) {
-      await deps.persistSession(sessionId, session);
-    }
-    return outcome.stopReason === "cancelled" || claim.aborted || session.closed
-      ? "cancelled"
-      : "end_turn";
-  } catch (error) {
-    // Persist even on failure: agy's conversation id/step position may have
-    // advanced before it errored out, and that partial progress is worth
-    // resuming from on the next prompt.
-    if (!claim.aborted && !session.closed) {
-      await deps.persistSession(sessionId, session).catch(() => {});
-    }
-    throw error;
-  } finally {
-    detach();
-  }
+
+  return adapter.coordinate
+    ? guard(adapter.coordinate(backendPromptText, claim, executeBackend))
+    : (await executeBackend()).stopReason;
 }
 
-function admissionAdapter(
-  params: { sessionId: string; _meta?: unknown },
+function turnAdmissionAdapter(
+  params: { sessionId: string },
   session: SessionState,
-  deps: PromptTurnDeps
-): TurnAdapter["admit"] {
-  const admission = deps.admission;
+  deps: PromptTurnDeps,
+  reportProgress: (progress: AdmissionTurnProgress) => void | Promise<void>
+): TurnAdapter["coordinate"] {
+  const admission = deps.turnAdmission;
   if (!admission) return undefined;
-
-  return async (promptText, claim) => admission.seam.admit({
+  return (promptText, claim, execute) => admission.admit({
     sessionId: params.sessionId,
     model: session.selectedBaseModel,
     promptText,
     claim,
-    requestIdentity: validateRequestIdentityPromptMetadata(
-      admission.requestIdentity,
-      promptRequestIdentityMetadata(params)
-    )
+    reportProgress,
+    execute
   });
 }
 
-function promptRequestIdentityMetadata(params: { _meta?: unknown }): unknown {
-  const meta = params._meta;
-  if (!meta || typeof meta !== "object") return undefined;
-  return (meta as Record<string, unknown>)[ACP_REQUEST_IDENTITY_CAPABILITY_KEY];
+function queueProgressUpdate(progress: AdmissionTurnProgress): Record<string, unknown> {
+  return {
+    sessionUpdate: "_paseo_queue_progress",
+    state: progress.state,
+    position: progress.position,
+    eligiblePosition: progress.eligiblePosition,
+    waitedMs: progress.waitedMs,
+    cooldownUntil: progress.cooldownUntil
+  };
 }
 
 function v1Adapter(
@@ -418,7 +426,10 @@ function v1Adapter(
   deps: PromptV1Deps
 ): TurnAdapter {
   return {
-    admit: admissionAdapter(params, session, deps),
+    coordinate: turnAdmissionAdapter(params, session, deps, (progress) => client.notify(
+      v1.methods.client.session.update,
+      { sessionId: params.sessionId, update: queueProgressUpdate(progress) as never }
+    )),
     applySlash: (promptText) => applyCuratedSlashCommand(
       params.sessionId,
       promptText,
@@ -436,7 +447,7 @@ function v1Adapter(
       },
       deps
     ),
-    forwardUpdates: async (promptText, claim) => {
+    forwardUpdates: async (promptText, claim, boundary) => {
       const tracker = createTerminalOutputTracker();
       const clientToolCallName = deps.clientToolCallNameV1?.(client);
       return session.agy.prompt(promptText, async (update) => {
@@ -461,7 +472,7 @@ function v1Adapter(
           elicitationCap,
           clientToolCallName
         );
-      }, deps.clientFileSystemV1(client, params.sessionId), deps.clientElicitationV1?.(client));
+      }, deps.clientFileSystemV1(client, params.sessionId), deps.clientElicitationV1?.(client), boundary);
     }
   };
 }
@@ -484,7 +495,9 @@ function v2Adapter(
   let userMessageId = options.userMessageId ?? "";
 
   const adapter: TurnAdapter = {
-    admit: admissionAdapter(params, session, deps),
+    coordinate: turnAdmissionAdapter(params, session, deps, (progress) => notify(
+      queueProgressUpdate(progress) as never
+    )),
     announceUserMessage: options.announceUserMessage
       ? async (promptText: string) => {
           userMessageId = v2UserMessageId(params.prompt as v1.ContentBlock[], promptText);
@@ -508,7 +521,7 @@ function v2Adapter(
       },
       deps
     ),
-    forwardUpdates: async (promptText, claim) => {
+    forwardUpdates: async (promptText, claim, boundary) => {
       const terminalTracker = createTerminalOutputTracker();
       const toolContentTracker = createToolCallContentTracker();
       const clientToolCallName = deps.clientToolCallNameV2?.(client);
@@ -529,7 +542,7 @@ function v2Adapter(
             elicitationCap,
             clientToolCallName
           );
-        }, undefined, deps.clientElicitationV2?.(client));
+        }, undefined, deps.clientElicitationV2?.(client), boundary);
       } finally {
         const userStepIdxs = session.agy.lastPromptUserStepIdxs;
         if (userStepIdxs.length > 1) {
@@ -897,7 +910,7 @@ function enqueueV2(
   // Global admission must start only after executeQueuedV2Turn has acquired
   // the local claim. The legacy path intentionally retains eager conversion
   // and user-message publication below.
-  if (deps.admission) {
+  if (deps.turnAdmission) {
     notifyIdleAndDrainQueue(session);
     return queuedId;
   }
@@ -967,7 +980,7 @@ async function executeQueuedV2Turn(item: QueuedPromptV2): Promise<void> {
       session,
       claim,
       async () => {
-        if (deps.admission) {
+        if (deps.turnAdmission) {
           const adapter = v2Adapter(params, client, session, deps, {
             announceUserMessage: true
           });

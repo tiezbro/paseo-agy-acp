@@ -21,27 +21,13 @@ import {
 } from "./launch-spec.js";
 import {
   startAgyPromptFreeProcess,
-  type AgyPromptFreeProcess,
-  type AgyPromptFreeProcessExit,
-  type AgyPromptFreeProcessWriteResult
+  type AgyPromptFreeProcess
 } from "./prompt-free-process.js";
 import { launchAgyProcess, type AgyStartupLauncher } from "./startup-launcher.js";
 import { conversationSnapshot } from "./db/scan.js";
 import { defaultInstallBinDir, ensureAgyInstalled } from "./installer.js";
 import { StreamPoller } from "./db/streaming.js";
 import type { StepRow } from "./db/types.js";
-import {
-  createExactConversationBinder,
-  type ExactConversationBinding
-} from "./db/exact-conversation-binder.js";
-import {
-  createSqliteProviderSnapshotReader,
-  type SqliteProviderSnapshotReader
-} from "./db/provider-observer.js";
-import {
-  observeAgyStreamJsonIdentity,
-  type AgyStreamJsonIdentityChannel
-} from "./stream-json-identity.js";
 import { diffBlocks, revertEditToolCall, type DiffBlock } from "./edit/revert.js";
 import {
   primeEditReadThroughClient,
@@ -297,33 +283,13 @@ export interface AgyCliConfigInput {
 }
 
 /**
- * Exact binding inputs for one v2 SQLite-primary connector turn. `reader` is
- * injectable so callers can test this seam without a provider process or a
- * real conversation database.
+ * Narrow request-scoped hook used by the Admission Controller around the
+ * existing print-mode stdin write. It owns no process creation or output.
  */
-export interface AgyExactConversationTurnOptions {
-  readonly expectedConversationId: string | null;
-  readonly minimumCursor: number;
-  readonly signal?: AbortSignal;
-  readonly reader?: SqliteProviderSnapshotReader;
-  readonly now?: () => number;
-  readonly timeoutMs?: number;
-  readonly pollIntervalMs?: number;
-  readonly wait?: (milliseconds: number, signal?: AbortSignal) => Promise<void>;
-}
-
-/**
- * The v2 connector-facing process capability. It intentionally exposes no
- * stdout or child-process object: stream-json is identity-only, and activity
- * plus terminal evidence are available only through `binding.observer`.
- */
-export interface AgyExactConversationTurn {
-  readonly processId: number | undefined;
-  readonly promptChannel: "stdin";
-  readonly exit: Promise<AgyPromptFreeProcessExit>;
-  readonly binding: Promise<ExactConversationBinding>;
-  writeBusinessPrompt(): AgyPromptFreeProcessWriteResult;
-  cancel(): void;
+export interface AgyAdmissionDispatchBoundary {
+  prepare(processId: number): void;
+  beforePromptWrite(): void;
+  afterPromptWrite(): void;
 }
 
 export class AgyCliError extends Error {
@@ -439,66 +405,7 @@ export class AgyCliSession {
     return this.startPromptFreeProcessInternal(businessPrompt);
   }
 
-  /**
-   * Starts a v2 SQLite-primary connector turn. The official stream-json
-   * channel is attached inside the spawn callback, before the business prompt
-   * can be written, and supplies only the exact conversation ID to the binder.
-   */
-  startExactConversationTurn(
-    businessPrompt: string,
-    options: AgyExactConversationTurnOptions
-  ): AgyExactConversationTurn {
-    const reader = options.reader ?? createSqliteProviderSnapshotReader(this.config.conversationsDir);
-    const binder = createExactConversationBinder({
-      reader,
-      ...(options.now === undefined ? {} : { now: options.now }),
-      ...(options.timeoutMs === undefined ? {} : { timeoutMs: options.timeoutMs }),
-      ...(options.pollIntervalMs === undefined ? {} : { pollIntervalMs: options.pollIntervalMs }),
-      ...(options.wait === undefined ? {} : { wait: options.wait })
-    });
-    let identityChannel: AgyStreamJsonIdentityChannel | undefined;
-    const process = this.startPromptFreeProcessInternal(businessPrompt, (stdout) => {
-      identityChannel = observeAgyStreamJsonIdentity(stdout);
-    });
-    if (identityChannel === undefined) {
-      process.cancel();
-      throw new Error("prompt-free process did not expose a stream-json identity channel");
-    }
-
-    const channel = identityChannel;
-    const binding = binder.bind({
-      identityChannel: channel,
-      expectedConversationId: options.expectedConversationId,
-      minimumCursor: options.minimumCursor,
-      signal: options.signal
-    });
-    // The dispatcher consumes this promise. Mark it observed here as well so a
-    // failed init cannot become an unhandled rejection before the dispatcher
-    // reaches the returned capability.
-    void binding.catch(() => {});
-
-    const processId = typeof process.child.pid === "number" &&
-      Number.isSafeInteger(process.child.pid) && process.child.pid > 0
-      ? process.child.pid
-      : undefined;
-
-    return Object.freeze({
-      processId,
-      promptChannel: process.promptChannel,
-      exit: process.exit,
-      binding,
-      writeBusinessPrompt: () => process.writeBusinessPrompt(),
-      cancel: () => {
-        channel.close();
-        process.cancel();
-      }
-    });
-  }
-
-  private startPromptFreeProcessInternal(
-    businessPrompt: string,
-    observeStdout?: (stdout: NodeJS.ReadableStream) => void
-  ): AgyPromptFreeProcess<SpawnedProcess> {
+  private startPromptFreeProcessInternal(businessPrompt: string): AgyPromptFreeProcess<SpawnedProcess> {
     const command = this.commandForPromptFreeProcess();
     try {
       const process = startAgyPromptFreeProcess({
@@ -519,21 +426,11 @@ export class AgyCliSession {
           () => {
             const [program, ...args] = launch.argv;
             if (!program) throw new Error("prompt-free launch specification has no executable");
-            const child = this.spawnProcess(program, args, {
+            return this.spawnProcess(program, args, {
               cwd: launch.cwd,
               env: { ...launch.environment },
               launchSpecification: launch
             });
-            try {
-              observeStdout?.(child.stdout);
-            } catch {
-              try {
-                if (globalThis.process.platform === "win32") child.kill();
-                else child.kill("SIGINT");
-              } catch {}
-              throw new Error("failed to attach stream-json identity reader");
-            }
-            return child;
           }
         )
       });
@@ -626,14 +523,19 @@ export class AgyCliSession {
     onUpdate: (update: SessionUpdate) => Promise<void>,
     onPermission?: PermissionCallback,
     fsBridge?: ClientFileSystem,
-    elicitationCap?: ClientElicitationCapability
+    elicitationCap?: ClientElicitationCapability,
+    admissionBoundary?: AgyAdmissionDispatchBoundary
   ): Promise<PromptOutcome> {
     this.#lastPromptUserStepIdxs = [];
-    // The former CLI-owned boundary combined persistence, intent commit, and
-    // the irreversible write. It is retained only as a compatibility config
-    // surface and must never become a production composition path again.
+    // The removed CLI-owned dispatch configuration must stay unreachable. The
+    // Admission Controller uses the request-scoped boundary argument below.
     if (this.config.promptFreeDispatch?.enabled === true) {
       throw new AgyPromptFreeDispatchError("blocked", "dispatcher_owned_prompt_required");
+    }
+    if (admissionBoundary !== undefined) {
+      if (this.config.promptInArgv || this.shouldUseInteractivePermissions()) {
+        throw new AgyPromptFreeDispatchError("blocked", "admission_requires_prompt_free_print_mode");
+      }
     }
     if (this.shouldUseInteractivePermissions() && !onPermission) {
       throw new Error("interactive permissions require a permission callback");
@@ -646,11 +548,17 @@ export class AgyCliSession {
       }
       const command = this.commandForPrompt(prompt);
       try {
-        return await this.runPromptCommand(command, prompt, onUpdate, fsBridge);
+        return await this.runPromptCommand(command, prompt, onUpdate, fsBridge, admissionBoundary);
       } catch (error) {
         if (this.shouldInstallAfterError(error)) {
           await this.installAgy();
-          return await this.runPromptCommand(this.commandForPrompt(prompt), prompt, onUpdate, fsBridge);
+          return await this.runPromptCommand(
+            this.commandForPrompt(prompt),
+            prompt,
+            onUpdate,
+            fsBridge,
+            admissionBoundary
+          );
         }
         throw error;
       }
@@ -1171,7 +1079,8 @@ export class AgyCliSession {
     command: string[],
     prompt: string,
     onUpdate: (update: SessionUpdate) => Promise<void>,
-    fsBridge?: ClientFileSystem
+    fsBridge?: ClientFileSystem,
+    admissionBoundary?: AgyAdmissionDispatchBoundary
   ): Promise<PromptOutcome> {
     const [program, ...args] = command;
 
@@ -1220,7 +1129,17 @@ export class AgyCliSession {
     });
 
     try {
-      child.stdin.end(this.config.promptInArgv ? undefined : prompt);
+      if (admissionBoundary !== undefined) {
+        if (!Number.isSafeInteger(child.pid) || child.pid === undefined || child.pid < 1) {
+          throw new AgyPromptFreeDispatchError("blocked", "child_process_identity_unavailable");
+        }
+        admissionBoundary.prepare(child.pid);
+        admissionBoundary.beforePromptWrite();
+        child.stdin.end(prompt);
+        admissionBoundary.afterPromptWrite();
+      } else {
+        child.stdin.end(this.config.promptInArgv ? undefined : prompt);
+      }
 
       const pollOnce = async () => {
         for (const update of poller.poll()) {
@@ -1320,6 +1239,16 @@ export class AgyCliSession {
       }
 
       return { stopReason: this.#cancelled ? "cancelled" : "end_turn" };
+    } catch (error) {
+      if (admissionBoundary !== undefined && child.exitCode === null) {
+        try {
+          if (process.platform === "win32") child.kill();
+          else child.kill("SIGINT");
+        } catch {
+          // The coordinator retains recovery debt when termination is unknown.
+        }
+      }
+      throw error;
     } finally {
       this.#conversationId = poller.conversationId ?? this.#conversationId;
       this.#lastStepIdx = Math.max(this.#lastStepIdx, poller.lastStepIdx);
@@ -1621,16 +1550,6 @@ export class AgyCliBackend {
   ): AgyPromptFreeProcess<SpawnedProcess> {
     return new AgyCliSession(config, this.spawnProcess, this.ptyFactory)
       .startPromptFreeProcess(businessPrompt);
-  }
-
-  /** Starts the no-stdout v2 SQLite-primary turn capability for one request. */
-  startExactConversationTurn(
-    config: AgyCliConfig,
-    businessPrompt: string,
-    options: AgyExactConversationTurnOptions
-  ): AgyExactConversationTurn {
-    return new AgyCliSession(config, this.spawnProcess, this.ptyFactory)
-      .startExactConversationTurn(businessPrompt, options);
   }
 
   async listModels(config: AgyCliConfig): Promise<string[]> {

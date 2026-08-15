@@ -1,7 +1,7 @@
 import type Database from "better-sqlite3";
 
 /** The newest AdmissionController schema this connector can safely use. */
-export const ADMISSION_SCHEMA_VERSION = 10;
+export const ADMISSION_SCHEMA_VERSION = 1;
 
 /** Raised when an admission database is not exactly the supported schema. */
 export class SchemaIntegrityError extends Error {
@@ -99,16 +99,7 @@ interface MigrationRow {
 }
 
 const MIGRATIONS: readonly MigrationSpec[] = [
-  { version: 1, name: "admission-controller-core" },
-  { version: 2, name: "provider-terminal-proof" },
-  { version: 3, name: "authenticated-row-binding" },
-  { version: 4, name: "structured-terminal-evidence" },
-  { version: 5, name: "durable-outbox-claims" },
-  { version: 6, name: "fenced-recovery-resolution" },
-  { version: 7, name: "sqlite-session-store" },
-  { version: 8, name: "atomic-process-dispatch-intent" },
-  { version: 9, name: "atomic-outbox-claim-leases" },
-  { version: 10, name: "sanitized-admission-events" }
+  { version: 1, name: "shared-admission-queue" }
 ];
 
 const TABLES: readonly TableSpec[] = [
@@ -151,16 +142,7 @@ const TABLES: readonly TableSpec[] = [
       column("owner_instance_id", "TEXT", true),
       column("phase", "TEXT", true),
       column("acquired_at", "INTEGER", true),
-      column("heartbeat_at", "INTEGER", true),
-      column("terminal_outcome", "TEXT", false),
-      column("terminal_conversation_id", "TEXT", false),
-      column("terminal_status", "TEXT", false),
-      column("terminal_stream_observed_at", "INTEGER", false),
-      column("terminal_sqlite_observed_at", "INTEGER", false),
-      column("terminal_failure_category", "TEXT", false),
-      column("terminal_http_status", "INTEGER", false),
-      column("terminal_code", "TEXT", false),
-      column("terminal_reason", "TEXT", false)
+      column("heartbeat_at", "INTEGER", true)
     ],
     foreignKeys: [foreignKey("request_id", "turn_requests", "request_id")],
     namedIndexes: [index("leases_phase", ["phase"])],
@@ -186,81 +168,12 @@ const TABLES: readonly TableSpec[] = [
       column("ciphertext", "BLOB", true),
       column("auth_tag", "BLOB", true),
       column("key_version", "INTEGER", true),
+      column("content_fingerprint", "TEXT", true),
       column("expires_at", "INTEGER", true),
-      column("created_at", "INTEGER", true),
-      column("content_fingerprint", "TEXT", false)
+      column("created_at", "INTEGER", true)
     ],
     foreignKeys: [foreignKey("request_id", "turn_requests", "request_id", "CASCADE")],
     namedIndexes: [],
-    uniqueConstraints: []
-  },
-  {
-    name: "delivery_outbox",
-    columns: [
-      column("event_id", "TEXT", false, 1),
-      column("request_id", "TEXT", true),
-      column("fingerprint", "TEXT", true),
-      column("state", "TEXT", true),
-      column("nonce", "BLOB", false),
-      column("ciphertext", "BLOB", false),
-      column("auth_tag", "BLOB", false),
-      column("expires_at", "INTEGER", true),
-      column("created_at", "INTEGER", true),
-      column("settled_at", "INTEGER", false),
-      column("key_version", "INTEGER", false),
-      column("sequence", "INTEGER", true, 0, "0"),
-      column("protocol_version", "INTEGER", true, 0, "0"),
-      column("protocol_semantics", "TEXT", true, 0, "'unnegotiated'"),
-      column("claim_generation", "INTEGER", true, 0, "0"),
-      column("claim_owner_instance_id", "TEXT", false),
-      column("claim_acquired_at", "INTEGER", false),
-      column("lease_id", "TEXT", false),
-      column("lease_generation", "INTEGER", false)
-    ],
-    foreignKeys: [foreignKey("request_id", "turn_requests", "request_id")],
-    namedIndexes: [index("delivery_outbox_pending", ["state", "created_at"])],
-    uniqueConstraints: []
-  },
-  {
-    name: "delivery_claim_leases",
-    columns: [
-      column("event_id", "TEXT", false, 1),
-      column("request_id", "TEXT", true),
-      column("owner_instance_id", "TEXT", true),
-      column("claim_generation", "INTEGER", true),
-      column("state", "TEXT", true),
-      column("heartbeat_at", "INTEGER", true),
-      column("lease_expires_at", "INTEGER", true),
-      column("settled_at", "INTEGER", false),
-      column("updated_at", "INTEGER", true)
-    ],
-    foreignKeys: [
-      foreignKey("event_id", "delivery_outbox", "event_id", "CASCADE"),
-      foreignKey("request_id", "turn_requests", "request_id")
-    ],
-    namedIndexes: [index("delivery_claim_leases_expiry", ["state", "lease_expires_at"])],
-    uniqueConstraints: []
-  },
-  {
-    name: "recovery_claims",
-    columns: [
-      column("lease_id", "TEXT", false, 1),
-      column("request_id", "TEXT", true),
-      column("lease_generation", "INTEGER", true),
-      column("recovery_generation", "INTEGER", true),
-      column("claimant_instance_id", "TEXT", true),
-      column("prior_phase", "TEXT", true),
-      column("state", "TEXT", true),
-      column("claimed_at", "INTEGER", true),
-      column("resolved_at", "INTEGER", false),
-      column("action", "TEXT", false),
-      column("evidence_code", "TEXT", false),
-      column("reason_code", "TEXT", false),
-      column("actor_hmac", "TEXT", false),
-      column("evidence_hmac", "TEXT", false)
-    ],
-    foreignKeys: [foreignKey("request_id", "turn_requests", "request_id")],
-    namedIndexes: [index("recovery_claims_request", ["request_id"])],
     uniqueConstraints: []
   },
   {
@@ -348,6 +261,7 @@ const TABLES: readonly TableSpec[] = [
 export function assertAdmissionSchemaIntegrity(db: Database.Database): void {
   try {
     assertForeignKeysEnabled(db);
+    assertNoUnexpectedTables(db);
 
     for (const table of TABLES) {
       assertTable(db, table);
@@ -361,6 +275,18 @@ export function assertAdmissionSchemaIntegrity(db: Database.Database): void {
   } catch (error) {
     if (error instanceof SchemaIntegrityError) throw error;
     throw new SchemaIntegrityError("SQLite metadata could not be inspected");
+  }
+}
+
+function assertNoUnexpectedTables(db: Database.Database): void {
+  const expected = new Set(TABLES.map((table) => table.name));
+  const rows = db
+    .prepare("SELECT name FROM sqlite_schema WHERE type = 'table' AND name NOT LIKE 'sqlite_%'")
+    .all() as Array<{ name: unknown }>;
+  for (const row of rows) {
+    if (typeof row.name !== "string" || !expected.has(row.name)) {
+      fail(`unexpected table ${typeof row.name === "string" ? row.name : "unknown"} is present`);
+    }
   }
 }
 

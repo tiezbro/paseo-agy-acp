@@ -6,194 +6,54 @@ All notable changes to `paseo-agy-acp` are recorded here.
 
 ### Changed
 
-- Converged source ownership into exactly two root-level functional areas:
-  `Admission Controller/` owns the shared seats, queue, start-rate, leases,
-  heartbeat, cooldown, recovery proofs, and queue progress; `ACP Connector/`
-  owns Paseo/ACP, session/conversation mapping, Antigravity integration,
-  stream-json/SQLite translation, permissions, cancellation, recovery
-  coordination, and error classification. Package entrypoints live inside
-  `ACP Connector/`.
-- Narrowed durable result delivery to initial send plus exact ACK fencing. No
-  reconnect resend API or duplicate Connector-owned claim store remains;
-  unconfirmed delivery becomes `recovery_required` without another provider
-  turn.
-- Made `maxActiveTurns` one shared account-level pool across connector
-  processes and models. Targeted waiters can only claim the controller's
-  oldest eligible, parent-fair request; provider/model cooldown affects queue
-  eligibility without creating additional capacity. The source default follows
-  the confirmed plan: two active seats and one concurrent start. Runtime
-  configuration accepts one or two seats and rejects larger values.
-- Removed unconfirmed follow-on scope from this iteration: Agent archival and
-  compensating supervision remain Paseo responsibilities, and live-parity or
-  seat-expansion stages are not part of the Admission Controller plan.
+- Converged the repository into exactly two source areas. `ACP Connector/`
+  retains ACP protocol handling, sessions, the existing Antigravity online
+  output path, permissions, cancellation, and error mapping.
+  `Admission Controller/` now contains only the shared queue and seat kernel.
+- Wrapped the existing `AgyCliSession.prompt` path with a disabled-by-default
+  shared Admission coordinator. The source defaults are three active account
+  seats, one concurrent start, a two-second start interval, a 30-minute queue
+  timeout, and a 30-second provider/model capacity cooldown. The only supported
+  seat override is `1`; `2`, `4`, `5`, and every other value fail closed.
+- Made terminal settlement and seat release one controller transaction.
+  Confirmed Antigravity capacity failures start cooldown; uncertain post-write
+  failures retain visible `recovery_required` capacity debt and cannot replay
+  the business prompt.
+- Reset the Admission database contract to `shared-admission-queue` schema v1
+  with eight business tables plus `schema_migrations`. Extra legacy tables
+  fail closed.
 
 ### Added
 
-- Added the internal SQLite-backed Admission Controller core for the v2.0.0.0
-  development track. Its initial tests cover idempotent admission,
-  cross-instance capacity, parent fairness, cooldown, and conservative
-  pre-dispatch versus post-dispatch recovery. Lease generations fence safe
-  pre-dispatch requeues, and a durable start history enforces global startup
-  spacing.
-- Added authenticated encryption for durable turn payloads and ACP delivery
-  outbox content. Expired payloads are removed, while delivery records retain
-  a stable event ID and require an explicit acknowledgement before they become
-  `delivered`.
-- Added a versioned SQLite schema ledger and a fail-closed preflight parser for
-  legacy `sessions.json`; a present but damaged legacy file is rejected rather
-  than interpreted as an empty session store.
-- Added queued-request cancellation that atomically removes the encrypted
-  prompt. It intentionally refuses to claim cancellation after provider
-  admission or dispatch, which requires separate process and provider proof.
-- Added OS-process contention coverage and a redacting provider error
-  classifier. Recognized `503` capacity and `429` quota evidence is retained
-  as a typed outcome; unrecognized raw error text is discarded.
-- Tightened crash recovery evidence: a `starting` request is requeued only
-  after both connector loss and pre-dispatch process termination are proven.
-  A reservation with no started process can still be safely requeued.
-- Added a restrictive local key-store primitive for future encrypted runtime
-  state. It requires a `0700` state directory and `0600` 32-byte key, and
-  rejects unsafe pre-existing paths rather than silently repairing them.
-- Added the v2.0.0.0 design baseline in
-  `docs/design/v2.0.0.0-admission-controller.md`.
-- Bound encrypted turn and delivery rows to their immutable identities with
-  AES-GCM additional authenticated data, and replaced raw content hashes with
-  keyed fingerprints. A master key now derives independent encryption,
-  fingerprint, identity, recovery, and audit keys through versioned HKDF
-  domains.
-- Hardened the Admission SQLite schema to a fully verified v11 ledger. Startup
-  checks the complete migration history, tables, columns, foreign keys, and
-  indexes inside a rollback-safe migration transaction rather than trusting a
-  maximum version number. The current schema includes SQLite-backed ACP
-  sessions, a fenced process-identity record for each dispatched lease,
-  controller-owned outbox claim leases, and an identifier-free sanitized event
-  journal whose correlations use a purpose-separated HMAC.
-- Added Linux process identity, connector ownership, dispatch-boundary,
-  cancellation, and terminal-evidence primitives. Unverifiable termination,
-  PID reuse, local process killing, or conflicting provider observations stay
-  conservative and cannot silently become a completed or cancelled turn.
-- Added exact, opt-in protocol records for stable client message identity and
-  at-least-once outbox acknowledgement. ACP writer completion is explicitly
-  not treated as a remote acknowledgement, and JSON-RPC request IDs are not
-  accepted as reconnect-stable business identities.
-- Added a disabled runtime factory with conservative source defaults of one
-  active turn and one concurrent start. These values are not approved for
-  production use until the isolated acceptance gates pass.
-- Added an atomic, lease-fenced process-identity plus `dispatch_intent`
-  transaction. Exact repeats are idempotent; stale leases, conflicting process
-  identities, and injected transaction faults fail closed without a partial
-  process record or dispatch transition.
-- Split pre-dispatch recovery into proof and mutation layers. Linux process
-  inspection now emits only a claim-bound HMAC proof, while the recovery
-  coordinator is the sole owner of fenced durable requeue or
-  `recovery_required` resolution.
-- Added the runtime-owned prompt dispatcher and prompt-free CLI bridge. Fake
-  process tests cover the single irreversible prompt write, terminal
-  persistence, cancellation, and no automatic business-turn replay.
-- Added a fresh-PTY canary that rejects prompt leakage through argv,
-  environment, process title, temporary paths, and launcher diagnostics. Its
-  prompt correlation and attestation use a caller-supplied purpose-separated
-  HMAC key; missing, stale, mismatched, or failed evidence blocks the PTY path.
-- Added a SQLite ACP session store and opt-in runtime composition. Enabled
-  source configurations preserve session/conversation state across connector
-  restarts without sharing `sessions.json`; the disabled default remains on
-  the legacy store and prompt path.
-- Added the reserved `_paseo-agy-acp/outbox/ack` route. The connector advertises
-  at-least-once outbox delivery only when a live durable bridge and ACK route
-  are both active; forged acknowledgements fail and exact repeats remain
-  idempotent across bridge and controller restarts without resending the
-  payload or business turn.
-- Hardened the atomic dispatch boundary so a successfully recorded process
-  identity is treated as an already durable `dispatch_intent`. Cancellation,
-  stale owner/generation revalidation, or an exact-intent replay fault after
-  that point now becomes `dispatch_ambiguous` and can never enter the safe
-  pre-dispatch requeue path.
-- Added controller-owned, payload-free recovery inventories for nonterminal
-  dispatches and outbox claims. Partial, orphaned, or mismatched outbox/claim
-  fences reject the complete inventory instead of silently dropping recovery
-  work or decrypting an update.
-- Added a SQLite-backed startup launcher for `auxiliary` and `resident_pty`
-  processes. It enforces independent cross-process capacity with generation
-  fences and heartbeat evidence; heartbeat expiry never releases a permit.
-- Added an asynchronous startup recovery barrier that reconciles dispatch,
-  active-session, outbox-claim, startup-permit, and Linux residue inventories.
-  It can only observe and block: it has no payload, signal, release, requeue,
-  or provider-dispatch capability.
-- Added a serialized controller-owned outbox pump. It sweeps expired claims,
-  performs bounded delivery work, waits for explicit ACK, and converts sender
-  failures to fixed blocked results without replaying a provider turn.
-- Added post-write cancellation propagation to the SQLite-primary dispatcher.
-  Only an official `CANCELED` or `INTERRUPTED` SQLite terminal confirms
-  cancellation; missing or conflicting terminal evidence remains
-  `recovery_required`, and prompt references are cleared after every terminal
-  or unrecoverable path.
-- Added test-only transaction fault seams at provider-terminal/outbox and ACK
-  settlement boundaries. Fault-matrix tests prove request, lease, outbox,
-  claim, and sanitized-event state rolls back together without leaking the
-  injected error or durable payload.
-- Added a source-only asynchronous production graph builder. It owns one
-  SQLite startup launcher and threads that exact instance through dispatch and
-  startup recovery, then assembles SQLite sessions, exact dispatch,
-  proof-gated recovery, negotiated ACK delivery, and the outbox pump. It
-  returns a dispatch surface only after every capability and recovery barrier
-  passes.
-- Removed the superseded `StartupGate` and the process-lifecycle startup
-  method after independent audit. Linux process lifecycle code now exposes
-  recovery, evidence, and cancellation only; the admission dispatcher remains
-  the only production owner of provider startup and the irreversible business
-  prompt write.
-- Queue timeout now atomically transitions the request, deletes its encrypted
-  prompt payload, and writes the sanitized journal event. The terminal request
-  tombstone remains non-replayable, a new request identity can continue, and a
-  journal fault rolls the complete timeout transaction back.
-- Minimized controller error strings after audit by removing request,
-  delivery, and lease identifiers while retaining typed error classes for
-  callers.
-- Hardened first-open active-session registry initialization against concurrent
-  connectors. Only SQLite `BUSY`/`LOCKED` contention during idempotent WAL,
-  table, and index setup receives a short bounded retry; schema mismatch,
-  corruption, and every non-contention error still fail closed, and business
-  prompts are never replayed.
+- Added durable oldest-eligible queue selection with agent fairness, encrypted
+  queued prompts, queue progress, global start throttling, lease heartbeats,
+  immutable Linux process identity, and proof-gated startup seat recovery.
+- Added focused final-plan tests for cross-process seats, agent fairness,
+  start throttling, timeout payload deletion, capacity cooldown, heartbeat,
+  immediate terminal release, atomic identity plus dispatch intent, and
+  no-replay behavior after an uncertain prompt write.
 
-### Not Yet Enabled
+### Removed
 
-- The Admission Controller is not enabled in the installed connector. The
-  source now contains the durable controller, recovery/readiness barrier,
-  SQLite session and startup-permit composition, prompt dispatcher,
-  process/recovery contracts, outbox pump, and ACK route. The legacy
-  `composeAcpRuntime()` entrypoint still rejects enabled configuration. A real,
-  version-specific fresh-PTY launcher certificate and isolated provider
-  acceptance are still release blockers before that entrypoint can use the
-  source-only production graph. This work does not change production provider
-  concurrency, retries, lifecycle, installed binaries, or Paseo runtime state.
+- Removed the unapproved second delivery architecture: controller outbox,
+  delivery claims, custom ACK route, terminal reconnect replay, client route
+  fencing, shadow terminal observers, and custom request identity.
+- Removed the unused production graph, alternate dispatcher/prompt seam,
+  manual recovery claims and requeue APIs, startup-permit subsystem, exact
+  terminal binder, legacy migration pipeline, and their dedicated tests.
+- Preserved official ACP `session/load` and `session/resume`, conversation
+  SQLite replay, `StreamPoller`/`Translator` online updates, and the
+  stream-json identity primitive.
 
 ### Verification
 
-- `npm run validate` - typecheck, clean package build, 60 test files with 873
-  tests passed, 2 skipped, and 1
-  intentional TODO. The TODO is the production fresh-PTY certificate scan,
-  which remains blocked because no accepted real launcher source exists; the
-  corresponding runtime path stays fail closed.
-- The architecture boundary gate passed and confirmed exactly two physical
-  source/build areas with package entrypoints under `ACP Connector/`.
-- A final 126-test admission/dispatch/recovery/outbox/production-composition
-  focused integration run passed after the two independent-audit LOW findings
-  were fixed. The earlier 212-test integration baseline also passed before the
-  audit repair.
-- A final 78-test controller and sensitive-data matrix run passed after the
-  follow-up audit identifier-minimization finding was closed.
-- The real two-process active-session registry test passed 10 consecutive
-  focused runs after its concurrent first-open initialization repair.
-- A lock-held initialization test proves the retry path rather than relying on
-  scheduler timing, and verifies that normal registry operations restore the
-  5000 ms write-contention timeout after initialization. Each initialization
-  lock wait is capped at 100 ms with at most 8 attempts; a continuously held
-  single lock has a nominal 940 ms wait budget, not a global wall-clock
-  deadline across every SQLite statement. The test passed 5 consecutive
-  focused runs together with incompatible-schema and corrupt-database
-  fail-closed coverage.
-- No real Antigravity process, installed connector, Paseo daemon, tag, push, or
-  release was used for this source-development verification.
+- `npm run validate` passed: production/test TypeScript, clean build,
+  33 test files with 527 passed and 2 skipped, and the architecture boundary
+  gate.
+- `rtk tsc -p tsconfig.test.json --noEmit` passed.
+- `rtk git diff --check` passed.
+- No real Antigravity provider, installed connector, production Paseo daemon,
+  push, tag, or release was used.
 
 ## 1.0.0.4 - 2026-08-07
 

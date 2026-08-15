@@ -64,65 +64,63 @@
 
 → [完整技术细节](./docs/PASEO_LOCAL_CHANGES.md)
 
-## v2 Admission Controller 开发状态
+## Admission Controller 开发状态
 
-源码所有权明确收敛为两个根级功能区：`Admission Controller/` 承载与实现无关的
-共享席位、队列、lease、heartbeat、cooldown 和排队进度内核；`ACP Connector/`
-承载 Paseo/ACP 协议、session/conversation 映射、Antigravity 集成、stream-json/SQLite
-转换、权限、取消、恢复协调和错误分类。package entrypoint 位于 `ACP Connector/`
-内部，不存在第三个源码功能区。
+仓库严格只有两个源码功能区：
 
-v2.0.0.0 Admission Controller 已进入源码开发。当前默认禁用的基础层包含经过完整
-校验的 SQLite v10 ledger、带行身份认证的加密持久载荷、按用途独立派生的运行时
-密钥、原子 process identity + `dispatch_intent`、只产出证据的恢复层、SQLite ACP
-session、controller-owned outbox claim lease、sanitized HMAC event journal，以及
-显式的 at-least-once outbox ACK 路由。本地 key-store 会拒绝不安全的所有权、
-权限、链接和首次发布竞态。
+```text
+paseo-agy-acp/
+|-- ACP Connector/
+`-- Admission Controller/
+```
 
-`maxActiveTurns` 是同一 Antigravity 账号在所有本地 connector 进程与模型之间共享的
-总席位池。所有请求进入同一持久 oldest-eligible 队列，并带 parent fairness；启动速率
-与并发启动上限分别控制。provider/model cooldown 只改变请求资格，绝不会增加席位。
-源码默认值为 2，运行时只接受 1 或 2；高于 2 的值不属于本次确认方案并会 fail closed。
+`ACP Connector/` 负责 Paseo/ACP 协议、session/conversation 映射、
+Antigravity 进程、stream-json 与 SQLite 转换、权限、取消、恢复协调和 provider
+错误分类。`Admission Controller/` 只负责共享 Antigravity 席位、持久队列、启动
+限速、lease、heartbeat、进程证据、capacity cooldown 和排队观察。package 入口仍在
+`ACP Connector/` 内。
 
-exact outbox ACK 会依据持久 claim 状态校验，因此 bridge 或 controller 重启后
-仍可幂等确认，且不会重发 payload 或业务 turn。outbox 只暴露首次结果投递和精确
-ACK，不提供重连补发 API，也不保留 Connector 自有的重复 claim store；未确认投递
-只能进入 `recovery_required`。
-process identity 一旦原子记录
-`dispatch_intent`，后续取消或 fence 校验失败只会保留为
-`dispatch_ambiguous`，绝不会自动回到安全重排路径。
+只有同时设置 `AGY_ACP_ADMISSION_ENABLED=true`、绝对路径
+`AGY_ACP_STATE_DIR` 和 `PASEO_AGENT_ID` 时才启用 Admission；默认保持关闭。
+已确认的源码默认值如下：
 
-fake-child fresh-PTY canary 会验证启动 argv、环境变量、进程标题、临时路径和诊断
-信息均不包含业务 prompt；其关联证据使用 keyed HMAC。缺失、过期、不匹配或失败的
-证据都会阻断 dispatch。
+| 规则 | 默认值 |
+|---|---:|
+| 共享 Antigravity 活动 turn | 3 |
+| 同时启动数量 | 1 |
+| 两次启动最小间隔 | 2 秒 |
+| 最长排队时间 | 30 分钟 |
+| 容量 cooldown | 30 秒 |
 
-跨进程 startup permit 现在覆盖 auxiliary 命令与 resident PTY；heartbeat 过期只
-是观测证据，绝不是自动回收槽位的授权。异步 startup barrier 会同时核对 dispatch、
-session、outbox claim、startup permit 与 Linux process residue。串行 outbox pump
-只执行有界投递，不会重复 provider turn。
-队列超时会原子删除加密 prompt payload，同时保留用于阻止自动重放的终态 request
-记录。Linux process lifecycle 代码不再提供启动或 prompt 写入方法；不可逆业务
-prompt 写入仍只归 admission dispatcher 所有。
-Controller 错误仍保留 typed class，但 message 字符串不再包含持久 request、delivery
-或 lease 标识符。
+使用同一状态目录的所有本地 connector、session 和模型共享这三个账号席位。唯一支持的
+覆盖值是保守的单席位模式；`2`、`4`、`5` 以及其他值全部拒绝。队列按
+oldest-eligible 调度并带 agent fairness。cooldown 会跳过受影响的 provider/model，
+但不会堵住其他可运行请求。排队超时会在同一事务中取消请求并删除加密 prompt。
 
-turn 完成后立即释放 Antigravity 席位。Agent 完成通知与归档继续由 Paseo 官方
-生命周期负责，connector 不增加第二套生命周期监督。重新发送消息时必须再次进入
-同一全局队列。
-多个 connector 可并发初始化 active-session registry。registry 只会对幂等 WAL/schema
-初始化中的 SQLite `BUSY`/`LOCKED` 竞争做有界重试；不兼容或损坏的 schema 仍立即
-fail closed，且绝不会重放业务 prompt。每次锁等待上限为 100 ms，最多尝试 8 次；
-持续阻塞同一把锁时名义等待预算为 940 ms，但这不是覆盖所有 SQLite statement 的全局
-初始化 deadline。正常 registry 写入仍使用独立的 5000 ms contention timeout。
+空闲 session 和空闲 ACP 连接不占 turn 席位，也不保留常驻 turn 进程。获得席位的
+turn 继续使用原有一次性 stdin 进程；prompt EOF 会关闭输入，provider 明确终态后
+立即释放席位。关闭 session 会取消尚未开始的排队请求，已经运行的 turn 继续走原有
+connector 取消路径。
 
-source-only production graph builder 要求 dispatch 与 recovery 使用同一个 SQLite
-startup launcher，并且 stable request identity、outbox ACK、fresh-PTY 认证证据和
-startup recovery barrier 全部通过后才暴露 dispatch surface。已安装的入口仍会拒绝
-启用 Admission；当前没有安装或切换 connector，没有执行真实 Antigravity provider
-测试，也没有批准生产并发。真实、版本专用的 fresh-PTY launcher certificate 与隔离
-验收仍是 release blocker。
+获得席位后的 turn 继续走原有 `AgyCliSession.prompt`、conversation SQLite、
+`StreamPoller`、`Translator`、ACP 权限处理和在线 ACP 通知。Admission 不增加
+第二套 live 输出、outbox、ACK 协议、terminal replay、shadow comparison、自创
+request identity 或手工 requeue API。官方 `session/load` 与 `session/resume`
+历史回放继续由 ACP Connector 负责。
 
-设计契约和发布门禁见
+provider 明确终态和席位释放在一个 controller 事务中完成。可信的 Antigravity
+`503` 容量失败会启动对应 provider/model cooldown。如果业务 prompt 可能已经写出，
+但无法证明执行已经结束，请求会进入 `recovery_required`；prompt 会被删除且绝不
+自动重放。启动恢复只有在 connector、child 和 process group 均已证明退出后，才释放
+该本地席位。
+
+schema 为 `shared-admission-queue` v1：`turn_requests`、`leases`、
+`cooldowns`、`turn_payloads`、`lease_process_identities`、
+`start_history`、`sessions`、`events`，另加 `schema_migrations`。
+任何旧 outbox 或 recovery-claim 额外表都会触发完整性检查失败。
+
+本次源码工作没有安装或切换 connector，没有运行真实 Antigravity provider，没有
+触碰生产 Paseo daemon，也没有 push、tag 或发布。设计和剩余验收门禁见
 [`docs/design/v2.0.0.0-admission-controller.md`](docs/design/v2.0.0.0-admission-controller.md)。
 
 ## 🔧 解决的问题

@@ -1,19 +1,7 @@
-import { createCipheriv, createDecipheriv, createHmac, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
+import { createCipheriv, createDecipheriv, createHmac, randomBytes, randomUUID } from "node:crypto";
 import Database from "better-sqlite3";
-import {
-  planRecoveryResolution,
-  validateRecoveryResolution,
-  type RecoveryClaimToken,
-  type RecoveryEvidenceCode,
-  type RecoveryReasonCode,
-  type RecoveryResolutionAction,
-  type RecoveryResolutionPlan
-} from "./recovery-resolution.js";
 import { ADMISSION_SCHEMA_VERSION, assertAdmissionSchemaIntegrity } from "./schema.js";
 
-const DEFAULT_DELIVERY_CLAIM_LEASE_MS = 30_000;
-const DURABLE_DELIVERY_PROTOCOL_VERSION = 1;
-const DURABLE_DELIVERY_SEMANTICS = "at-least-once";
 const MAX_DISPATCH_CONTENTION_RECHECKS = 500;
 const DISPATCH_CONTENTION_RECHECK_DELAY_MS = 2;
 const dispatchContentionRetrySignal = new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT));
@@ -31,7 +19,6 @@ export interface AdmissionControllerOptions {
   policy: AdmissionPolicy;
   encryptionKey?: Buffer;
   contentFingerprintKey?: Buffer;
-  claimTokenKey?: Buffer;
   /** Test-only synchronous hook for proving rollback at the atomic dispatch boundary. */
   faultInjection?: AdmissionControllerFaultInjection;
 }
@@ -39,8 +26,6 @@ export interface AdmissionControllerOptions {
 /** Test-only synchronous hooks for proving rollback at durable transaction midpoints. */
 export interface AdmissionControllerFaultInjection {
   afterProcessIdentityPersisted?(): void;
-  afterProviderTerminalOutboxPersisted?(): void;
-  afterDeliveryOutboxSettled?(): void;
 }
 
 export interface EnqueueRequest {
@@ -53,64 +38,7 @@ export interface EnqueueRequest {
   now: number;
 }
 
-export interface EnqueueDelivery {
-  eventId: string;
-  requestId: string;
-  fingerprint: string;
-  payload: string;
-  sequence: number;
-  now: number;
-  expiresAt: number;
-  /** Must be the exact result of successful ACP outbox capability negotiation. */
-  protocol: DurableDeliveryProtocol;
-}
-
-/** Connector-validated delivery protocol projected into durable state. */
-export interface DurableDeliveryProtocol {
-  readonly version: typeof DURABLE_DELIVERY_PROTOCOL_VERSION;
-  readonly semantics: typeof DURABLE_DELIVERY_SEMANTICS;
-}
-
-export const DURABLE_DELIVERY_PROTOCOL: DurableDeliveryProtocol = Object.freeze({
-  version: DURABLE_DELIVERY_PROTOCOL_VERSION,
-  semantics: DURABLE_DELIVERY_SEMANTICS
-});
-
-/** Protocol-neutral durable fence projected back to the Connector. */
-export interface DurableDeliveryMetadata {
-  readonly v: typeof DURABLE_DELIVERY_PROTOCOL_VERSION;
-  readonly eventId: string;
-  readonly sequence: number;
-  readonly claimGeneration: number;
-  readonly claimToken: string;
-}
-
-/** Connector-validated acknowledgement; writer completion is never an ACK. */
-export interface DeliveryAcknowledgement {
-  readonly v: typeof DURABLE_DELIVERY_PROTOCOL_VERSION;
-  readonly sessionId: string;
-  readonly eventId: string;
-  readonly claimGeneration: number;
-  readonly claimToken: string;
-}
-
 export type ConfirmedProviderOutcome = "completed" | "failed" | "cancelled";
-export type ConfirmedProviderStatus = "SUCCESS" | "ERROR" | "CANCELED" | "INTERRUPTED";
-
-/** Sanitized terminal fact produced only after Connector evidence validation. */
-export interface ConfirmedProviderTerminal {
-  readonly outcome: ConfirmedProviderOutcome;
-  readonly conversationId: string;
-  readonly status: ConfirmedProviderStatus;
-  readonly streamObservedAt: number | null;
-  readonly sqliteObservedAt: number;
-  readonly failure: Readonly<{
-    category: "provider_capacity" | "quota" | "auth" | "permission" | "timeout" | "transport" | "unknown";
-    httpStatus: number | undefined;
-    code: string | undefined;
-    reason: string | undefined;
-  }> | null;
-}
 
 export type RequestState =
   | "queued"
@@ -124,14 +52,14 @@ export type RequestState =
   | "failed"
   | "cancelled"
   | "queue_timeout"
-  | "recovery_required"
-  | "recovery_resolved";
+  | "recovery_required";
 
-export type SanitizedEventState = RequestState | "absent" | DeliveryClaimLeaseState | "pending";
+export type SanitizedEventState = RequestState | "absent";
 
 export type SanitizedEventKind =
   | "request_enqueued"
   | "request_cancelled"
+  | "request_abandoned"
   | "request_queue_timed_out"
   | "request_admitted"
   | "request_starting"
@@ -141,14 +69,7 @@ export type SanitizedEventKind =
   | "request_provider_terminal"
   | "request_released"
   | "request_recovery_required"
-  | "request_recovery_requeued"
-  | "request_recovery_completed"
-  | "request_recovery_cancelled"
-  | "request_recovery_unknown_released"
-  | "delivery_enqueued"
-  | "delivery_claimed"
-  | "delivery_delivered"
-  | "delivery_recovery_required";
+  | "request_recovery_seat_released";
 
 /** Exact, identifier-free pagination input for the sanitized audit journal. */
 export interface SanitizedEventPageRequest {
@@ -175,6 +96,17 @@ export interface StoredRequest {
   model: string;
   state: RequestState;
   enqueuedAt: number;
+}
+
+/** Terminal fact for the existing online ACP output path. */
+export interface LiveTurnCompletion {
+  readonly outcome: ConfirmedProviderOutcome;
+  readonly failure?: Readonly<{
+    readonly category: "provider_capacity" | "quota" | "auth" | "permission" | "timeout" | "transport" | "unknown";
+    readonly httpStatus?: number;
+    readonly code?: string;
+    readonly reason?: string;
+  }>;
 }
 
 /** Durable queue observation. It grants no admission or recovery authority. */
@@ -274,67 +206,6 @@ export type DispatchIntentCommitResult =
   | { status: "committed"; idempotent: boolean }
   | { status: "not_committed"; reason: DispatchIntentFailureReason };
 
-/** @deprecated Recovery is now claimed and resolved with a durable fence. */
-export interface OwnerRecoveryEvidence {
-  ownerAlive: boolean;
-  preDispatchProcessTerminated: boolean;
-}
-
-export interface PendingDelivery {
-  eventId: string;
-  requestId: string;
-  payload: string;
-}
-
-/** A persisted outbox fence. The bearer token is derived, never stored in SQLite. */
-export interface DeliveryClaimFence {
-  eventId: string;
-  ownerInstanceId: string;
-  claimGeneration: number;
-  claimToken: string;
-}
-
-/** One encrypted outbox payload held by exactly one delivery worker. */
-export interface ClaimedDelivery extends PendingDelivery, DeliveryClaimFence {
-  sessionId: string;
-  sequence: number;
-  metadata: DurableDeliveryMetadata;
-}
-
-/** Input for the controller-owned atomic outbox claim transaction. */
-export interface AtomicDeliveryClaimInput {
-  eventId: string;
-  ownerInstanceId: string;
-  now: number;
-  leaseMs: number;
-}
-
-export type DeliveryClaimLeaseState = "claimed" | "delivered" | "recovery_required";
-
-/** Durable, enumerable claim metadata. It deliberately never contains payload or claim token material. */
-export interface DeliveryClaimLease {
-  eventId: string;
-  requestId: string;
-  ownerInstanceId: string;
-  claimGeneration: number;
-  state: DeliveryClaimLeaseState;
-  heartbeatAt: number;
-  leaseExpiresAt: number;
-}
-
-/** Sweep metadata is intentionally payload-free: callers cannot resend from a recovery scan. */
-export interface ExpiredDeliveryClaimSweepResult {
-  eventId: string;
-  requestId: string;
-  claimGeneration: number;
-  reason: "lease_expired" | "legacy_claim" | "invalid_lease";
-}
-
-export interface RecoveryResolutionAttestations {
-  actorHmac: string;
-  evidenceHmac: string;
-}
-
 interface RequestRow {
   request_id: string;
   session_id: string;
@@ -353,7 +224,6 @@ interface LeaseRow {
   generation: number;
   owner_instance_id: string;
   phase: RequestState;
-  terminal_outcome: "completed" | "failed" | "cancelled" | null;
 }
 
 interface DispatchContentionRecheckRow extends LeaseRow {
@@ -376,66 +246,6 @@ interface EncryptedPayload {
   authTag: Buffer;
 }
 
-interface DeliveryRow {
-  event_id: string;
-  request_id: string;
-  fingerprint: string;
-  state: "pending" | "claimed" | "delivered" | "recovery_required";
-  nonce: Buffer | null;
-  ciphertext: Buffer | null;
-  auth_tag: Buffer | null;
-  key_version: number | null;
-  expires_at: number;
-  sequence: number;
-  protocol_version: number;
-  protocol_semantics: string;
-  claim_generation: number;
-  claim_owner_instance_id: string | null;
-  claim_acquired_at: number | null;
-  lease_id: string | null;
-  lease_generation: number | null;
-  session_id?: string;
-}
-
-interface DeliveryClaimLeaseRow {
-  event_id: string;
-  request_id: string;
-  owner_instance_id: string;
-  claim_generation: number;
-  state: DeliveryClaimLeaseState;
-  heartbeat_at: number;
-  lease_expires_at: number;
-  settled_at: number | null;
-}
-
-interface RecoverableOutboxClaimRow {
-  lease_event_id: unknown;
-  lease_request_id: unknown;
-  lease_owner_instance_id: unknown;
-  lease_claim_generation: unknown;
-  lease_state: unknown;
-  lease_heartbeat_at: unknown;
-  lease_expires_at: unknown;
-  outbox_event_id: unknown;
-  outbox_request_id: unknown;
-  outbox_owner_instance_id: unknown;
-  outbox_claim_generation: unknown;
-  outbox_state: unknown;
-}
-
-interface ExpiredDeliveryClaimRow {
-  event_id: string;
-  request_id: string;
-  claim_generation: number;
-  expires_at: number;
-  outbox_owner_instance_id: string | null;
-  lease_request_id: string | null;
-  lease_owner_instance_id: string | null;
-  lease_claim_generation: number | null;
-  lease_state: DeliveryClaimLeaseState | null;
-  lease_expires_at: number | null;
-}
-
 interface SanitizedEventRow {
   event_seq: unknown;
   kind: unknown;
@@ -443,16 +253,6 @@ interface SanitizedEventRow {
   to_state: unknown;
   occurred_at: unknown;
   correlation_hmac: unknown;
-}
-
-interface RecoveryClaimRow {
-  lease_id: string;
-  request_id: string;
-  lease_generation: number;
-  recovery_generation: number;
-  claimant_instance_id: string;
-  prior_phase: RequestState;
-  state: "claimed" | "resolved";
 }
 
 interface LeaseProcessIdentityRow {
@@ -487,7 +287,6 @@ interface RecoverableDispatchRow {
   lease_owner_instance_id: unknown;
   lease_phase: unknown;
   lease_heartbeat_at: unknown;
-  lease_terminal_outcome: unknown;
   request_id: unknown;
   request_session_id: unknown;
   request_provider: unknown;
@@ -543,27 +342,6 @@ export class PayloadConflictError extends Error {
   }
 }
 
-export class DeliveryConflictError extends Error {
-  constructor(_eventId: string) {
-    super("delivery event was reused with a different fingerprint");
-    this.name = "DeliveryConflictError";
-  }
-}
-
-export class DeliveryClaimFenceError extends Error {
-  constructor(_eventId: string) {
-    super("delivery event is not owned by the supplied claim fence");
-    this.name = "DeliveryClaimFenceError";
-  }
-}
-
-export class RecoveryClaimFenceError extends Error {
-  constructor(_leaseId: string) {
-    super("recovery claim is not current");
-    this.name = "RecoveryClaimFenceError";
-  }
-}
-
 export class LeaseFenceError extends Error {
   constructor(_leaseId: string) {
     super("lease is not owned by the supplied generation fence");
@@ -576,14 +354,6 @@ export class RecoverableDispatchInventoryError extends Error {
   constructor() {
     super("recoverable dispatch inventory contains an invalid durable row");
     this.name = "RecoverableDispatchInventoryError";
-  }
-}
-
-/** Raised when an outbox row and its controller-owned claim lease do not form one exact fence. */
-export class RecoverableOutboxClaimInventoryError extends Error {
-  constructor() {
-    super("recoverable outbox claim inventory contains an invalid durable row");
-    this.name = "RecoverableOutboxClaimInventoryError";
   }
 }
 
@@ -604,7 +374,6 @@ export class AdmissionController {
   readonly #db: Database.Database;
   readonly #encryptionKey?: Buffer;
   readonly #contentFingerprintKey?: Buffer;
-  readonly #claimTokenKey?: Buffer;
   readonly #faultInjection?: AdmissionControllerFaultInjection;
 
   constructor(options: AdmissionControllerOptions) {
@@ -612,7 +381,6 @@ export class AdmissionController {
     this.policy = validatePolicy(options.policy);
     this.#encryptionKey = validatePurposeKey(options.encryptionKey, "encryption");
     this.#contentFingerprintKey = validatePurposeKey(options.contentFingerprintKey, "content fingerprint");
-    this.#claimTokenKey = validatePurposeKey(options.claimTokenKey, "claim token");
     this.#faultInjection = validateFaultInjection(options.faultInjection);
     this.#db = new Database(options.databasePath);
     this.#db.pragma("foreign_keys = ON");
@@ -626,7 +394,6 @@ export class AdmissionController {
     this.#db.close();
     this.#encryptionKey?.fill(0);
     this.#contentFingerprintKey?.fill(0);
-    this.#claimTokenKey?.fill(0);
   }
 
   get schemaVersion(): number {
@@ -730,255 +497,6 @@ export class AdmissionController {
     });
   }
 
-  enqueueDelivery(input: EnqueueDelivery): { eventId: string; existed: boolean } {
-    this.validateDeliveryInput(input);
-    return this.transaction(() => {
-      return this.insertDelivery(input, null);
-    });
-  }
-
-  /** Claim a named pending event. A claimed event is never implicitly reclaimed. */
-  claimPendingDelivery(eventId: string, ownerInstanceId: string, now: number): ClaimedDelivery | null {
-    return this.claimPendingDeliveryAtomically({ eventId, ownerInstanceId, now, leaseMs: DEFAULT_DELIVERY_CLAIM_LEASE_MS });
-  }
-
-  /**
-   * Atomically changes the outbox row to claimed and persists the controller-owned
-   * lease that makes a crash-recovery sweep possible.
-   */
-  claimPendingDeliveryAtomically(input: AtomicDeliveryClaimInput): ClaimedDelivery | null {
-    validateAtomicDeliveryClaimInput(input);
-    this.requireClaimTokenKey();
-    const leaseExpiresAt = deliveryClaimLeaseExpiry(input.now, input.leaseMs);
-
-    const row = this.transaction(() => {
-      const row = this.requireDelivery(input.eventId);
-      if (row.state !== "pending") return null;
-      if (row.expires_at <= input.now || !this.isNegotiatedDelivery(row)) {
-        this.markDeliveryRecovery(row.event_id, input.now, null);
-        return null;
-      }
-
-      const result = this.#db
-        .prepare(
-          `UPDATE delivery_outbox
-           SET state = 'claimed', claim_generation = claim_generation + 1,
-               claim_owner_instance_id = ?, claim_acquired_at = ?
-           WHERE event_id = ? AND state = 'pending' AND claim_generation = ?`
-        )
-        .run(input.ownerInstanceId, input.now, input.eventId, row.claim_generation);
-      if (result.changes !== 1) return null;
-
-      const claimed = this.requireDelivery(input.eventId);
-      this.#db
-        .prepare(
-          `INSERT INTO delivery_claim_leases
-             (event_id, request_id, owner_instance_id, claim_generation, state,
-              heartbeat_at, lease_expires_at, updated_at)
-           VALUES (?, ?, ?, ?, 'claimed', ?, ?, ?)`
-        )
-        .run(
-          claimed.event_id,
-          claimed.request_id,
-          input.ownerInstanceId,
-          claimed.claim_generation,
-          input.now,
-          leaseExpiresAt,
-          input.now
-        );
-      this.journalTransition("delivery_claimed", claimed.request_id, "pending", "claimed", input.now);
-      return claimed;
-    });
-    if (!row) return null;
-
-    try {
-      return this.toClaimedDelivery(row);
-    } catch (error) {
-      this.markClaimedDeliveryRecovery(row, input.now);
-      throw error;
-    }
-  }
-
-  /** Extend a controller-owned claim only when the exact fence is still live. */
-  heartbeatClaimedDelivery(fence: DeliveryClaimFence, now: number, leaseMs: number): DeliveryClaimLease {
-    validateDeliveryClaimFence(fence);
-    validateTimestamp(now, "delivery claim heartbeat timestamp");
-    validateDeliveryClaimLeaseMs(leaseMs);
-    const leaseExpiresAt = deliveryClaimLeaseExpiry(now, leaseMs);
-
-    const heartbeat = this.transaction(() => {
-      const row = this.requireDelivery(fence.eventId);
-      this.assertDeliveryClaim(row, fence);
-      const lease = this.requireDeliveryClaimLease(row, fence);
-      if (row.state !== "claimed" || !isActiveDeliveryClaimLeaseState(lease.state)) {
-        throw new DeliveryClaimFenceError(fence.eventId);
-      }
-      if (row.expires_at <= now || lease.leaseExpiresAt <= now) {
-        this.markDeliveryRecovery(row.event_id, now, fence);
-        return null;
-      }
-      const result = this.#db
-        .prepare(
-          `UPDATE delivery_claim_leases
-           SET heartbeat_at = ?, lease_expires_at = ?, updated_at = ?
-           WHERE event_id = ? AND request_id = ? AND owner_instance_id = ? AND claim_generation = ?
-             AND state = 'claimed' AND lease_expires_at > ?`
-        )
-        .run(now, leaseExpiresAt, now, row.event_id, row.request_id, fence.ownerInstanceId, fence.claimGeneration, now);
-      if (result.changes !== 1) throw new DeliveryClaimFenceError(fence.eventId);
-      return this.requireDeliveryClaimLease(row, fence);
-    });
-    if (heartbeat === null) throw new DeliveryClaimFenceError(fence.eventId);
-    return heartbeat;
-  }
-
-  /**
-   * Enumerates only controller-owned durable claim metadata and fails expired or
-   * legacy claimed rows closed. It never decrypts or returns an outbox payload.
-   */
-  sweepExpiredDeliveryClaims(now: number): readonly ExpiredDeliveryClaimSweepResult[] {
-    validateTimestamp(now, "delivery claim sweep timestamp");
-    return this.transaction(() => {
-      const rows = this.#db
-        .prepare(
-          `SELECT outbox.event_id, outbox.request_id, outbox.claim_generation, outbox.expires_at,
-                  outbox.claim_owner_instance_id AS outbox_owner_instance_id,
-                  lease.request_id AS lease_request_id,
-                  lease.owner_instance_id AS lease_owner_instance_id,
-                  lease.claim_generation AS lease_claim_generation,
-                  lease.state AS lease_state, lease.lease_expires_at
-           FROM delivery_outbox AS outbox
-           LEFT JOIN delivery_claim_leases AS lease ON lease.event_id = outbox.event_id
-           WHERE outbox.state = 'claimed'
-           ORDER BY outbox.event_id ASC`
-        )
-        .all() as ExpiredDeliveryClaimRow[];
-      const swept: ExpiredDeliveryClaimSweepResult[] = [];
-
-      for (const row of rows) {
-        if (
-          row.lease_owner_instance_id === null ||
-          row.lease_claim_generation === null ||
-          row.lease_state === null ||
-          row.lease_expires_at === null
-        ) {
-          if (this.sweepClaimedDeliveryToRecovery(row.event_id, now, null)) {
-            swept.push(Object.freeze({
-              eventId: row.event_id,
-              requestId: row.request_id,
-              claimGeneration: row.claim_generation,
-              reason: "legacy_claim"
-            }));
-          }
-          continue;
-        }
-
-        const expired = row.expires_at <= now || row.lease_expires_at <= now;
-        const active = isActiveDeliveryClaimLeaseState(row.lease_state);
-        const exactLease =
-          row.outbox_owner_instance_id !== null &&
-          row.lease_request_id === row.request_id &&
-          row.lease_owner_instance_id === row.outbox_owner_instance_id &&
-          row.lease_claim_generation === row.claim_generation;
-        if (!expired && active && exactLease) continue;
-        if (
-          this.sweepClaimedDeliveryToRecovery(row.event_id, now, {
-            ownerInstanceId: row.lease_owner_instance_id,
-            claimGeneration: row.lease_claim_generation,
-            state: row.lease_state
-          })
-        ) {
-          swept.push(Object.freeze({
-            eventId: row.event_id,
-            requestId: row.request_id,
-            claimGeneration: row.claim_generation,
-            reason: exactLease && expired ? "lease_expired" : "invalid_lease"
-          }));
-        }
-      }
-      return Object.freeze(swept);
-    });
-  }
-
-  /** Claim the oldest eligible event. A concurrent worker may win the race. */
-  claimNextPendingDelivery(ownerInstanceId: string, now: number): ClaimedDelivery | null {
-    validateIdentifier(ownerInstanceId, "delivery claim owner");
-    validateTimestamp(now, "delivery claim timestamp");
-    const row = this.#db
-      .prepare("SELECT event_id FROM delivery_outbox WHERE state = 'pending' ORDER BY created_at ASC, event_id ASC LIMIT 1")
-      .get() as { event_id: string } | undefined;
-    return row ? this.claimPendingDelivery(row.event_id, ownerInstanceId, now) : null;
-  }
-
-  /**
-   * ACK acceptance is intentionally limited to the exact negotiated v1
-   * at-least-once record and the current bearer token derived for that claim.
-   */
-  acknowledgeDelivery(input: unknown, now: number): void {
-    validateTimestamp(now, "delivery acknowledgement timestamp");
-    const acknowledgement = validateDeliveryAcknowledgement(input);
-    const status = this.transaction(() => {
-      const row = this.requireDelivery(acknowledgement.eventId);
-      const fence: DeliveryClaimFence = {
-        eventId: acknowledgement.eventId,
-        ownerInstanceId: row.claim_owner_instance_id ?? "",
-        claimGeneration: acknowledgement.claimGeneration,
-        claimToken: acknowledgement.claimToken
-      };
-      if (row.session_id !== acknowledgement.sessionId || !this.isNegotiatedDelivery(row)) {
-        throw new DeliveryClaimFenceError(acknowledgement.eventId);
-      }
-      this.assertDeliveryClaim(row, fence);
-      const lease = this.requireDeliveryClaimLease(row, fence);
-      if (row.state === "delivered") {
-        if (lease.state !== "delivered") throw new DeliveryClaimFenceError(acknowledgement.eventId);
-        return "delivered" as const;
-      }
-      if (row.state !== "claimed") throw new DeliveryClaimFenceError(acknowledgement.eventId);
-      if (!isActiveDeliveryClaimLeaseState(lease.state)) throw new DeliveryClaimFenceError(acknowledgement.eventId);
-      if (row.expires_at <= now || lease.leaseExpiresAt <= now) {
-        this.markDeliveryRecovery(row.event_id, now, fence);
-        return "expired" as const;
-      }
-
-      const result = this.#db
-        .prepare(
-          `UPDATE delivery_outbox
-           SET state = 'delivered', nonce = NULL, ciphertext = NULL, auth_tag = NULL, settled_at = ?
-           WHERE event_id = ? AND state = 'claimed' AND claim_owner_instance_id = ? AND claim_generation = ?`
-        )
-        .run(now, row.event_id, fence.ownerInstanceId, fence.claimGeneration);
-      if (result.changes !== 1) throw new DeliveryClaimFenceError(acknowledgement.eventId);
-      this.runInjectedTransactionFault(this.#faultInjection?.afterDeliveryOutboxSettled);
-      const settled = this.#db
-        .prepare(
-          `UPDATE delivery_claim_leases
-           SET state = 'delivered', settled_at = ?, updated_at = ?
-           WHERE event_id = ? AND request_id = ? AND owner_instance_id = ? AND claim_generation = ?
-             AND state = 'claimed'`
-        )
-        .run(now, now, row.event_id, row.request_id, fence.ownerInstanceId, fence.claimGeneration);
-      if (settled.changes !== 1) throw new DeliveryClaimFenceError(acknowledgement.eventId);
-      this.journalTransition("delivery_delivered", row.request_id, lease.state, "delivered", now);
-      return "delivered" as const;
-    });
-    if (status === "expired") throw new DeliveryClaimFenceError(acknowledgement.eventId);
-  }
-
-  /** A transport failure must use the claim fence and cannot reopen the event. */
-  markDeliveryRecoveryRequired(fence: DeliveryClaimFence, now: number): void {
-    validateDeliveryClaimFence(fence);
-    validateTimestamp(now, "delivery recovery timestamp");
-    this.transaction(() => {
-      const row = this.requireDelivery(fence.eventId);
-      this.assertDeliveryClaim(row, fence);
-      const lease = this.requireDeliveryClaimLease(row, fence);
-      if (row.state !== "claimed") throw new DeliveryClaimFenceError(fence.eventId);
-      if (!isActiveDeliveryClaimLeaseState(lease.state)) throw new DeliveryClaimFenceError(fence.eventId);
-      this.markDeliveryRecovery(row.event_id, now, fence);
-    });
-  }
-
   admitNext(now: number, ownerInstanceId: string): AdmissionLease | null {
     validateIdentifier(ownerInstanceId, "admission owner instance ID");
     validateTimestamp(now, "admission timestamp");
@@ -994,7 +512,7 @@ export class AdmissionController {
   /**
    * Atomically admit this request only when the global selector chose it.
    * Callers may wait on their own request, but cannot bypass the controller's
-   * oldest-eligible and parent-fair ordering.
+   * oldest-eligible and agent-fair ordering.
    */
   admitRequest(requestId: string, now: number, ownerInstanceId: string): AdmissionLease | null {
     validateIdentifier(requestId, "admission request ID");
@@ -1081,62 +599,152 @@ export class AdmissionController {
   }
 
   markActive(fence: LeaseFence, now: number): void {
-    this.transition(fence, "dispatch_intent", "active", now);
+    this.transaction(() => {
+      const lease = this.requireLease(fence);
+      if (lease.phase !== "dispatch_intent") throw new Error("lease is not dispatch_intent");
+      this.setLeasePhase(lease, "active", now);
+      // Once the irreversible write has been issued, the payload must never be
+      // available to a recovery path that could repeat the business prompt.
+      this.#db.prepare("DELETE FROM turn_payloads WHERE request_id = ?").run(lease.request_id);
+    });
   }
 
   markDispatchAmbiguous(fence: LeaseFence, now: number): void {
     this.transition(fence, "dispatch_intent", "dispatch_ambiguous", now);
   }
 
-  markProviderTerminal(
+  /**
+   * End a reserved turn only when the Connector still has direct proof that no
+   * business prompt write occurred. This is terminal, never a requeue.
+   */
+  abandonBeforePrompt(
     fence: LeaseFence,
     now: number,
-    terminal: ConfirmedProviderTerminal,
-    delivery: EnqueueDelivery
-  ): { eventId: string; existed: boolean } {
-    validateTimestamp(now, "provider terminal timestamp");
-    validateConfirmedProviderTerminal(terminal);
-    this.validateDeliveryInput(delivery);
-    if (delivery.now !== now) throw new Error("terminal delivery timestamp must equal the provider terminal timestamp");
-
-    return this.transaction(() => {
+    outcome: Extract<ConfirmedProviderOutcome, "failed" | "cancelled">
+  ): void {
+    validateTimestamp(now, "pre-prompt abandonment timestamp");
+    this.transaction(() => {
       const lease = this.requireLease(fence);
-      if (lease.phase !== "active") throw new Error("lease is not active");
-      if (delivery.requestId !== lease.request_id) {
-        throw new DeliveryConflictError(delivery.eventId);
+      if (lease.phase !== "admitted" && lease.phase !== "starting" && lease.phase !== "dispatch_intent") {
+        throw new Error("lease is not safely abandonable before prompt write");
       }
-      const delivered = this.insertDelivery(delivery, { leaseId: lease.lease_id, leaseGeneration: lease.generation });
-      this.runInjectedTransactionFault(this.#faultInjection?.afterProviderTerminalOutboxPersisted);
-      const result = this.#db
+      this.#db
+        .prepare("UPDATE turn_requests SET state = ?, terminal_at = ? WHERE request_id = ?")
+        .run(outcome, now, lease.request_id);
+      this.#db.prepare("DELETE FROM turn_payloads WHERE request_id = ?").run(lease.request_id);
+      const released = this.#db
+        .prepare("DELETE FROM leases WHERE lease_id = ? AND owner_instance_id = ? AND generation = ?")
+        .run(fence.leaseId, fence.ownerInstanceId, fence.generation);
+      if (released.changes !== 1) throw new LeaseFenceError(fence.leaseId);
+      this.journalTransition("request_abandoned", lease.request_id, lease.phase, outcome, now);
+    });
+  }
+
+  /** Retain an uncertain dispatch as visible capacity debt; never requeue it. */
+  markExecutionRecoveryRequired(fence: LeaseFence, now: number): void {
+    validateTimestamp(now, "execution recovery timestamp");
+    this.transaction(() => {
+      const lease = this.requireLease(fence);
+      if (lease.phase === "recovery_required") return;
+      if (
+        lease.phase !== "starting" &&
+        lease.phase !== "dispatch_intent" &&
+        lease.phase !== "dispatch_ambiguous" &&
+        lease.phase !== "active"
+      ) {
+        throw new Error("lease cannot enter execution recovery");
+      }
+      const updated = this.#db
         .prepare(
-          `UPDATE leases
-           SET phase = 'provider_terminal', terminal_outcome = ?, heartbeat_at = ?,
-               terminal_conversation_id = ?, terminal_status = ?,
-               terminal_stream_observed_at = ?, terminal_sqlite_observed_at = ?,
-               terminal_failure_category = ?, terminal_http_status = ?, terminal_code = ?, terminal_reason = ?
+          `UPDATE leases SET phase = 'recovery_required', heartbeat_at = ?
            WHERE lease_id = ? AND owner_instance_id = ? AND generation = ?`
         )
-        .run(
-          terminal.outcome,
-          now,
-          terminal.conversationId,
-          terminal.status,
-          terminal.streamObservedAt,
-          terminal.sqliteObservedAt,
-          terminal.failure?.category ?? null,
-          terminal.failure?.httpStatus ?? null,
-          terminal.failure?.code ?? null,
-          terminal.failure?.reason ?? null,
-          fence.leaseId,
-          fence.ownerInstanceId,
-          fence.generation
-        );
-      if (result.changes !== 1) throw new LeaseFenceError(fence.leaseId);
+        .run(now, fence.leaseId, fence.ownerInstanceId, fence.generation);
+      if (updated.changes !== 1) throw new LeaseFenceError(fence.leaseId);
+      this.#db
+        .prepare("UPDATE turn_requests SET state = 'recovery_required', terminal_at = ? WHERE request_id = ?")
+        .run(now, lease.request_id);
+      this.journalTransition("request_recovery_required", lease.request_id, lease.phase, "recovery_required", now);
+      this.#db.prepare("DELETE FROM turn_payloads WHERE request_id = ?").run(lease.request_id);
+    });
+  }
+
+  /**
+   * Release only the local seat after the Connector has independently proved
+   * that the persisted connector, child, and process group are all gone. The
+   * request deliberately remains recovery_required and cannot be replayed.
+   */
+  releaseExitedRecoverySeat(fence: LeaseFence, now: number): void {
+    validateTimestamp(now, "exited recovery seat timestamp");
+    this.transaction(() => {
+      const lease = this.requireLease(fence);
+      if (
+        lease.phase === "provider_terminal" ||
+        lease.phase === "completed" ||
+        lease.phase === "failed" ||
+        lease.phase === "cancelled" ||
+        lease.phase === "queue_timeout"
+      ) {
+        throw new Error("lease is not an unresolved local execution");
+      }
+      this.#db
+        .prepare("UPDATE turn_requests SET state = 'recovery_required', terminal_at = ? WHERE request_id = ?")
+        .run(now, lease.request_id);
+      this.#db.prepare("DELETE FROM turn_payloads WHERE request_id = ?").run(lease.request_id);
+      const released = this.#db
+        .prepare("DELETE FROM leases WHERE lease_id = ? AND owner_instance_id = ? AND generation = ?")
+        .run(fence.leaseId, fence.ownerInstanceId, fence.generation);
+      if (released.changes !== 1) throw new LeaseFenceError(fence.leaseId);
+      this.journalTransition(
+        "request_recovery_seat_released",
+        lease.request_id,
+        lease.phase,
+        "recovery_required",
+        now
+      );
+    });
+  }
+
+  /**
+   * Persist the terminal state and release the seat used by the existing live
+   * ACP update path. No delivery replay record is created.
+   */
+  completeLiveTurn(fence: LeaseFence, now: number, completion: LiveTurnCompletion): void {
+    validateTimestamp(now, "live turn completion timestamp");
+    validateLiveTurnCompletion(completion);
+    this.transaction(() => {
+      const lease = this.requireLease(fence);
+      if (lease.phase !== "active") throw new Error("lease is not active");
+      const request = this.getRequest(lease.request_id);
+      if (request === null) throw new Error("unknown request");
+
       this.#db
         .prepare("UPDATE turn_requests SET state = 'provider_terminal', terminal_at = ? WHERE request_id = ?")
         .run(now, lease.request_id);
       this.journalTransition("request_provider_terminal", lease.request_id, "active", "provider_terminal", now);
-      return delivered;
+
+      if (completion.failure?.category === "provider_capacity") {
+        const notBefore = now + this.policy.capacityCooldownMs;
+        this.#db
+          .prepare(
+            `INSERT INTO cooldowns (provider, model, not_before, updated_at)
+             VALUES (?, ?, ?, ?)
+             ON CONFLICT(provider, model) DO UPDATE SET
+               not_before = MAX(cooldowns.not_before, excluded.not_before),
+               updated_at = MAX(cooldowns.updated_at, excluded.updated_at)`
+          )
+          .run(request.provider, request.model, notBefore, now);
+      }
+
+      this.#db
+        .prepare("UPDATE turn_requests SET state = ?, terminal_at = ? WHERE request_id = ?")
+        .run(completion.outcome, now, lease.request_id);
+      this.#db.prepare("DELETE FROM turn_payloads WHERE request_id = ?").run(lease.request_id);
+      const released = this.#db
+        .prepare("DELETE FROM leases WHERE lease_id = ? AND owner_instance_id = ? AND generation = ?")
+        .run(fence.leaseId, fence.ownerInstanceId, fence.generation);
+      if (released.changes !== 1) throw new LeaseFenceError(fence.leaseId);
+      this.journalTransition("request_released", lease.request_id, "provider_terminal", completion.outcome, now);
     });
   }
 
@@ -1145,218 +753,6 @@ export class AdmissionController {
       .prepare("UPDATE leases SET heartbeat_at = ? WHERE lease_id = ? AND owner_instance_id = ? AND generation = ?")
       .run(now, fence.leaseId, fence.ownerInstanceId, fence.generation);
     if (result.changes !== 1) throw new LeaseFenceError(fence.leaseId);
-  }
-
-  release(fence: LeaseFence, now: number): void {
-    this.transaction(() => {
-      const lease = this.requireLease(fence);
-      if (lease.phase !== "provider_terminal" || lease.terminal_outcome === null) {
-        throw new Error("lease has no confirmed provider terminal outcome");
-      }
-      this.#db
-        .prepare("UPDATE turn_requests SET state = ?, terminal_at = ? WHERE request_id = ?")
-        .run(lease.terminal_outcome, now, lease.request_id);
-      const result = this.#db
-        .prepare("DELETE FROM leases WHERE lease_id = ? AND owner_instance_id = ? AND generation = ?")
-        .run(fence.leaseId, fence.ownerInstanceId, fence.generation);
-      if (result.changes !== 1) throw new LeaseFenceError(fence.leaseId);
-      this.journalTransition("request_released", lease.request_id, "provider_terminal", lease.terminal_outcome, now);
-    });
-  }
-
-  /**
-   * Mark a suspect owner as recovery_required and allocate one durable recovery
-   * claim. This intentionally accepts no caller boolean about process death or
-   * dispatch: any proof must be represented by a later signed resolution.
-   */
-  recoverOwner(leaseId: string, now: number, claimantInstanceId: string): RecoveryClaimToken {
-    validateIdentifier(leaseId, "lease ID");
-    validateIdentifier(claimantInstanceId, "recovery claimant");
-    validateTimestamp(now, "owner recovery timestamp");
-    return this.transaction(() => {
-      const lease = this.requireLeaseById(leaseId);
-      if (lease.phase === "provider_terminal") {
-        throw new RecoveryClaimFenceError(leaseId);
-      }
-      const existing = this.#db
-        .prepare(
-          `SELECT lease_id, request_id, lease_generation, recovery_generation, claimant_instance_id, prior_phase, state
-           FROM recovery_claims WHERE lease_id = ?`
-        )
-        .get(leaseId) as RecoveryClaimRow | undefined;
-      if (existing) {
-        if (
-          existing.state !== "claimed" ||
-          existing.claimant_instance_id !== claimantInstanceId ||
-          existing.request_id !== lease.request_id ||
-          existing.lease_generation !== lease.generation
-        ) {
-          throw new RecoveryClaimFenceError(leaseId);
-        }
-        return recoveryClaimToken(existing);
-      }
-
-      this.#db
-        .prepare("UPDATE turn_requests SET state = 'recovery_required', terminal_at = ? WHERE request_id = ?")
-        .run(now, lease.request_id);
-      const updated = this.#db
-        .prepare(
-          `UPDATE leases SET phase = 'recovery_required', heartbeat_at = ?
-           WHERE lease_id = ? AND owner_instance_id = ? AND generation = ?`
-        )
-        .run(now, leaseId, lease.owner_instance_id, lease.generation);
-      if (updated.changes !== 1) throw new LeaseFenceError(leaseId);
-      const claim: RecoveryClaimRow = {
-        lease_id: lease.lease_id,
-        request_id: lease.request_id,
-        lease_generation: lease.generation,
-        recovery_generation: 1,
-        claimant_instance_id: claimantInstanceId,
-        prior_phase: lease.phase,
-        state: "claimed"
-      };
-      this.#db
-        .prepare(
-          `INSERT INTO recovery_claims
-            (lease_id, request_id, lease_generation, recovery_generation, claimant_instance_id, prior_phase, state, claimed_at)
-           VALUES (?, ?, ?, ?, ?, ?, 'claimed', ?)`
-        )
-        .run(
-          claim.lease_id,
-          claim.request_id,
-          claim.lease_generation,
-          claim.recovery_generation,
-          claim.claimant_instance_id,
-          claim.prior_phase,
-          now
-        );
-      this.journalTransition("request_recovery_required", lease.request_id, lease.phase, "recovery_required", now);
-      return recoveryClaimToken(claim);
-    });
-  }
-
-  /** Create the two HMAC attestations required by the recovery-resolution contract. */
-  createRecoveryResolutionAttestations(
-    claim: RecoveryClaimToken,
-    action: RecoveryResolutionAction,
-    evidenceCode: RecoveryEvidenceCode,
-    reasonCode: RecoveryReasonCode
-  ): RecoveryResolutionAttestations {
-    const current = this.requireCurrentRecoveryClaim(claim);
-    return Object.freeze({
-      actorHmac: this.recoveryHmac("actor", [current]),
-      evidenceHmac: this.recoveryHmac("evidence", [current, action, evidenceCode, reasonCode])
-    });
-  }
-
-  /**
-   * Apply a pure recovery plan against the still-current durable claim. Invalid
-   * plans, stale claims, unsigned evidence, and post-dispatch requeue attempts
-   * leave the lease in recovery_required.
-   */
-  resolveRecovery(input: unknown, now: number, delivery?: EnqueueDelivery): RecoveryResolutionPlan {
-    validateTimestamp(now, "recovery resolution timestamp");
-    return this.transaction(() => {
-      const resolution = validateRecoveryResolution(input);
-      if (resolution === null) return rejectedRecoveryPlan("invalid_resolution");
-      const row = this.#db
-        .prepare(
-          `SELECT lease_id, request_id, lease_generation, recovery_generation, claimant_instance_id, prior_phase, state
-           FROM recovery_claims WHERE lease_id = ?`
-        )
-        .get(resolution.claim.leaseId) as RecoveryClaimRow | undefined;
-      if (!row || row.state !== "claimed") return rejectedRecoveryPlan("claim_mismatch");
-
-      const claim = recoveryClaimToken(row);
-      const plan = planRecoveryResolution({ state: "recovery_required", claim }, resolution);
-      if (!plan.accepted) return plan;
-      if (!this.hasRecoveryAttestations(plan)) return rejectedRecoveryPlan("evidence_mismatch");
-
-      const lease = this.requireLeaseById(plan.claim.leaseId);
-      if (
-        lease.request_id !== plan.claim.requestId ||
-        lease.generation !== plan.claim.leaseGeneration ||
-        lease.phase !== "recovery_required"
-      ) {
-        return rejectedRecoveryPlan("claim_mismatch");
-      }
-
-      switch (plan.action) {
-        case "confirmed_not_dispatched_requeue":
-          if (lease.phase !== "recovery_required" || !this.isPreDispatchRecoveryLease(lease.lease_id)) {
-            return rejectedRecoveryPlan("evidence_mismatch");
-          }
-          this.#db
-            .prepare("UPDATE turn_requests SET state = 'queued', terminal_at = NULL WHERE request_id = ?")
-            .run(lease.request_id);
-          this.journalTransition(
-            "request_recovery_requeued",
-            lease.request_id,
-            "recovery_required",
-            "queued",
-            now
-          );
-          break;
-        case "confirmed_completed":
-        case "confirmed_cancelled": {
-          if (delivery === undefined) return rejectedRecoveryPlan("evidence_mismatch");
-          this.validateDeliveryInput(delivery);
-          if (delivery.now !== now || delivery.requestId !== lease.request_id) return rejectedRecoveryPlan("evidence_mismatch");
-          this.insertDelivery(delivery, { leaseId: lease.lease_id, leaseGeneration: lease.generation });
-          this.#db
-            .prepare("UPDATE turn_requests SET state = ?, terminal_at = ? WHERE request_id = ?")
-            .run(plan.nextState, now, lease.request_id);
-          this.journalTransition(
-            plan.nextState === "completed" ? "request_recovery_completed" : "request_recovery_cancelled",
-            lease.request_id,
-            "recovery_required",
-            plan.nextState,
-            now
-          );
-          break;
-        }
-        case "acknowledge_unknown_release":
-          this.#db
-            .prepare("UPDATE turn_requests SET state = 'recovery_resolved', terminal_at = ? WHERE request_id = ?")
-            .run(now, lease.request_id);
-          this.journalTransition(
-            "request_recovery_unknown_released",
-            lease.request_id,
-            "recovery_required",
-            "recovery_resolved",
-            now
-          );
-          break;
-      }
-
-      const resolved = this.#db
-        .prepare(
-          `UPDATE recovery_claims
-           SET state = 'resolved', resolved_at = ?, action = ?, evidence_code = ?, reason_code = ?,
-               actor_hmac = ?, evidence_hmac = ?
-           WHERE lease_id = ? AND request_id = ? AND lease_generation = ? AND recovery_generation = ?
-             AND claimant_instance_id = ? AND state = 'claimed'`
-        )
-        .run(
-          now,
-          plan.action,
-          plan.evidenceCode,
-          plan.reasonCode,
-          plan.actorHmac,
-          plan.evidenceHmac,
-          plan.claim.leaseId,
-          plan.claim.requestId,
-          plan.claim.leaseGeneration,
-          plan.claim.recoveryGeneration,
-          plan.claim.claimantInstanceId
-        );
-      if (resolved.changes !== 1) throw new RecoveryClaimFenceError(plan.claim.leaseId);
-      const released = this.#db
-        .prepare("DELETE FROM leases WHERE lease_id = ? AND generation = ?")
-        .run(plan.claim.leaseId, plan.claim.leaseGeneration);
-      if (released.changes !== 1) throw new RecoveryClaimFenceError(plan.claim.leaseId);
-      return plan;
-    });
   }
 
   setCapacityCooldown(provider: string, model: string, notBefore: number, now: number): void {
@@ -1415,7 +811,6 @@ export class AdmissionController {
                 lease.owner_instance_id AS lease_owner_instance_id,
                 lease.phase AS lease_phase,
                 lease.heartbeat_at AS lease_heartbeat_at,
-                lease.terminal_outcome AS lease_terminal_outcome,
                 request.request_id AS request_id,
                 request.session_id AS request_session_id,
                 request.provider AS request_provider,
@@ -1458,66 +853,6 @@ export class AdmissionController {
     return Object.freeze(inventory);
   }
 
-  /**
-   * Enumerate only payload-free, non-delivered outbox claim leases. The two
-   * tables are read in one snapshot and any partial or mismatched fence rejects
-   * the complete inventory instead of silently omitting recovery work.
-   */
-  listRecoverableOutboxClaims(): readonly DeliveryClaimLease[] {
-    return this.transaction(() => {
-      const leaseRows = this.#db
-        .prepare(
-          `SELECT lease.event_id AS lease_event_id,
-                  lease.request_id AS lease_request_id,
-                  lease.owner_instance_id AS lease_owner_instance_id,
-                  lease.claim_generation AS lease_claim_generation,
-                  lease.state AS lease_state,
-                  lease.heartbeat_at AS lease_heartbeat_at,
-                  lease.lease_expires_at AS lease_expires_at,
-                  outbox.event_id AS outbox_event_id,
-                  outbox.request_id AS outbox_request_id,
-                  outbox.claim_owner_instance_id AS outbox_owner_instance_id,
-                  outbox.claim_generation AS outbox_claim_generation,
-                  outbox.state AS outbox_state
-           FROM delivery_claim_leases AS lease
-           LEFT JOIN delivery_outbox AS outbox ON outbox.event_id = lease.event_id
-           WHERE lease.state IN ('claimed', 'recovery_required')
-           ORDER BY lease.event_id ASC`
-        )
-        .all() as RecoverableOutboxClaimRow[];
-      const outboxRows = this.#db
-        .prepare(
-          `SELECT lease.event_id AS lease_event_id,
-                  lease.request_id AS lease_request_id,
-                  lease.owner_instance_id AS lease_owner_instance_id,
-                  lease.claim_generation AS lease_claim_generation,
-                  lease.state AS lease_state,
-                  lease.heartbeat_at AS lease_heartbeat_at,
-                  lease.lease_expires_at AS lease_expires_at,
-                  outbox.event_id AS outbox_event_id,
-                  outbox.request_id AS outbox_request_id,
-                  outbox.claim_owner_instance_id AS outbox_owner_instance_id,
-                  outbox.claim_generation AS outbox_claim_generation,
-                  outbox.state AS outbox_state
-           FROM delivery_outbox AS outbox
-           LEFT JOIN delivery_claim_leases AS lease ON lease.event_id = outbox.event_id
-           WHERE outbox.state IN ('claimed', 'recovery_required')
-           ORDER BY outbox.event_id ASC`
-        )
-        .all() as RecoverableOutboxClaimRow[];
-
-      if (leaseRows.length !== outboxRows.length) throw new RecoverableOutboxClaimInventoryError();
-      const inventory = leaseRows.map((row) => recoverableOutboxClaim(row));
-      for (let index = 0; index < outboxRows.length; index += 1) {
-        const counterpart = recoverableOutboxClaim(outboxRows[index]);
-        if (!sameRecoverableOutboxClaim(inventory[index], counterpart)) {
-          throw new RecoverableOutboxClaimInventoryError();
-        }
-      }
-      return Object.freeze(inventory);
-    });
-  }
-
   private migrate(): void {
     this.transaction(() => {
       this.#db.exec(`
@@ -1532,188 +867,58 @@ export class AdmissionController {
         throw new Error(`admission database schema version ${applied} is newer than this connector supports`);
       }
       if (applied === 0) {
-        const unversionedCore = this.#db
+        const existing = this.#db
           .prepare(
             `SELECT COUNT(*) AS count FROM sqlite_master
-             WHERE type = 'table' AND name IN ('turn_requests', 'leases', 'turn_payloads', 'delivery_outbox')`
+             WHERE type = 'table' AND name IN (
+               'turn_requests', 'leases', 'cooldowns', 'turn_payloads',
+               'lease_process_identities', 'start_history', 'sessions', 'events'
+             )`
           )
           .get() as { count: number };
-        if (unversionedCore.count > 0) {
+        if (existing.count > 0) {
           throw new Error("unversioned admission tables require an explicit migration before use");
         }
-
         this.#db.exec(`
-      CREATE TABLE IF NOT EXISTS turn_requests (
-        request_id TEXT PRIMARY KEY,
-        session_id TEXT NOT NULL,
-        parent_id TEXT NOT NULL,
-        fingerprint TEXT NOT NULL,
-        provider TEXT NOT NULL,
-        model TEXT NOT NULL,
-        state TEXT NOT NULL,
-        enqueued_at INTEGER NOT NULL,
-        deadline_at INTEGER NOT NULL,
-        lease_generation INTEGER NOT NULL DEFAULT 0,
-        terminal_at INTEGER
-      );
-      CREATE TABLE IF NOT EXISTS leases (
-        lease_id TEXT PRIMARY KEY,
-        request_id TEXT NOT NULL UNIQUE REFERENCES turn_requests(request_id),
-        generation INTEGER NOT NULL,
-        owner_instance_id TEXT NOT NULL,
-        phase TEXT NOT NULL,
-        acquired_at INTEGER NOT NULL,
-        heartbeat_at INTEGER NOT NULL
-      );
-      CREATE TABLE IF NOT EXISTS cooldowns (
-        provider TEXT NOT NULL,
-        model TEXT NOT NULL,
-        not_before INTEGER NOT NULL,
-        updated_at INTEGER NOT NULL,
-        PRIMARY KEY (provider, model)
-      );
-      CREATE TABLE IF NOT EXISTS turn_payloads (
-        request_id TEXT PRIMARY KEY REFERENCES turn_requests(request_id) ON DELETE CASCADE,
-        nonce BLOB NOT NULL,
-        ciphertext BLOB NOT NULL,
-        auth_tag BLOB NOT NULL,
-        key_version INTEGER NOT NULL,
-        expires_at INTEGER NOT NULL,
-        created_at INTEGER NOT NULL
-      );
-      CREATE TABLE IF NOT EXISTS delivery_outbox (
-        event_id TEXT PRIMARY KEY,
-        request_id TEXT NOT NULL REFERENCES turn_requests(request_id),
-        fingerprint TEXT NOT NULL,
-        state TEXT NOT NULL,
-        nonce BLOB,
-        ciphertext BLOB,
-        auth_tag BLOB,
-        expires_at INTEGER NOT NULL,
-        created_at INTEGER NOT NULL,
-        settled_at INTEGER
-      );
-      CREATE TABLE IF NOT EXISTS start_history (
-        lease_id TEXT PRIMARY KEY,
-        started_at INTEGER NOT NULL
-      );
-      CREATE INDEX IF NOT EXISTS turn_requests_queue ON turn_requests(state, enqueued_at);
-      CREATE INDEX IF NOT EXISTS leases_phase ON leases(phase);
-      CREATE INDEX IF NOT EXISTS delivery_outbox_pending ON delivery_outbox(state, created_at);
-      CREATE INDEX IF NOT EXISTS start_history_started ON start_history(started_at);
-    `);
-        this.#db
-          .prepare("INSERT INTO schema_migrations (version, name, applied_at) VALUES (1, 'admission-controller-core', ?)")
-          .run(Date.now());
-      }
-
-      if (this.schemaVersion === 1) {
-        this.#db.exec("ALTER TABLE leases ADD COLUMN terminal_outcome TEXT");
-        this.#db
-          .prepare("INSERT INTO schema_migrations (version, name, applied_at) VALUES (2, 'provider-terminal-proof', ?)")
-          .run(Date.now());
-      }
-
-      if (this.schemaVersion === 2) {
-        this.#db.exec(`
-          ALTER TABLE turn_payloads ADD COLUMN content_fingerprint TEXT;
-          ALTER TABLE delivery_outbox ADD COLUMN key_version INTEGER;
-        `);
-        this.#db
-          .prepare("INSERT INTO schema_migrations (version, name, applied_at) VALUES (3, 'authenticated-row-binding', ?)")
-          .run(Date.now());
-      }
-
-      if (this.schemaVersion === 3) {
-        this.#db.exec(`
-          ALTER TABLE leases ADD COLUMN terminal_conversation_id TEXT;
-          ALTER TABLE leases ADD COLUMN terminal_status TEXT;
-          ALTER TABLE leases ADD COLUMN terminal_stream_observed_at INTEGER;
-          ALTER TABLE leases ADD COLUMN terminal_sqlite_observed_at INTEGER;
-          ALTER TABLE leases ADD COLUMN terminal_failure_category TEXT;
-          ALTER TABLE leases ADD COLUMN terminal_http_status INTEGER;
-          ALTER TABLE leases ADD COLUMN terminal_code TEXT;
-          ALTER TABLE leases ADD COLUMN terminal_reason TEXT;
-        `);
-        this.#db
-          .prepare("INSERT INTO schema_migrations (version, name, applied_at) VALUES (4, 'structured-terminal-evidence', ?)")
-          .run(Date.now());
-      }
-
-      if (this.schemaVersion === 4) {
-        this.#db.exec(`
-          ALTER TABLE delivery_outbox ADD COLUMN sequence INTEGER NOT NULL DEFAULT 0;
-          ALTER TABLE delivery_outbox ADD COLUMN protocol_version INTEGER NOT NULL DEFAULT 0;
-          ALTER TABLE delivery_outbox ADD COLUMN protocol_semantics TEXT NOT NULL DEFAULT 'unnegotiated';
-          ALTER TABLE delivery_outbox ADD COLUMN claim_generation INTEGER NOT NULL DEFAULT 0;
-          ALTER TABLE delivery_outbox ADD COLUMN claim_owner_instance_id TEXT;
-          ALTER TABLE delivery_outbox ADD COLUMN claim_acquired_at INTEGER;
-          ALTER TABLE delivery_outbox ADD COLUMN lease_id TEXT;
-          ALTER TABLE delivery_outbox ADD COLUMN lease_generation INTEGER;
-        `);
-        // A v4 pending row has no negotiated protocol or claim fence, so never replay it.
-        this.#db
-          .prepare(
-            `UPDATE delivery_outbox
-             SET state = 'recovery_required', nonce = NULL, ciphertext = NULL, auth_tag = NULL, settled_at = ?
-             WHERE state = 'pending'`
-          )
-          .run(Date.now());
-        this.#db
-          .prepare("INSERT INTO schema_migrations (version, name, applied_at) VALUES (5, 'durable-outbox-claims', ?)")
-          .run(Date.now());
-      }
-
-      if (this.schemaVersion === 5) {
-        this.#db.exec(`
-          CREATE TABLE recovery_claims (
-            lease_id TEXT PRIMARY KEY,
-            request_id TEXT NOT NULL REFERENCES turn_requests(request_id),
-            lease_generation INTEGER NOT NULL,
-            recovery_generation INTEGER NOT NULL,
-            claimant_instance_id TEXT NOT NULL,
-            prior_phase TEXT NOT NULL,
-            state TEXT NOT NULL,
-            claimed_at INTEGER NOT NULL,
-            resolved_at INTEGER,
-            action TEXT,
-            evidence_code TEXT,
-            reason_code TEXT,
-            actor_hmac TEXT,
-            evidence_hmac TEXT
-          );
-          CREATE INDEX recovery_claims_request ON recovery_claims(request_id);
-        `);
-        this.#db
-          .prepare("INSERT INTO schema_migrations (version, name, applied_at) VALUES (6, 'fenced-recovery-resolution', ?)")
-          .run(Date.now());
-      }
-
-      if (this.schemaVersion === 6) {
-        this.#db.exec(`
-          CREATE TABLE sessions (
-            session_id TEXT NOT NULL PRIMARY KEY,
-            conversation_id TEXT,
-            conversation_cursor INTEGER NOT NULL,
+          CREATE TABLE turn_requests (
+            request_id TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            parent_id TEXT NOT NULL,
+            fingerprint TEXT NOT NULL,
+            provider TEXT NOT NULL,
             model TEXT NOT NULL,
-            effort TEXT NOT NULL,
-            mode TEXT NOT NULL,
-            cwd TEXT NOT NULL,
-            roots_json TEXT NOT NULL,
-            v2_user_message_ids_json TEXT NOT NULL,
-            updated_at INTEGER NOT NULL
+            state TEXT NOT NULL,
+            enqueued_at INTEGER NOT NULL,
+            deadline_at INTEGER NOT NULL,
+            lease_generation INTEGER NOT NULL DEFAULT 0,
+            terminal_at INTEGER
           );
-          CREATE INDEX sessions_updated_at_session_id ON sessions(updated_at DESC, session_id ASC);
-          CREATE INDEX sessions_cwd_updated_at_session_id ON sessions(cwd, updated_at DESC, session_id ASC);
-        `);
-        this.#db
-          .prepare("INSERT INTO schema_migrations (version, name, applied_at) VALUES (7, 'sqlite-session-store', ?)")
-          .run(Date.now());
-      }
-
-      if (this.schemaVersion === 7) {
-        const migrationAt = Date.now();
-        this.#db.exec(`
+          CREATE TABLE leases (
+            lease_id TEXT PRIMARY KEY,
+            request_id TEXT NOT NULL UNIQUE REFERENCES turn_requests(request_id),
+            generation INTEGER NOT NULL,
+            owner_instance_id TEXT NOT NULL,
+            phase TEXT NOT NULL,
+            acquired_at INTEGER NOT NULL,
+            heartbeat_at INTEGER NOT NULL
+          );
+          CREATE TABLE cooldowns (
+            provider TEXT NOT NULL,
+            model TEXT NOT NULL,
+            not_before INTEGER NOT NULL,
+            updated_at INTEGER NOT NULL,
+            PRIMARY KEY (provider, model)
+          );
+          CREATE TABLE turn_payloads (
+            request_id TEXT PRIMARY KEY REFERENCES turn_requests(request_id) ON DELETE CASCADE,
+            nonce BLOB NOT NULL,
+            ciphertext BLOB NOT NULL,
+            auth_tag BLOB NOT NULL,
+            key_version INTEGER NOT NULL,
+            content_fingerprint TEXT NOT NULL,
+            expires_at INTEGER NOT NULL,
+            created_at INTEGER NOT NULL
+          );
           CREATE TABLE lease_process_identities (
             lease_id TEXT PRIMARY KEY REFERENCES leases(lease_id) ON DELETE CASCADE,
             request_id TEXT NOT NULL REFERENCES turn_requests(request_id),
@@ -1738,69 +943,22 @@ export class AdmissionController {
             child_session INTEGER NOT NULL,
             recorded_at INTEGER NOT NULL
           );
-          CREATE UNIQUE INDEX lease_process_identities_request ON lease_process_identities(request_id);
-        `);
-        // v7 retained no immutable child identity, so every pre-terminal in-flight
-        // lease is unknown after upgrade and must not be treated as replayable.
-        this.#db
-          .prepare(
-            `UPDATE turn_requests
-             SET state = 'recovery_required', terminal_at = ?
-             WHERE request_id IN (
-               SELECT request_id FROM leases
-               WHERE phase IN ('starting', 'dispatch_intent', 'dispatch_ambiguous', 'active')
-             )`
-          )
-          .run(migrationAt);
-        this.#db
-          .prepare(
-            `UPDATE leases
-             SET phase = 'recovery_required', heartbeat_at = ?
-             WHERE phase IN ('starting', 'dispatch_intent', 'dispatch_ambiguous', 'active')`
-          )
-          .run(migrationAt);
-        this.#db
-          .prepare(
-            "INSERT INTO schema_migrations (version, name, applied_at) VALUES (8, 'atomic-process-dispatch-intent', ?)"
-          )
-          .run(migrationAt);
-      }
-
-      if (this.schemaVersion === 8) {
-        const migrationAt = Date.now();
-        this.#db.exec(`
-          CREATE TABLE delivery_claim_leases (
-            event_id TEXT PRIMARY KEY REFERENCES delivery_outbox(event_id) ON DELETE CASCADE,
-            request_id TEXT NOT NULL REFERENCES turn_requests(request_id),
-            owner_instance_id TEXT NOT NULL,
-            claim_generation INTEGER NOT NULL,
-            state TEXT NOT NULL CHECK (state IN ('claimed', 'delivered', 'recovery_required')),
-            heartbeat_at INTEGER NOT NULL,
-            lease_expires_at INTEGER NOT NULL,
-            settled_at INTEGER,
+          CREATE TABLE start_history (
+            lease_id TEXT PRIMARY KEY,
+            started_at INTEGER NOT NULL
+          );
+          CREATE TABLE sessions (
+            session_id TEXT NOT NULL PRIMARY KEY,
+            conversation_id TEXT,
+            conversation_cursor INTEGER NOT NULL,
+            model TEXT NOT NULL,
+            effort TEXT NOT NULL,
+            mode TEXT NOT NULL,
+            cwd TEXT NOT NULL,
+            roots_json TEXT NOT NULL,
+            v2_user_message_ids_json TEXT NOT NULL,
             updated_at INTEGER NOT NULL
           );
-          CREATE INDEX delivery_claim_leases_expiry ON delivery_claim_leases(state, lease_expires_at);
-        `);
-        // v8 claims have no controller-owned lease. They are ambiguous across
-        // a crash and must never be sent again after upgrade.
-        this.#db
-          .prepare(
-            `UPDATE delivery_outbox
-             SET state = 'recovery_required', nonce = NULL, ciphertext = NULL, auth_tag = NULL, settled_at = ?
-             WHERE state = 'claimed'`
-          )
-          .run(migrationAt);
-        this.#db
-          .prepare(
-            "INSERT INTO schema_migrations (version, name, applied_at) VALUES (9, 'atomic-outbox-claim-leases', ?)"
-          )
-          .run(migrationAt);
-      }
-
-      if (this.schemaVersion === 9) {
-        const migrationAt = Date.now();
-        this.#db.exec(`
           CREATE TABLE events (
             event_seq INTEGER PRIMARY KEY AUTOINCREMENT,
             kind TEXT NOT NULL,
@@ -1809,13 +967,17 @@ export class AdmissionController {
             occurred_at INTEGER NOT NULL,
             correlation_hmac TEXT NOT NULL
           );
+          CREATE INDEX turn_requests_queue ON turn_requests(state, enqueued_at);
+          CREATE INDEX leases_phase ON leases(phase);
+          CREATE UNIQUE INDEX lease_process_identities_request ON lease_process_identities(request_id);
+          CREATE INDEX start_history_started ON start_history(started_at);
+          CREATE INDEX sessions_updated_at_session_id ON sessions(updated_at DESC, session_id ASC);
+          CREATE INDEX sessions_cwd_updated_at_session_id ON sessions(cwd, updated_at DESC, session_id ASC);
           CREATE INDEX events_occurred ON events(occurred_at, event_seq);
         `);
         this.#db
-          .prepare(
-            "INSERT INTO schema_migrations (version, name, applied_at) VALUES (10, 'sanitized-admission-events', ?)"
-          )
-          .run(migrationAt);
+          .prepare("INSERT INTO schema_migrations (version, name, applied_at) VALUES (?, 'shared-admission-queue', ?)")
+          .run(ADMISSION_SCHEMA_VERSION, Date.now());
       }
 
       assertAdmissionSchemaIntegrity(this.#db);
@@ -1877,7 +1039,7 @@ export class AdmissionController {
     const lease = this.#db
       .prepare(
         `SELECT lease.lease_id, lease.request_id, lease.generation, lease.owner_instance_id,
-                lease.phase, lease.terminal_outcome, request.state AS request_state,
+                lease.phase, request.state AS request_state,
                 request.lease_generation AS request_lease_generation
          FROM leases AS lease
          JOIN turn_requests AS request ON request.request_id = lease.request_id
@@ -1889,7 +1051,6 @@ export class AdmissionController {
       lease.request_id !== record.requestId ||
       lease.generation !== record.generation ||
       lease.owner_instance_id !== record.ownerInstanceId ||
-      lease.terminal_outcome !== null ||
       lease.request_lease_generation !== record.generation
     ) {
       return null;
@@ -1918,7 +1079,7 @@ export class AdmissionController {
   ): AtomicDispatchIntentOutcome {
     const lease = this.#db
       .prepare(
-        "SELECT lease_id, request_id, generation, owner_instance_id, phase, terminal_outcome FROM leases WHERE lease_id = ?"
+        "SELECT lease_id, request_id, generation, owner_instance_id, phase FROM leases WHERE lease_id = ?"
       )
       .get(record.leaseId) as LeaseRow | undefined;
     if (
@@ -2146,7 +1307,7 @@ export class AdmissionController {
   private requireLeaseById(leaseId: string): LeaseRow {
     const lease = this.#db
       .prepare(
-        "SELECT lease_id, request_id, generation, owner_instance_id, phase, terminal_outcome FROM leases WHERE lease_id = ?"
+        "SELECT lease_id, request_id, generation, owner_instance_id, phase FROM leases WHERE lease_id = ?"
       )
       .get(leaseId) as LeaseRow | undefined;
     if (!lease) throw new Error("unknown lease");
@@ -2166,325 +1327,9 @@ export class AdmissionController {
     return row;
   }
 
-  private validateDeliveryInput(input: EnqueueDelivery): void {
-    if (typeof input !== "object" || input === null || Array.isArray(input)) {
-      throw new Error("delivery input must be an object");
-    }
-    validateIdentifier(input.eventId, "delivery event ID");
-    validateIdentifier(input.requestId, "delivery request ID");
-    validateIdentifier(input.fingerprint, "delivery fingerprint");
-    if (typeof input.payload !== "string") throw new Error("delivery payload must be a string");
-    validateTimestamp(input.now, "delivery timestamp");
-    validateTimestamp(input.expiresAt, "delivery expiry");
-    if (input.expiresAt <= input.now) throw new Error("delivery expiry must be after persistence time");
-    if (!Number.isSafeInteger(input.sequence) || input.sequence < 0) {
-      throw new Error("delivery sequence must be a non-negative safe integer");
-    }
-    if (!isNegotiatedOutboxProtocol(input.protocol)) {
-      throw new Error("delivery requires a negotiated at-least-once outbox protocol");
-    }
-  }
-
-  private insertDelivery(
-    input: EnqueueDelivery,
-    attachment: { leaseId: string; leaseGeneration: number } | null
-  ): { eventId: string; existed: boolean } {
-    const existing = this.findDelivery(input.eventId);
-    if (existing) {
-      if (
-        existing.request_id !== input.requestId ||
-        existing.fingerprint !== input.fingerprint ||
-        existing.sequence !== input.sequence ||
-        !this.isNegotiatedDelivery(existing) ||
-        existing.lease_id !== (attachment?.leaseId ?? null) ||
-        existing.lease_generation !== (attachment?.leaseGeneration ?? null)
-      ) {
-        throw new DeliveryConflictError(input.eventId);
-      }
-      return { eventId: input.eventId, existed: true };
-    }
-
-    this.requireRequest(input.requestId);
-    const keyVersion = 1;
-    const encrypted = this.encrypt(input.payload, this.deliveryAad(input.eventId, input.requestId, keyVersion));
-    this.#db
-      .prepare(
-        `INSERT INTO delivery_outbox
-          (event_id, request_id, fingerprint, state, nonce, ciphertext, auth_tag, expires_at, created_at, key_version,
-           sequence, protocol_version, protocol_semantics, claim_generation, lease_id, lease_generation)
-         VALUES (?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)`
-      )
-      .run(
-        input.eventId,
-        input.requestId,
-        input.fingerprint,
-        encrypted.nonce,
-        encrypted.ciphertext,
-        encrypted.authTag,
-        input.expiresAt,
-        input.now,
-        keyVersion,
-        input.sequence,
-        DURABLE_DELIVERY_PROTOCOL_VERSION,
-        DURABLE_DELIVERY_SEMANTICS,
-        attachment?.leaseId ?? null,
-        attachment?.leaseGeneration ?? null
-      );
-    this.journalTransition("delivery_enqueued", input.requestId, "absent", "pending", input.now);
-    return { eventId: input.eventId, existed: false };
-  }
-
-  private findDelivery(eventId: string): DeliveryRow | undefined {
-    return this.#db
-      .prepare(
-        `SELECT outbox.event_id, outbox.request_id, outbox.fingerprint, outbox.state,
-                outbox.nonce, outbox.ciphertext, outbox.auth_tag, outbox.key_version, outbox.expires_at,
-                outbox.sequence, outbox.protocol_version, outbox.protocol_semantics, outbox.claim_generation,
-                outbox.claim_owner_instance_id, outbox.claim_acquired_at, outbox.lease_id, outbox.lease_generation,
-                request.session_id
-         FROM delivery_outbox outbox
-         JOIN turn_requests request ON request.request_id = outbox.request_id
-         WHERE outbox.event_id = ?`
-      )
-      .get(eventId) as DeliveryRow | undefined;
-  }
-
-  private requireDelivery(eventId: string): DeliveryRow {
-    const row = this.findDelivery(eventId);
-    if (!row) throw new Error("unknown delivery event");
-    return row;
-  }
-
-  private findDeliveryClaimLease(eventId: string): DeliveryClaimLeaseRow | undefined {
-    return this.#db
-      .prepare(
-        `SELECT event_id, request_id, owner_instance_id, claim_generation, state,
-                heartbeat_at, lease_expires_at, settled_at
-         FROM delivery_claim_leases WHERE event_id = ?`
-      )
-      .get(eventId) as DeliveryClaimLeaseRow | undefined;
-  }
-
-  private requireDeliveryClaimLease(row: DeliveryRow, fence: DeliveryClaimFence): DeliveryClaimLease {
-    const lease = this.findDeliveryClaimLease(row.event_id);
-    if (
-      !lease ||
-      lease.request_id !== row.request_id ||
-      lease.owner_instance_id !== fence.ownerInstanceId ||
-      lease.claim_generation !== fence.claimGeneration ||
-      !isDeliveryClaimLeaseState(lease.state) ||
-      !Number.isSafeInteger(lease.heartbeat_at) ||
-      !Number.isSafeInteger(lease.lease_expires_at) ||
-      lease.heartbeat_at < 0 ||
-      lease.lease_expires_at < 0
-    ) {
-      throw new DeliveryClaimFenceError(fence.eventId);
-    }
-    return Object.freeze({
-      eventId: lease.event_id,
-      requestId: lease.request_id,
-      ownerInstanceId: lease.owner_instance_id,
-      claimGeneration: lease.claim_generation,
-      state: lease.state,
-      heartbeatAt: lease.heartbeat_at,
-      leaseExpiresAt: lease.lease_expires_at
-    });
-  }
-
-  private isNegotiatedDelivery(row: DeliveryRow): boolean {
-    return (
-      row.protocol_version === DURABLE_DELIVERY_PROTOCOL_VERSION &&
-      row.protocol_semantics === DURABLE_DELIVERY_SEMANTICS
-    );
-  }
-
-  private toClaimedDelivery(row: DeliveryRow): ClaimedDelivery {
-    if (
-      row.state !== "claimed" ||
-      !row.nonce ||
-      !row.ciphertext ||
-      !row.auth_tag ||
-      row.key_version === null ||
-      row.claim_owner_instance_id === null ||
-      row.session_id === undefined
-    ) {
-      throw new DeliveryClaimFenceError(row.event_id);
-    }
-    const claimToken = this.deliveryClaimToken(row);
-    const payload = this.decrypt(
-      { nonce: row.nonce, ciphertext: row.ciphertext, authTag: row.auth_tag },
-      this.deliveryAad(row.event_id, row.request_id, row.key_version)
-    );
-    return Object.freeze({
-      eventId: row.event_id,
-      requestId: row.request_id,
-      sessionId: row.session_id,
-      payload,
-      sequence: row.sequence,
-      ownerInstanceId: row.claim_owner_instance_id,
-      claimGeneration: row.claim_generation,
-      claimToken,
-      metadata: createDurableDeliveryMetadata({
-        v: DURABLE_DELIVERY_PROTOCOL_VERSION,
-        eventId: row.event_id,
-        sequence: row.sequence,
-        claimGeneration: row.claim_generation,
-        claimToken
-      })
-    });
-  }
-
-  private assertDeliveryClaim(row: DeliveryRow, fence: DeliveryClaimFence): void {
-    if (
-      row.event_id !== fence.eventId ||
-      row.claim_owner_instance_id === null ||
-      row.claim_owner_instance_id !== fence.ownerInstanceId ||
-      row.claim_generation !== fence.claimGeneration ||
-      !sameHmac(this.deliveryClaimToken(row), fence.claimToken)
-    ) {
-      throw new DeliveryClaimFenceError(fence.eventId);
-    }
-  }
-
-  private deliveryClaimToken(row: DeliveryRow): string {
-    if (row.claim_owner_instance_id === null || row.session_id === undefined) {
-      throw new DeliveryClaimFenceError(row.event_id);
-    }
-    return this.claimHmac("delivery", [
-      row.event_id,
-      row.request_id,
-      row.session_id,
-      row.sequence,
-      row.protocol_version,
-      row.protocol_semantics,
-      row.claim_owner_instance_id,
-      row.claim_generation
-    ]);
-  }
-
-  private markDeliveryRecovery(eventId: string, now: number, fence: DeliveryClaimFence | null): void {
-    const row = this.requireDelivery(eventId);
-    const fromState: SanitizedEventState =
-      fence === null ? "pending" : (this.findDeliveryClaimLease(eventId)?.state ?? "claimed");
-    const statement =
-      fence === null
-        ? `UPDATE delivery_outbox
-           SET state = 'recovery_required', nonce = NULL, ciphertext = NULL, auth_tag = NULL, settled_at = ?
-           WHERE event_id = ? AND state = 'pending'`
-        : `UPDATE delivery_outbox
-           SET state = 'recovery_required', nonce = NULL, ciphertext = NULL, auth_tag = NULL, settled_at = ?
-           WHERE event_id = ? AND state = 'claimed' AND claim_owner_instance_id = ? AND claim_generation = ?`;
-    const result =
-      fence === null
-        ? this.#db.prepare(statement).run(now, eventId)
-        : this.#db.prepare(statement).run(now, eventId, fence.ownerInstanceId, fence.claimGeneration);
-    if (fence === null) {
-      if (result.changes === 1) {
-        this.journalTransition("delivery_recovery_required", row.request_id, "pending", "recovery_required", now);
-      }
-      return;
-    }
-    if (result.changes !== 1) throw new DeliveryClaimFenceError(eventId);
-    const settled = this.#db
-      .prepare(
-        `UPDATE delivery_claim_leases
-         SET state = 'recovery_required', settled_at = ?, updated_at = ?
-         WHERE event_id = ? AND owner_instance_id = ? AND claim_generation = ?
-           AND state = 'claimed'`
-      )
-      .run(now, now, eventId, fence.ownerInstanceId, fence.claimGeneration);
-    if (settled.changes !== 1) throw new DeliveryClaimFenceError(eventId);
-    this.journalTransition("delivery_recovery_required", row.request_id, fromState, "recovery_required", now);
-  }
-
-  private sweepClaimedDeliveryToRecovery(
-    eventId: string,
-    now: number,
-    lease: { ownerInstanceId: string; claimGeneration: number; state: DeliveryClaimLeaseState } | null
-  ): boolean {
-    const row = this.requireDelivery(eventId);
-    const recovered = this.#db
-      .prepare(
-        `UPDATE delivery_outbox
-         SET state = 'recovery_required', nonce = NULL, ciphertext = NULL, auth_tag = NULL, settled_at = ?
-         WHERE event_id = ? AND state = 'claimed'`
-      )
-      .run(now, eventId);
-    if (recovered.changes !== 1) return false;
-    if (lease !== null) {
-      this.#db
-        .prepare(
-          `UPDATE delivery_claim_leases
-           SET state = 'recovery_required', settled_at = ?, updated_at = ?
-           WHERE event_id = ? AND owner_instance_id = ? AND claim_generation = ?`
-        )
-        .run(now, now, eventId, lease.ownerInstanceId, lease.claimGeneration);
-    }
-    this.journalTransition(
-      "delivery_recovery_required",
-      row.request_id,
-      "claimed",
-      "recovery_required",
-      now
-    );
-    return true;
-  }
-
-  private markClaimedDeliveryRecovery(row: DeliveryRow, now: number): void {
-    if (row.claim_owner_instance_id === null) return;
-    const fence: DeliveryClaimFence = {
-      eventId: row.event_id,
-      ownerInstanceId: row.claim_owner_instance_id,
-      claimGeneration: row.claim_generation,
-      claimToken: this.deliveryClaimToken(row)
-    };
-    this.transaction(() => this.markDeliveryRecovery(row.event_id, now, fence));
-  }
-
-  private requireCurrentRecoveryClaim(claim: RecoveryClaimToken): RecoveryClaimToken {
-    const row = this.#db
-      .prepare(
-        `SELECT lease_id, request_id, lease_generation, recovery_generation, claimant_instance_id, prior_phase, state
-         FROM recovery_claims WHERE lease_id = ?`
-      )
-      .get(claim.leaseId) as RecoveryClaimRow | undefined;
-    if (!row || row.state !== "claimed" || !sameRecoveryClaim(recoveryClaimToken(row), claim)) {
-      throw new RecoveryClaimFenceError(claim.leaseId);
-    }
-    return recoveryClaimToken(row);
-  }
-
-  private hasRecoveryAttestations(plan: Extract<RecoveryResolutionPlan, { accepted: true }>): boolean {
-    const actor = this.recoveryHmac("actor", [plan.claim]);
-    const evidence = this.recoveryHmac("evidence", [plan.claim, plan.action, plan.evidenceCode, plan.reasonCode]);
-    return sameHmac(actor, plan.actorHmac) && sameHmac(evidence, plan.evidenceHmac);
-  }
-
-  private recoveryHmac(label: "actor" | "evidence", values: readonly unknown[]): string {
-    return this.claimHmac(`recovery:${label}`, values);
-  }
-
-  private claimHmac(domain: string, values: readonly unknown[]): string {
-    return createHmac("sha256", this.requireClaimTokenKey())
-      .update(JSON.stringify(["paseo-agy-acp", "admission-claim", 1, domain, values]), "utf8")
-      .digest("hex");
-  }
-
-  private isPreDispatchRecoveryLease(leaseId: string): boolean {
-    const row = this.#db
-      .prepare("SELECT prior_phase FROM recovery_claims WHERE lease_id = ? AND state = 'claimed'")
-      .get(leaseId) as { prior_phase: RequestState } | undefined;
-    return row?.prior_phase === "admitted" || row?.prior_phase === "starting";
-  }
-
   private requireEncryptionKey(): Buffer {
     if (!this.#encryptionKey) throw new Error("payload persistence requires an encryption key");
     return this.#encryptionKey;
-  }
-
-  private requireClaimTokenKey(): Buffer {
-    if (!this.#claimTokenKey) throw new Error("delivery and recovery claims require a claim token key");
-    return this.#claimTokenKey;
   }
 
   private requireContentFingerprintKey(): Buffer {
@@ -2618,10 +1463,6 @@ export class AdmissionController {
     return JSON.stringify(["paseo-agy-acp", "turn", 1, requestId, keyVersion]);
   }
 
-  private deliveryAad(eventId: string, requestId: string, keyVersion: number): string {
-    return JSON.stringify(["paseo-agy-acp", "delivery", 1, eventId, requestId, keyVersion]);
-  }
-
   private validatePayloadExpiry(now: number, expiresAt: number): void {
     if (!Number.isFinite(now) || !Number.isFinite(expiresAt) || expiresAt <= now) {
       throw new Error("payload expiry must be after persistence time");
@@ -2651,6 +1492,10 @@ export class AdmissionController {
 const SANITIZED_EVENT_TRANSITIONS = new Set<string>([
   transitionSignature("request_enqueued", "absent", "queued"),
   transitionSignature("request_cancelled", "queued", "cancelled"),
+  ...(["admitted", "starting", "dispatch_intent"] as const).flatMap((fromState) => [
+    transitionSignature("request_abandoned", fromState, "failed"),
+    transitionSignature("request_abandoned", fromState, "cancelled")
+  ]),
   transitionSignature("request_queue_timed_out", "queued", "queue_timeout"),
   transitionSignature("request_admitted", "queued", "admitted"),
   transitionSignature("request_starting", "admitted", "starting"),
@@ -2664,15 +1509,9 @@ const SANITIZED_EVENT_TRANSITIONS = new Set<string>([
   ...(["admitted", "starting", "dispatch_intent", "dispatch_ambiguous", "active", "recovery_required"] as const).map(
     (fromState) => transitionSignature("request_recovery_required", fromState, "recovery_required")
   ),
-  transitionSignature("request_recovery_requeued", "recovery_required", "queued"),
-  transitionSignature("request_recovery_completed", "recovery_required", "completed"),
-  transitionSignature("request_recovery_cancelled", "recovery_required", "cancelled"),
-  transitionSignature("request_recovery_unknown_released", "recovery_required", "recovery_resolved"),
-  transitionSignature("delivery_enqueued", "absent", "pending"),
-  transitionSignature("delivery_claimed", "pending", "claimed"),
-  transitionSignature("delivery_delivered", "claimed", "delivered"),
-  transitionSignature("delivery_recovery_required", "pending", "recovery_required"),
-  transitionSignature("delivery_recovery_required", "claimed", "recovery_required")
+  ...(["admitted", "starting", "dispatch_intent", "dispatch_ambiguous", "active", "recovery_required"] as const).map(
+    (fromState) => transitionSignature("request_recovery_seat_released", fromState, "recovery_required")
+  )
 ]);
 
 function transitionSignature(
@@ -2741,6 +1580,7 @@ function isSanitizedEventKind(value: unknown): value is SanitizedEventKind {
   return (
     value === "request_enqueued" ||
     value === "request_cancelled" ||
+    value === "request_abandoned" ||
     value === "request_queue_timed_out" ||
     value === "request_admitted" ||
     value === "request_starting" ||
@@ -2750,19 +1590,12 @@ function isSanitizedEventKind(value: unknown): value is SanitizedEventKind {
     value === "request_provider_terminal" ||
     value === "request_released" ||
     value === "request_recovery_required" ||
-    value === "request_recovery_requeued" ||
-    value === "request_recovery_completed" ||
-    value === "request_recovery_cancelled" ||
-    value === "request_recovery_unknown_released" ||
-    value === "delivery_enqueued" ||
-    value === "delivery_claimed" ||
-    value === "delivery_delivered" ||
-    value === "delivery_recovery_required"
+    value === "request_recovery_seat_released"
   );
 }
 
 function isSanitizedEventState(value: unknown): value is SanitizedEventState {
-  if (value === "absent" || value === "pending" || isDeliveryClaimLeaseState(value)) return true;
+  if (value === "absent") return true;
   try {
     normalizeRequestState(value);
     return true;
@@ -2777,7 +1610,9 @@ function validatePolicy(policy: AdmissionPolicy): AdmissionPolicy {
       throw new Error(`invalid admission policy ${name}`);
     }
   }
-  if (policy.maxActiveTurns > 2) throw new Error("invalid admission policy maxActiveTurns");
+  if (policy.maxActiveTurns !== 1 && policy.maxActiveTurns !== 3) {
+    throw new Error("invalid admission policy maxActiveTurns");
+  }
   return Object.freeze({ ...policy });
 }
 
@@ -2811,117 +1646,13 @@ function validateTimestamp(value: unknown, label: string): asserts value is numb
   }
 }
 
-function validateAtomicDeliveryClaimInput(input: AtomicDeliveryClaimInput): void {
-  if (typeof input !== "object" || input === null || Array.isArray(input)) {
-    throw new Error("atomic delivery claim input must be an object");
-  }
-  validateIdentifier(input.eventId, "delivery event ID");
-  validateIdentifier(input.ownerInstanceId, "delivery claim owner");
-  validateTimestamp(input.now, "delivery claim timestamp");
-  validateDeliveryClaimLeaseMs(input.leaseMs);
-}
-
-function validateDeliveryClaimFence(fence: DeliveryClaimFence): void {
-  if (typeof fence !== "object" || fence === null || Array.isArray(fence)) {
-    throw new DeliveryClaimFenceError("unknown");
-  }
-  validateIdentifier(fence.eventId, "delivery event ID");
-  validateIdentifier(fence.ownerInstanceId, "delivery claim owner");
-  if (!Number.isSafeInteger(fence.claimGeneration) || fence.claimGeneration < 1) {
-    throw new DeliveryClaimFenceError(fence.eventId);
-  }
-  if (typeof fence.claimToken !== "string" || !/^[0-9a-f]{64}$/.test(fence.claimToken)) {
-    throw new DeliveryClaimFenceError(fence.eventId);
-  }
-}
-
-function validateDeliveryClaimLeaseMs(leaseMs: unknown): asserts leaseMs is number {
-  if (typeof leaseMs !== "number" || !Number.isSafeInteger(leaseMs) || leaseMs <= 0) {
-    throw new Error("delivery claim lease duration must be a positive safe integer");
-  }
-}
-
-function deliveryClaimLeaseExpiry(now: number, leaseMs: number): number {
-  const expiry = now + leaseMs;
-  if (!Number.isSafeInteger(expiry)) throw new Error("delivery claim lease expiry exceeds safe integer range");
-  return expiry;
-}
-
-function isDeliveryClaimLeaseState(value: unknown): value is DeliveryClaimLeaseState {
-  return value === "claimed" || value === "delivered" || value === "recovery_required";
-}
-
-function isActiveDeliveryClaimLeaseState(value: DeliveryClaimLeaseState): value is "claimed" {
-  return value === "claimed";
-}
-
-function recoverableOutboxClaim(row: RecoverableOutboxClaimRow): DeliveryClaimLease {
-  try {
-    validateIdentifier(row.lease_event_id, "recoverable outbox lease event ID");
-    validateIdentifier(row.lease_request_id, "recoverable outbox lease request ID");
-    validateIdentifier(row.lease_owner_instance_id, "recoverable outbox lease owner");
-    validateIdentifier(row.outbox_event_id, "recoverable outbox event ID");
-    validateIdentifier(row.outbox_request_id, "recoverable outbox request ID");
-    validateIdentifier(row.outbox_owner_instance_id, "recoverable outbox owner");
-    validateTimestamp(row.lease_heartbeat_at, "recoverable outbox heartbeat");
-    validateTimestamp(row.lease_expires_at, "recoverable outbox lease expiry");
-  } catch {
-    throw new RecoverableOutboxClaimInventoryError();
-  }
-
-  const state = row.lease_state;
-  const generation = row.lease_claim_generation;
-  const outboxGeneration = row.outbox_claim_generation;
-  const expectedOutboxState = state === "recovery_required" ? "recovery_required" : "claimed";
-  if (
-    (state !== "claimed" && state !== "recovery_required") ||
-    row.outbox_state !== expectedOutboxState ||
-    row.lease_event_id !== row.outbox_event_id ||
-    row.lease_request_id !== row.outbox_request_id ||
-    row.lease_owner_instance_id !== row.outbox_owner_instance_id ||
-    typeof generation !== "number" ||
-    !Number.isSafeInteger(generation) ||
-    generation < 1 ||
-    outboxGeneration !== generation ||
-    (row.lease_expires_at as number) <= (row.lease_heartbeat_at as number)
-  ) {
-    throw new RecoverableOutboxClaimInventoryError();
-  }
-
-  return Object.freeze({
-    eventId: row.lease_event_id,
-    requestId: row.lease_request_id,
-    ownerInstanceId: row.lease_owner_instance_id,
-    claimGeneration: generation,
-    state,
-    heartbeatAt: row.lease_heartbeat_at,
-    leaseExpiresAt: row.lease_expires_at
-  });
-}
-
-function sameRecoverableOutboxClaim(left: DeliveryClaimLease, right: DeliveryClaimLease): boolean {
-  return (
-    left.eventId === right.eventId &&
-    left.requestId === right.requestId &&
-    left.ownerInstanceId === right.ownerInstanceId &&
-    left.claimGeneration === right.claimGeneration &&
-    left.state === right.state &&
-    left.heartbeatAt === right.heartbeatAt &&
-    left.leaseExpiresAt === right.leaseExpiresAt
-  );
-}
-
 function validateFaultInjection(value: unknown): AdmissionControllerFaultInjection | undefined {
   if (value === undefined) return undefined;
   try {
     if (typeof value !== "object" || value === null || Array.isArray(value)) {
       throw new Error("fault injection must be an object");
     }
-    const callbacks = value as {
-      afterProcessIdentityPersisted?: unknown;
-      afterProviderTerminalOutboxPersisted?: unknown;
-      afterDeliveryOutboxSettled?: unknown;
-    };
+    const callbacks = value as { afterProcessIdentityPersisted?: unknown };
     const callback = (value: unknown): (() => void) | undefined => {
       if (value === undefined) return undefined;
       if (typeof value !== "function") {
@@ -2930,15 +1661,9 @@ function validateFaultInjection(value: unknown): AdmissionControllerFaultInjecti
       return value as () => void;
     };
     const afterProcessIdentityPersisted = callback(callbacks.afterProcessIdentityPersisted);
-    const afterProviderTerminalOutboxPersisted = callback(callbacks.afterProviderTerminalOutboxPersisted);
-    const afterDeliveryOutboxSettled = callback(callbacks.afterDeliveryOutboxSettled);
     return Object.freeze({
       afterProcessIdentityPersisted:
-        afterProcessIdentityPersisted === undefined ? undefined : () => afterProcessIdentityPersisted(),
-      afterProviderTerminalOutboxPersisted:
-        afterProviderTerminalOutboxPersisted === undefined ? undefined : () => afterProviderTerminalOutboxPersisted(),
-      afterDeliveryOutboxSettled:
-        afterDeliveryOutboxSettled === undefined ? undefined : () => afterDeliveryOutboxSettled()
+        afterProcessIdentityPersisted === undefined ? undefined : () => afterProcessIdentityPersisted()
     });
   } catch (error) {
     if (error instanceof Error) throw error;
@@ -3145,7 +1870,6 @@ function toRecoverableDispatch(row: RecoverableDispatchRow): RecoverableDispatch
     );
     const phase = normalizeRequestState(row.lease_phase);
     const requestState = normalizeRequestState(row.request_state);
-    const terminalOutcome = normalizeLeaseTerminalOutcome(row.lease_terminal_outcome);
     validateTimestamp(row.lease_heartbeat_at, "recoverable dispatch heartbeat");
     validateTimestamp(row.request_enqueued_at, "recoverable dispatch enqueue timestamp");
 
@@ -3158,13 +1882,7 @@ function toRecoverableDispatch(row: RecoverableDispatchRow): RecoverableDispatch
       throw new Error("process identity predates dispatch intent");
     }
 
-    if (phase === "provider_terminal") {
-      if (requestState !== "provider_terminal" || terminalOutcome === null) {
-        throw new Error("terminal lease/request state mismatch");
-      }
-      return null;
-    }
-    if (!isRecoverableDispatchPhase(phase) || requestState !== phase || terminalOutcome !== null) {
+    if (!isRecoverableDispatchPhase(phase) || requestState !== phase) {
       throw new Error("nonterminal lease/request state mismatch");
     }
 
@@ -3279,16 +1997,10 @@ function normalizeRequestState(value: unknown): RequestState {
     case "cancelled":
     case "queue_timeout":
     case "recovery_required":
-    case "recovery_resolved":
       return value;
     default:
       throw new Error("request state is invalid");
   }
-}
-
-function normalizeLeaseTerminalOutcome(value: unknown): "completed" | "failed" | "cancelled" | null {
-  if (value === null || value === "completed" || value === "failed" || value === "cancelled") return value;
-  throw new Error("lease terminal outcome is invalid");
 }
 
 function isRecoverableDispatchPhase(value: RequestState): value is RecoverableDispatchPhase {
@@ -3302,133 +2014,41 @@ function isRecoverableDispatchPhase(value: RequestState): value is RecoverableDi
   );
 }
 
-function isNegotiatedOutboxProtocol(value: unknown): value is DurableDeliveryProtocol {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
-  try {
-    const prototype = Object.getPrototypeOf(value);
-    if (prototype !== Object.prototype && prototype !== null) return false;
-    const record = value as Record<string, unknown>;
-    const fields = Object.getOwnPropertyNames(record);
-    if (
-      Object.getOwnPropertySymbols(record).length !== 0 ||
-      fields.length !== 2 ||
-      !fields.includes("version") ||
-      !fields.includes("semantics")
-    ) {
-      return false;
-    }
-    const entries = fields.map((field) => [field, Object.getOwnPropertyDescriptor(record, field)] as const);
-    if (entries.some(([, descriptor]) => descriptor === undefined || !descriptor.enumerable || !("value" in descriptor))) {
-      return false;
-    }
-    const values = Object.fromEntries(entries.map(([field, descriptor]) => [field, descriptor!.value]));
-    return (
-      values.version === DURABLE_DELIVERY_PROTOCOL_VERSION &&
-      values.semantics === DURABLE_DELIVERY_SEMANTICS
-    );
-  } catch {
-    return false;
-  }
-}
-
-function createDurableDeliveryMetadata(input: DurableDeliveryMetadata): DurableDeliveryMetadata {
-  return Object.freeze({ ...input });
-}
-
-function validateDeliveryAcknowledgement(value: unknown): DeliveryAcknowledgement {
+function validateLiveTurnCompletion(value: LiveTurnCompletion): void {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new DeliveryClaimFenceError("");
+    throw new Error("live turn completion must be an object");
   }
-  const input = value as Record<string, unknown>;
-  const fields = Object.keys(input);
+  if (value.outcome !== "completed" && value.outcome !== "failed" && value.outcome !== "cancelled") {
+    throw new Error("live turn completion outcome is invalid");
+  }
+  if (value.outcome !== "failed" && value.failure !== undefined) {
+    throw new Error("live turn completion failure is inconsistent");
+  }
+  if (value.failure === undefined) return;
+  const categories = new Set([
+    "provider_capacity",
+    "quota",
+    "auth",
+    "permission",
+    "timeout",
+    "transport",
+    "unknown"
+  ]);
+  if (!categories.has(value.failure.category)) throw new Error("live turn failure category is invalid");
   if (
-    fields.length !== 5 ||
-    !fields.includes("v") ||
-    !fields.includes("sessionId") ||
-    !fields.includes("eventId") ||
-    !fields.includes("claimGeneration") ||
-    !fields.includes("claimToken") ||
-    input.v !== DURABLE_DELIVERY_PROTOCOL_VERSION ||
-    !Number.isSafeInteger(input.claimGeneration) ||
-    (input.claimGeneration as number) <= 0 ||
-    typeof input.claimToken !== "string" ||
-    !/^[0-9a-f]{64}$/.test(input.claimToken)
+    value.failure.httpStatus !== undefined &&
+    (!Number.isInteger(value.failure.httpStatus) || value.failure.httpStatus < 100 || value.failure.httpStatus > 599)
   ) {
-    throw new DeliveryClaimFenceError("");
+    throw new Error("live turn failure HTTP status is invalid");
   }
-  validateIdentifier(input.sessionId, "delivery session ID");
-  validateIdentifier(input.eventId, "delivery event ID");
-  return Object.freeze({
-    v: DURABLE_DELIVERY_PROTOCOL_VERSION,
-    sessionId: input.sessionId,
-    eventId: input.eventId,
-    claimGeneration: input.claimGeneration as number,
-    claimToken: input.claimToken
-  });
-}
-
-function validateConfirmedProviderTerminal(value: ConfirmedProviderTerminal): void {
-  if (typeof value !== "object" || value === null || Array.isArray(value)) {
-    throw new Error("confirmed provider terminal must be an object");
+  for (const signal of [value.failure.code, value.failure.reason]) {
+    if (signal !== undefined) validateIdentifier(signal, "live turn failure signal");
   }
-  validateIdentifier(value.conversationId, "terminal conversation ID");
-  validateTimestamp(value.sqliteObservedAt, "terminal SQLite observation timestamp");
-  if (value.streamObservedAt !== null) {
-    validateTimestamp(value.streamObservedAt, "terminal stream observation timestamp");
-  }
-  const expectedOutcome = value.status === "SUCCESS"
-    ? "completed"
-    : value.status === "ERROR"
-      ? "failed"
-      : value.status === "CANCELED" || value.status === "INTERRUPTED"
-        ? "cancelled"
-        : null;
-  if (expectedOutcome === null || value.outcome !== expectedOutcome) {
-    throw new Error("confirmed provider terminal outcome is inconsistent");
-  }
-  if ((value.status === "ERROR") !== (value.failure !== null)) {
-    throw new Error("confirmed provider terminal failure is inconsistent");
-  }
-}
-
-function sameHmac(expected: string, candidate: unknown): boolean {
-  if (typeof candidate !== "string" || !/^[0-9a-f]{64}$/.test(candidate) || !/^[0-9a-f]{64}$/.test(expected)) {
-    return false;
-  }
-  const left = Buffer.from(expected, "hex");
-  const right = Buffer.from(candidate, "hex");
-  return left.length === right.length && timingSafeEqual(left, right);
-}
-
-function recoveryClaimToken(row: RecoveryClaimRow): RecoveryClaimToken {
-  return Object.freeze({
-    requestId: row.request_id,
-    leaseId: row.lease_id,
-    leaseGeneration: row.lease_generation,
-    recoveryGeneration: row.recovery_generation,
-    claimantInstanceId: row.claimant_instance_id
-  });
-}
-
-function sameRecoveryClaim(left: RecoveryClaimToken, right: RecoveryClaimToken): boolean {
-  return (
-    left.requestId === right.requestId &&
-    left.leaseId === right.leaseId &&
-    left.leaseGeneration === right.leaseGeneration &&
-    left.recoveryGeneration === right.recoveryGeneration &&
-    left.claimantInstanceId === right.claimantInstanceId
-  );
-}
-
-function rejectedRecoveryPlan(
-  rejectionCode: "invalid_resolution" | "claim_mismatch" | "evidence_mismatch"
-): RecoveryResolutionPlan {
-  return Object.freeze({ accepted: false, nextState: "recovery_required", rejectionCode });
 }
 
 function validatePurposeKey(
   key: Buffer | undefined,
-  purpose: "encryption" | "content fingerprint" | "claim token"
+  purpose: "encryption" | "content fingerprint"
 ): Buffer | undefined {
   if (key === undefined) return undefined;
   if (!Buffer.isBuffer(key) || key.length !== 32) {

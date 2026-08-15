@@ -25,7 +25,7 @@ export class AdmissionRuntimeConfigError extends Error {
 }
 
 export const DEFAULT_ADMISSION_POLICY: Readonly<AdmissionPolicy> = Object.freeze({
-  maxActiveTurns: 2,
+  maxActiveTurns: 3,
   maxConcurrentStarts: 1,
   minStartIntervalMs: 2_000,
   queueTimeoutMs: 30 * 60 * 1_000,
@@ -61,7 +61,7 @@ export function parseAdmissionRuntimeConfig(
       environment,
       POLICY_ENV.maxActiveTurns,
       DEFAULT_ADMISSION_POLICY.maxActiveTurns,
-      (value) => value >= 1 && value <= 2
+      (value) => value === 1 || value === 3
     ),
     maxConcurrentStarts: parsePolicyOverride(
       environment,

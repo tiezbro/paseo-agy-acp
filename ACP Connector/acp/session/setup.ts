@@ -24,6 +24,7 @@ export interface SessionBuildDeps {
   backend: AgyCliBackend;
   getModelOptions(config: AgyCliConfig): Promise<string[]>;
   conversationsDir?: string;
+  admissionEnabled?: boolean;
 }
 
 /** Build a fresh session bound to `cwd` + ACP `additionalDirectories`. */
@@ -40,6 +41,12 @@ export async function buildSession(
     argv: deps.argv,
     conversationsDir: deps.conversationsDir
   });
+  if (deps.admissionEnabled === true) {
+    if (config.mode !== "dangerously-skip-permissions") {
+      throw new Error("enabled admission currently requires dangerously-skip-permissions mode");
+    }
+    config.promptInArgv = false;
+  }
   const modelOptions = await deps.getModelOptions(config);
   const catalog = buildModelCatalog(modelOptions);
   const agy = await deps.backend.startSession(config);

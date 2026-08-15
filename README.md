@@ -65,82 +65,74 @@ contributors. All credit for the original ACP adapter architecture belongs to th
 
 → [Full technical detail](./docs/PASEO_LOCAL_CHANGES.md)
 
-## v2 Admission Controller Development
+## Admission Controller Development
 
-Source ownership is intentionally limited to two root-level functional areas:
-`Admission Controller/` contains the implementation-independent shared seat,
-queue, lease, heartbeat, cooldown, and queue-progress kernel. `ACP Connector/`
-contains the Paseo/ACP protocol, session/conversation mapping, Antigravity
-integration, stream-json/SQLite translation, permissions, cancellation,
-recovery coordination, and error classification. Package entrypoints live in
-`ACP Connector/`; there is no third source area.
+The repository has exactly two source areas:
 
-The v2.0.0.0 Admission Controller is under source development. The current
-disabled-by-default foundation includes a verified SQLite v10 ledger,
-encrypted durable payloads with row-bound authentication, purpose-separated
-runtime keys, atomic process identity plus `dispatch_intent`, proof-only
-recovery, SQLite ACP sessions, controller-owned outbox claim leases, a
-sanitized HMAC event journal, and an explicit at-least-once outbox ACK route.
-The local key store rejects unsafe ownership, permissions, links, and
-publication races.
+```text
+paseo-agy-acp/
+|-- ACP Connector/
+`-- Admission Controller/
+```
 
-`maxActiveTurns` is one shared Antigravity account-level seat pool across all
-local connector processes and models. Requests enter one durable, oldest-
-eligible queue with parent fairness; startup rate and concurrent-start limits
-are enforced separately. Provider/model cooldown changes eligibility but never
-creates additional seats. The source default is two seats. The runtime accepts
-one or two seats only; values above two are outside this
-confirmed iteration and fail closed.
+`ACP Connector/` owns the Paseo/ACP protocol, session and conversation
+mapping, the Antigravity process, stream-json and SQLite translation,
+permissions, cancellation, recovery coordination, and provider error
+classification. `Admission Controller/` owns only the shared Antigravity
+seat pool, durable queue, start-rate limits, leases, heartbeats, process
+evidence, capacity cooldown, and queue observations. Package entrypoints stay
+inside `ACP Connector/`.
 
-Exact outbox acknowledgements are checked against durable claim state, so an
-ACK remains idempotent after a bridge or controller restart without resending
-the payload. The outbox exposes only initial result delivery and exact ACK;
-there is no reconnect resend API or duplicate Connector-owned claim store. An
-unconfirmed delivery becomes `recovery_required`.
-Once process identity persistence has atomically recorded
-`dispatch_intent`, any later cancellation or fence failure remains
-`dispatch_ambiguous` and is never automatically requeued.
+Admission is disabled unless `AGY_ACP_ADMISSION_ENABLED=true` is set together
+with an absolute `AGY_ACP_STATE_DIR` and `PASEO_AGENT_ID`. The confirmed
+source defaults are:
 
-A fake-child fresh-PTY canary verifies that prompt content is absent from
-startup argv, environment, process title, temporary paths, and diagnostics.
-Its prompt correlation uses keyed HMAC evidence; absent, stale, mismatched, or
-failed evidence blocks dispatch.
+| Rule | Default |
+|---|---:|
+| Shared active Antigravity turns | 3 |
+| Concurrent starts | 1 |
+| Minimum interval between starts | 2 seconds |
+| Queue timeout | 30 minutes |
+| Capacity cooldown | 30 seconds |
 
-Cross-process startup permits now cover auxiliary commands and resident PTYs;
-heartbeat expiry is evidence, never automatic permission to reclaim a slot.
-An asynchronous startup barrier reconciles dispatch, session, outbox claim,
-startup permit, and Linux process residue inventories. A serialized outbox
-pump performs bounded delivery work but never repeats the provider turn.
-Queue timeout atomically erases its encrypted prompt payload while retaining a
-terminal request record that blocks automatic replay. Linux process lifecycle
-code has no startup or prompt-write method; the admission dispatcher remains
-the sole owner of the irreversible business prompt write.
-Controller errors retain typed classes but omit durable request, delivery, and
-lease identifiers from message strings.
+Every local connector using the same state directory shares those three account
+seats across sessions and models. The only supported override is the
+conservative one-seat mode; `2`, `4`, `5`, and every other value are rejected.
+Requests are selected oldest-eligible with agent fairness. A cooldown skips the affected provider/model without blocking
+other eligible requests. Queue timeout cancels the request and deletes its
+encrypted prompt in the same transaction.
 
-A completed turn releases its Antigravity seat immediately. Agent completion,
-notification, and archival remain official Paseo lifecycle responsibilities;
-the connector does not add a second lifecycle supervisor. A later message
-re-enters the same global queue.
-Concurrent connectors may initialize the active-session registry together.
-The registry retries only bounded SQLite `BUSY`/`LOCKED` contention in its
-idempotent WAL/schema setup; incompatible or damaged schemas still fail closed,
-and this initialization retry can never replay a business prompt. Each lock
-wait is capped at 100 ms with at most 8 attempts; the resulting 940 ms nominal
-budget for one continuously held lock is not a global initialization deadline.
-Normal registry writes retain their separate 5000 ms contention timeout.
+Idle sessions and idle ACP connections consume no turn seat and retain no
+resident turn process. An admitted turn uses the existing one-shot stdin
+process; prompt EOF closes its input, and confirmed terminal settlement
+releases the seat immediately. Closing a session cancels queued work while an
+already running turn follows the existing connector cancellation path.
 
-A source-only production graph builder requires one exact SQLite startup
-launcher for dispatch and recovery, negotiated stable request identity and
-outbox ACK, authenticated fresh-PTY evidence, and an empty startup recovery
-barrier before it exposes any dispatch surface. The installed entrypoint still
-rejects enabled Admission configuration. No new connector has been installed,
-no live Antigravity provider has been tested, and production concurrency is not
-approved. A real version-specific fresh-PTY launcher certificate and isolated
-acceptance remain release blockers.
+The admitted turn still uses the existing `AgyCliSession.prompt`,
+conversation SQLite, `StreamPoller`, `Translator`, ACP permission handling,
+and online ACP notifications. Admission does not create a second live-output
+path, outbox, ACK protocol, terminal replay, shadow comparison, custom request
+identity, or manual requeue API. Official `session/load` and
+`session/resume` history replay remain ACP Connector responsibilities.
 
-The design contract and release gates are in
-[`docs/design/v2.0.0.0-admission-controller.md`](docs/design/v2.0.0.0-admission-controller.md).
+A provider-confirmed terminal outcome and seat release are one controller
+transaction. A trusted Antigravity `503` capacity failure starts the
+provider/model cooldown. If a business prompt may already have been written
+but execution cannot be proven terminal, the request becomes
+`recovery_required`; its prompt is deleted and is never automatically
+replayed. Startup recovery releases that local seat only after connector,
+child, and process-group exit are all proven.
+
+The schema is `shared-admission-queue` v1: `turn_requests`, `leases`,
+`cooldowns`, `turn_payloads`, `lease_process_identities`,
+`start_history`, `sessions`, and `events`, plus
+`schema_migrations`. Any extra legacy outbox or recovery-claim table fails
+the integrity check.
+
+This source work has not installed or switched a connector, run a real
+Antigravity provider, touched the production Paseo daemon, or performed a
+push, tag, or release. The design and remaining acceptance gates are recorded
+in [`docs/design/v2.0.0.0-admission-controller.md`](docs/design/v2.0.0.0-admission-controller.md).
 
 ## What This Fixes
 

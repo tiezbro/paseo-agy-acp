@@ -89,9 +89,9 @@ describe("Admission Controller runtime configuration", () => {
     });
   });
 
-  it("defaults to two shared active Antigravity seats and accepts only one or two", () => {
-    expect(DEFAULT_ADMISSION_POLICY.maxActiveTurns).toBe(2);
-    for (const maxActiveTurns of [1, 2]) {
+  it("defaults to three shared active Antigravity seats and accepts only one or three", () => {
+    expect(DEFAULT_ADMISSION_POLICY.maxActiveTurns).toBe(3);
+    for (const maxActiveTurns of [1, 3]) {
       const config = parseAdmissionRuntimeConfig({
         ...enabledEnvironment,
         AGY_ACP_ADMISSION_MAX_ACTIVE_TURNS: String(maxActiveTurns)
@@ -104,7 +104,9 @@ describe("Admission Controller runtime configuration", () => {
     const invalidEnvironments = [
       { ...enabledEnvironment, AGY_ACP_ADMISSION_ENABLED: "enabled" },
       { ...enabledEnvironment, AGY_ACP_ADMISSION_MAX_ACTIVE_TURNS: "0" },
-      { ...enabledEnvironment, AGY_ACP_ADMISSION_MAX_ACTIVE_TURNS: "3" },
+      { ...enabledEnvironment, AGY_ACP_ADMISSION_MAX_ACTIVE_TURNS: "2" },
+      { ...enabledEnvironment, AGY_ACP_ADMISSION_MAX_ACTIVE_TURNS: "4" },
+      { ...enabledEnvironment, AGY_ACP_ADMISSION_MAX_ACTIVE_TURNS: "5" },
       { ...enabledEnvironment, AGY_ACP_ADMISSION_MAX_ACTIVE_TURNS: "1.5" },
       { ...enabledEnvironment, AGY_ACP_ADMISSION_MAX_CONCURRENT_STARTS: "2" },
       { ...enabledEnvironment, AGY_ACP_ADMISSION_MIN_START_INTERVAL_MS: "1999" },
