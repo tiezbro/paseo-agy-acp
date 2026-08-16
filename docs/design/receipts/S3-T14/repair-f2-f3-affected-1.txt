@@ -1,0 +1,19 @@
+TASK_ID=S3-T14
+RECEIPT=repair-f2-f3-affected-1
+UTC=2026-08-16T06:50:02Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+COMMAND=rtk npm test -- tests/admission-reaper.test.ts tests/admission-runtime.test.ts tests/acp-runtime-wiring.test.ts tests/admission-startup-recovery.test.ts tests/admission-controller.test.ts tests/admission-process-evidence-contract.test.ts tests/admission-process-evidence.test.ts
+EXIT_CODE=0
+
+KEY_OUTPUT:
+tests/admission-reaper.test.ts PASS
+tests/admission-runtime.test.ts PASS
+tests/acp-runtime-wiring.test.ts PASS
+tests/admission-startup-recovery.test.ts PASS
+Test Files 7 passed
+Tests 26 passed
+
+AFFECTED_DISPOSITION:
+Focused reaper, runtime, startup recovery, controller, and process evidence
+coverage passed after the F2/F3 repair.

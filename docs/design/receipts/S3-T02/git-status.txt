@@ -1,0 +1,43 @@
+TASK_ID=S3-T02
+RECEIPT=git-status
+UTC=2026-08-16T02:50:08Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+COMMANDS:
+rtk git status --short --branch
+git diff --cached --name-only
+git ls-files --others --exclude-standard -- tests/admission-policy-consistency.test.ts docs/design/receipts/S3-T02
+sha256sum "Admission Controller/controller.ts" tests/admission-policy-consistency.test.ts docs/design/receipts/S3-T02/*.txt
+
+INDEX_STATUS:
+clean; git diff --cached --name-only produced no paths.
+
+T02_UNTRACKED_PATHS:
+docs/design/receipts/S3-T02/architecture.txt
+docs/design/receipts/S3-T02/broad-validate.txt
+docs/design/receipts/S3-T02/detect-changes.txt
+docs/design/receipts/S3-T02/green-1-focused.txt
+docs/design/receipts/S3-T02/green-2-affected.txt
+docs/design/receipts/S3-T02/green-3-high-expanded.txt
+docs/design/receipts/S3-T02/impact-1.txt
+docs/design/receipts/S3-T02/method-evidence.txt
+docs/design/receipts/S3-T02/red-1.txt
+tests/admission-policy-consistency.test.ts
+
+HASHES:
+eefd630796bb47929eb8e644f6859585f4d395391744a4ccd46b2301f51b565b  Admission Controller/controller.ts
+faf0301b3e0cbb5a1b4913faa56aaa4d97275198d7855796554b28c826a2abac  tests/admission-policy-consistency.test.ts
+be6aa9d8d46f6a5eac20ce19fe7f7ee2fed9a38a2297c1a9315503552de2ecd0  docs/design/receipts/S3-T02/architecture.txt
+a9c54aa2b2951e0c5bec951cff321b6fd3a6e9b4ad1a38038dfc35f12d731aac  docs/design/receipts/S3-T02/broad-validate.txt
+0011071823ef704b1323bbbd95272f527c26708635754f6737fd8dfb0c0b0550  docs/design/receipts/S3-T02/detect-changes.txt
+87c7d14f6b1b5e9b609050fe7427007870b78e5290b66362c5d0aafd0c605d8e  docs/design/receipts/S3-T02/green-1-focused.txt
+2e4bb03bf154eed2e2d3a070c1104f7f358fe21b8d70b895628cde26419835b1  docs/design/receipts/S3-T02/green-2-affected.txt
+ac8a198d1f558b7bd4da3a3e35fe803afbe24479d1709fa7c9ccc4af2d9cd71a  docs/design/receipts/S3-T02/green-3-high-expanded.txt
+3692fa727fbd9da9c2587c8bef11e48c73603c4a7ad24f887f87e87bb2af3b24  docs/design/receipts/S3-T02/impact-1.txt
+d3f7a59f5b45dc025446b91a8f75d4ef49257d1369ed5a1101d062e1e1451ed1  docs/design/receipts/S3-T02/method-evidence.txt
+d3f0005c8fdde3683e9187195ed24273dc62fac0647faf94f1c3e3a517482fd8  docs/design/receipts/S3-T02/red-1.txt
+
+EXTERNAL_BASELINE:
+Accepted predecessor tracked diffs remain present.
+External S3-T09 test/receipt reservation remains present and was not edited.
+No stage/commit/push was performed.

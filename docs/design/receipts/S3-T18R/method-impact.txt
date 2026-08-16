@@ -1,0 +1,49 @@
+TASK_ID=S3-T18R
+RECEIPT=method-impact
+UTC=2026-08-16T02:19:45Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+IDENTITY_GATE:
+- PASEO_AGENT_ID=0340ad6b-1096-413b-81c7-d1b067ee3ac4
+- Paseo get_agent_status: CHILD via label paseo.parent-agent-id=79ab5347-5101-4eff-89ed-6a7aa550ae2e
+- provider=codex; model=gpt-5.5; thinking=xhigh; mode=full-access; PendingPermissions=[]
+- No delegation performed; thin selector not loaded.
+
+BASELINE_GATE:
+- repo=/home/tiezbro/projects/paseo-agy-acp
+- branch=main
+- HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+- sole parent=78931bff95ecbd9868f9cfa83a281cbbbf1a60d8
+- index clean before edits and after task; no staged paths.
+- Allowed pre-existing tracked production diff: ACP Connector/acp/agent.ts; ACP Connector/admission/turn-coordinator.ts; Admission Controller/controller.ts; Admission Controller/schema.ts. These were not edited by S3-T18R.
+
+AUTHORITY_HASH_GATE:
+- /home/tiezbro/projects/MAACS/docs/maacs-paseo-agy-acp-confirmed-scheme.md sha256=d3b712ee5dd01029c66b0372a482f248a6f1ecbcf81572eb74d7b4ba5d98a98d
+- /home/tiezbro/projects/MAACS/docs/controller-prompts/PASEO_AGY_ACP_STAGE2_CONTROLLER_PROMPT.md sha256=9f946e36e717547e5982eefcc37c188d236e48b3be495541bd12129f84207993
+- AGENTS.md sha256=9bbd1e7b1bb7938cc3fd5922a1dcf9a036fa8639267d38789213f4fe9fc3198d
+- docs/design/v2.0.0.0-stage2-handoff.md blob=89c8abe0d82c4915cbf6748db15a9ff86a80c501 sha256=c88be84fa4c86c4c63921aaccd08f5f9c765dc896f1c35592f6cb0ee16fafc48
+- docs/design/v2.0.0.0-stage2-architecture.md blob=2a0028cbb60a54aff1fa85afb5d9ca78251f6be9 sha256=7989c043603a11e4b5d88073d8352509d9ffcf7f8c0d736d2b48149aff03eb54
+- docs/design/v2.0.0.0-stage2-domain-model.md blob=37d96877c5b6d9f8506d209be4c3184532e4e0bf sha256=3b6fabc9a862ed515ea5d39643fdeff6d83f15d0a079d3ea166377004183c12e
+- docs/design/v2.0.0.0-stage2-test-contracts.md blob=f17d726b38420c08ba6725bd4bfb6f502676fae4 sha256=51e8e3bab735919b2d3643d1212fe289c6de281da4404bde033709a8cb22ed2b
+- docs/design/receipts/S3-T18/red-1.txt sha256=b9c1c720082df759aa2966b2ca71f9ca2f78f31a52de11e7570ea13a40d57c1d
+- docs/design/receipts/S3-T18/impact-1.txt read; records AdmissionController HIGH and EnqueueRequest/RequestRow MEDIUM.
+- docs/design/receipts/S3-T18/green-1.txt sha256=e67f6c1b880cd05ae8022d9757896411f15ee797b77b143b51c95b8ba57d12f7
+- docs/design/receipts/S3-T18/validation-1.txt sha256=4ce6402f95ae96cc803efd1fe6e585937ef2d51d19d5f2995e1da0284bff0229
+
+REQUIRED_READS:
+- Stage3 Prompt: §1, §2.1-§2.5, §4, §5, §6.0, §6.18 read.
+- S2-ARCH-001: §11 and §17-9 read; v2 migration order and agent_id/agentId terminal naming confirmed.
+- S2-DOMAIN-001: §10.1 F7 read; parent_id/parentId is migration-only source spelling and not an alias.
+- S2-TEST-001: G2/M10 read; S3-T18 v2 shape/API rename and affected/broad sequence confirmed.
+
+GITNEXUS_IMPACT_BEFORE_WRITE:
+- MCP impact target=EnqueueRequest direction=upstream file=Admission Controller/controller.ts kind=Interface includeTests=true summaryOnly=true: risk=MEDIUM; impacted=19; direct=10; affected_processes=0; byDepthCounts={1:10,2:4,3:5}.
+- MCP impact target=RequestRow direction=upstream file=Admission Controller/controller.ts kind=Interface includeTests=true summaryOnly=true: risk=MEDIUM; impacted=19; direct=10; affected_processes=0; byDepthCounts={1:10,2:4,3:5}.
+- MCP impact target=assertAdmissionSchemaIntegrity direction=upstream file=Admission Controller/schema.ts kind=Function includeTests=true summaryOnly=true: risk=LOW; impacted=3; direct=2; affected_processes=constructor; affected_modules=Admission Controller.
+- Known T18 authority impact from docs/design/receipts/S3-T18/impact-1.txt: AdmissionController risk=HIGH; toStoredRequest risk=HIGH at depth 3; EnqueueRequest/RequestRow risk=MEDIUM. Controller explicitly authorized this test-only bounded repair under the known T18 HIGH impact.
+- No new HIGH/CRITICAL production seam appeared during S3-T18R. No production write was required.
+
+DETECT_CHANGES:
+- Command receipt: docs/design/receipts/S3-T18R/detect-changes.txt
+- Result: Changes: 10 files, 7 symbols; Affected processes: 0; Risk level: low.
+- Note: GitNexus CLI reported tracked diffs only. Complete S3-T18R path set is recorded in method-evidence.txt and git-status.txt because several allowed task-owned test reservations are untracked.

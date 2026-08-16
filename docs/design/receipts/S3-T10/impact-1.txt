@@ -1,0 +1,61 @@
+TASK_ID=S3-T10
+PHASE=PRE-GREEN_IMPACT
+UTC=2026-08-16T03:09:38Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+GITNEXUS_COMMAND_EQUIVALENT
+impact(repo="paseo-agy-acp", direction="upstream", includeTests=true, maxDepth=1)
+
+RESULT_SUMMARY
+No GitNexus impact target returned HIGH or CRITICAL. All six queried targets returned LOW. Stage 2 authority still classifies the S3-T10 permission/output seam as high-sensitivity, so this receipt records the impact result before any production source write and this worker stops before GREEN.
+
+TARGET composeAcpRuntime
+path=ACP Connector/acp/agent.ts
+kind=Function
+risk=LOW
+direct_callers=runAcp (ACP Connector/acp/agent.ts); tests/acp-runtime-wiring.test.ts
+affected_processes=none reported
+modules=Acp
+
+TARGET buildSession
+path=ACP Connector/acp/session/setup.ts
+kind=Function
+risk=LOW
+direct_callers=createSession (ACP Connector/acp/session/setup.ts); reloadSession (ACP Connector/acp/session/setup.ts)
+affected_processes=createSession (12 hits, earliest step 1); reloadSession (11 hits, earliest step 1)
+modules=Session
+
+TARGET runPromptCommand
+path=ACP Connector/agy/cli.ts
+kind=Method
+risk=LOW
+direct_callers=AgyCliSession.prompt (ACP Connector/agy/cli.ts)
+affected_processes=none reported
+modules=Agy
+
+TARGET runInteractivePrompt
+path=ACP Connector/agy/cli.ts
+kind=Method
+risk=LOW
+direct_callers=AgyCliSession.prompt (ACP Connector/agy/cli.ts)
+affected_processes=none reported
+modules=Agy
+
+TARGET AgyCliSession.prompt
+path=ACP Connector/agy/cli.ts
+kind=Method
+risk=LOW
+direct_callers=collectUpdates (tests/cli.test.ts); tests/cli.test.ts
+affected_processes=none reported
+modules=Agy
+
+TARGET AcpAgent.applyConfigOption
+path=ACP Connector/acp/agent.ts
+kind=Method
+risk=LOW
+direct_callers=AcpAgent.applyConfigOption (ACP Connector/acp/agent.ts)
+affected_processes=applyConfigOption (5 hits, earliest step 1)
+modules=Acp
+
+STOP_POINT
+Per Controller instruction, this worker does not proceed to GREEN in this round.

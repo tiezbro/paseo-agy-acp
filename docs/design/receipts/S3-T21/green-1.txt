@@ -1,0 +1,17 @@
+UTC: 2026-08-16T06:02:26Z
+Task: S3-T21 bilingual documentation / old-authority closeout
+Phase: GREEN
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+Command: rtk npm test -- tests/closeout-docs-contract.test.ts
+Exit code: 0
+
+Key output:
+> npm run typecheck && npm run build && vitest run tests/closeout-docs-contract.test.ts
+tests/closeout-docs-contract.test.ts (3 tests)
+Test Files  1 passed (1)
+Tests  3 passed (3)
+
+Observed GREEN contract:
+- README.md and README.zh-CN.md link the confirmed Scheme and all accepted Stage 2 artifacts, and no longer link the historical design as authority.
+- CHANGELOG.md records Stage 3 schema v2, durable policy/soft drain, owner/recovery/reaper, production dispatch, auth/permission, typed terminal behavior, verification scope, and no install/provider/production/release boundary.
+- docs/design/v2.0.0.0-admission-controller.md is historical input with clause-by-clause disposition and no second-authority header.

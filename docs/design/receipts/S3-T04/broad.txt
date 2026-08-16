@@ -1,0 +1,21 @@
+TASK_ID: S3-T04
+receipt: broad
+utc: 2026-08-16T01:37:24Z
+branch: main
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+command:
+rtk npm run validate
+
+exit_code: 0
+
+key_output:
+> npm test && npm run validate:architecture
+Test Files  41 passed (41)
+Tests  566 passed | 2 skipped (568)
+Duration  18.55s
+architecture boundaries: PASS
+
+scope:
+Strict broad-only S3-T04 revalidation after the parallel S3-T17 temporary failure was repaired.
+No production source, tests/admission-scheduling-contract.test.ts, git index, or other task-owned path was modified by this update.

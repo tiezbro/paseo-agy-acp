@@ -1,0 +1,34 @@
+UTC: 2026-08-16T05:18:25Z
+Task: S3-T19 method, impact, and authorization evidence.
+
+Identity and runtime:
+- PASEO_AGENT_ID=d1cb23f0-cc0a-4321-bfc6-3670339f0a07.
+- ParentAgentId=79ab5347-5101-4eff-89ed-6a7aa550ae2e.
+- Provider=codex, Model=gpt-5.5, Thinking=xhigh, Mode=full-access, PendingPermissions=[].
+
+Baseline:
+- cwd=/home/tiezbro/projects/paseo-agy-acp.
+- branch=main.
+- HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e.
+- HEAD^=78931bff95ecbd9868f9cfa83a281cbbbf1a60d8.
+- Index readback was clean before writes.
+
+Skills:
+- /home/tiezbro/.agents/skills/tdd/SKILL.md source mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df sha256 5e6b9c16b547113e90afbb946489d1c1384be5c2128f0159bd0bee57251ecf08.
+- /home/tiezbro/.agents/skills/implement/SKILL.md source mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df sha256 6d3fd9e83b8f36e5213854779db49b256a457a7ebb4a503e53fa7dcff696adc3.
+- tdd seam/test authoring executed at the pre-agreed seam AgyCliSession.prompt + fake agy + injected readers.
+- tdd RED is inapplicable by S3-T19 green-only authority.
+- implement's source-edit, code-review, staging, and commit steps are inapplicable because production source write set is empty and delegation/stage/commit are forbidden.
+
+GitNexus impact:
+- AgyCliSession upstream impact exit 0: risk HIGH, direct 26, affected processes 0, affected module Agy.
+- AgyPromptFreeDispatchBoundary upstream impact exit 0: risk MEDIUM, direct 6, affected processes 0.
+- Controller authorization accepted this blast radius for bounded test-only S3-T19 continuation.
+
+Write-set conformance:
+- Created tests/admission-native-process.test.ts.
+- Created docs/design/receipts/S3-T19/.
+- No production file edits; no git index/refs edits; no real Provider, install, network, delegation, commit, push, tag, deploy, release, or production <REDACTED> use.
+
+Iteration note:
+- An initial focused run exited 1 because the SIGKILL fake set exitCode before the native error race. The harness was corrected inside tests/admission-native-process.test.ts only; no production file was edited.

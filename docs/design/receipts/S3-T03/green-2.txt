@@ -1,0 +1,18 @@
+TASK_ID: S3-T03
+PHASE: GREEN focused cross-process opener reinforcement
+UTC: 2026-08-16T03:23:11Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Command:
+rtk npm test -- tests/admission-soft-drain.test.ts
+
+Exit code: 0
+
+Key output:
+> npm run typecheck && npm run build && vitest run tests/admission-soft-drain.test.ts
+Test Files  1 passed (1)
+Tests  1 passed (1)
+Duration  492ms (transform 95ms, setup 0ms, import 124ms, tests 238ms, environment 0ms)
+
+Interpretation:
+The focused S3-T03 test now includes a child-process second opener importing dist/Admission Controller/controller.js and asserting POLICY1 against the same runtime.sqlite after drain completion.

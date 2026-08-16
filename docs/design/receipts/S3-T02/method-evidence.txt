@@ -1,0 +1,27 @@
+TASK_ID=S3-T02
+RECEIPT=method-evidence
+UTC=2026-08-16T02:49:19Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+AUTHORIZATION:
+Controller authorized S3-T02 to continue GREEN after HIGH impact.
+Controller ruling: AdmissionController/parseAdmissionRuntimeConfig/AdmissionPolicy HIGH is the expected durable-policy/runtime blast radius; no new architecture direction or write set.
+
+SKILLS:
+- primary=tdd; path=/home/tiezbro/.agents/skills/tdd/SKILL.md; source=mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df; sha256=5e6b9c16b547113e90afbb946489d1c1384be5c2128f0159bd0bee57251ecf08; read=executed.
+- supporting=implement; path=/home/tiezbro/.agents/skills/implement/SKILL.md; source=mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df; sha256=6d3fd9e83b8f36e5213854779db49b256a457a7ebb4a503e53fa7dcff696adc3; read=executed.
+- CONTEXT.md absent in repo root.
+
+SKILL_REQUIRED_STEPS_DISPOSITION:
+- RED before GREEN: executed; red-1 failed because cross-process opener B with policy=1 exited 0 against A policy=3.
+- Impact before production symbol write: executed; HIGH gate recorded in impact-1 and authorized by Controller before GREEN.
+- Minimal GREEN: executed; only claimDurablePolicy/assertDurablePolicyMatch plus their typed error/HMAC helpers were added to controller.ts.
+- T18 schema consumption: executed; methods read/write existing policy_state and do not alter schema.ts or migrations.
+- HMAC normalized tuple: executed; fingerprint = HMAC-SHA256 over ["paseo-agy-acp","admission-policy",1] + NUL + [maxActiveTurns,maxConcurrentStarts,minStartIntervalMs,queueTimeoutMs,capacityCooldownMs].
+- Mismatch fail closed: executed; assertDurablePolicyMatch throws typed AdmissionRuntimeError.
+- Forbidden shortcuts: no max/min merge, no silent replacement, no v1 extension, no sessions edit, no runtime-config/schema/T09 edit.
+- Validation order: focused, affected, HIGH-expanded, architecture, broad, detect-changes executed.
+- implement commit guidance: inapplicable; task forbids stage/commit/push.
+
+EXTERNAL_RESERVATION:
+S3-T09 test/receipt reservation is present and was not edited by S3-T02.

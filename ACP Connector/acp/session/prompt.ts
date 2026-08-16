@@ -41,11 +41,16 @@ import { MODEL_CONFIG_ID } from "./config-options.js";
 import { MODE_CONFIG_ID } from "./modes.js";
 import { requestPermissionV1, requestPermissionV2 } from "./request-permission.js";
 import type { QueuedPromptV1, QueuedPromptV2, SessionState, TurnIntent } from "./types.js";
-import type {
-  AdmissionTurnCoordinator,
-  AdmissionTurnProgress
+import {
+  AdmissionQueueTimeoutError,
+  AdmissionTurnRecoveryRequiredError,
+  type AdmissionTurnCoordinator,
+  type AdmissionTurnProgress
 } from "../../admission/turn-coordinator.js";
-import type { AgyAdmissionDispatchBoundary } from "../../agy/cli.js";
+import {
+  AgyCliError,
+  type AgyAdmissionDispatchBoundary
+} from "../../agy/cli.js";
 import {
   isTurnCancelled,
   onAbort,
@@ -79,7 +84,12 @@ export interface PromptV2Deps extends PromptTurnDeps {
   clientToolCallNameV2?(client: V2AgentContext): ClientToolCallNameCapability | undefined;
 }
 
-type StopReason = "end_turn" | "cancelled";
+type BackendStopReason = "end_turn" | "cancelled";
+type FailureStopReason = "queue_timeout" | "provider_failure" | "recovery_required";
+type StopReason = BackendStopReason | FailureStopReason;
+type V1TerminalCode = Exclude<StopReason, "end_turn">;
+
+const TURN_TERMINAL_META_KEY = "agy-acp/turnTerminal";
 
 const MAX_PASEO_APPEND_CHARS = 200_000;
 const PASEO_APPEND_RETRY_ATTEMPTS = 25;
@@ -193,6 +203,42 @@ export function sessionTurnBusy(session: SessionState): boolean {
   return turnsOf(session).busy();
 }
 
+function v1PromptResponse(stopReason: StopReason, includeTypedCancel: boolean): V1PromptResponse {
+  if (stopReason === "end_turn") return { stopReason };
+  if (stopReason === "cancelled") {
+    if (!includeTypedCancel) return { stopReason };
+    return {
+      stopReason,
+      _meta: turnTerminalMeta("cancelled")
+    } as V1PromptResponse;
+  }
+  return {
+    stopReason: "refusal",
+    _meta: turnTerminalMeta(stopReason)
+  } as V1PromptResponse;
+}
+
+function turnTerminalMeta(code: V1TerminalCode): Record<string, unknown> {
+  return {
+    [TURN_TERMINAL_META_KEY]: {
+      version: 1,
+      code
+    }
+  };
+}
+
+function terminalStopReasonForError(error: unknown): FailureStopReason {
+  if (error instanceof AdmissionQueueTimeoutError) return "queue_timeout";
+  if (error instanceof AdmissionTurnRecoveryRequiredError) return "recovery_required";
+  if (error instanceof AgyCliError) return "provider_failure";
+  return "recovery_required";
+}
+
+function v1FailureStopReason(error: unknown, deps: PromptV1Deps): FailureStopReason {
+  if (!deps.turnAdmission) throw error;
+  return terminalStopReasonForError(error);
+}
+
 /**
  * Start the next queued prompt if the session is free. Safe to call from any
  * finalizer; it is a no-op while a turn or steer reservation owns the slot.
@@ -207,7 +253,7 @@ export function notifyIdleAndDrainQueue(session: SessionState): void {
   if (next.version === "v1") {
     next.detachQueueCancel?.();
     if (next.signal?.aborted) {
-      next.resolve({ stopReason: "cancelled" });
+      next.resolve(v1PromptResponse("cancelled", next.deps.turnAdmission !== undefined));
       notifyIdleAndDrainQueue(session);
       return;
     }
@@ -286,7 +332,7 @@ interface TurnAdapter {
   coordinate?(
     promptText: string,
     claim: TurnClaim,
-    execute: (boundary: AgyAdmissionDispatchBoundary) => Promise<{ stopReason: StopReason }>
+    execute: (boundary: AgyAdmissionDispatchBoundary) => Promise<{ stopReason: BackendStopReason }>
   ): Promise<StopReason>;
   /** v2 foreground only — queued v2 already published it, v1 has no concept. */
   announceUserMessage?(promptText: string): Promise<void>;
@@ -353,7 +399,7 @@ async function runTurnBody(
 
   const executeBackend = async (
     boundary?: AgyAdmissionDispatchBoundary
-  ): Promise<{ stopReason: StopReason }> => {
+  ): Promise<{ stopReason: BackendStopReason }> => {
     if (adapter.announceRunning) {
       await guard(adapter.announceRunning());
       ensureLive();
@@ -612,7 +658,7 @@ async function completeTurn(
   body: () => Promise<StopReason>,
   report: {
     terminal(stopReason: StopReason): void | Promise<void>;
-    failure(error: unknown): void | Promise<void>;
+    failure(error: unknown): StopReason | void | Promise<StopReason | void>;
   }
 ): Promise<void> {
   const turns = turnsOf(session);
@@ -624,8 +670,9 @@ async function completeTurn(
       if (isTurnCancelled(error) || claim.aborted || session.closed) {
         stopReason = "cancelled";
       } else {
-        await report.failure(error);
-        return;
+        const failureStopReason = await report.failure(error);
+        if (failureStopReason === undefined) return;
+        stopReason = failureStopReason;
       }
     }
     await report.terminal(stopReason);
@@ -663,7 +710,7 @@ export async function handlePromptV1(
     // Reserve synchronously: the claim (and its abort controller) must exist
     // before the first await so a cancel during the wait is never dropped.
     const claim = turns.reserveSteer(signal);
-    let response: V1PromptResponse = { stopReason: "cancelled" };
+    let response: V1PromptResponse = v1PromptResponse("cancelled", deps.turnAdmission !== undefined);
     await completeTurn(
       session,
       claim,
@@ -680,10 +727,10 @@ export async function handlePromptV1(
       },
       {
         terminal: (stopReason) => {
-          response = { stopReason };
+          response = v1PromptResponse(stopReason, deps.turnAdmission !== undefined);
         },
         failure: (error) => {
-          throw error;
+          return v1FailureStopReason(error, deps);
         }
       }
     );
@@ -691,7 +738,7 @@ export async function handlePromptV1(
   }
 
   const claim = turns.claimIdle("foreground", signal);
-  let response: V1PromptResponse = { stopReason: "cancelled" };
+  let response: V1PromptResponse = v1PromptResponse("cancelled", deps.turnAdmission !== undefined);
   await completeTurn(
     session,
     claim,
@@ -705,10 +752,10 @@ export async function handlePromptV1(
     ),
     {
       terminal: (stopReason) => {
-        response = { stopReason };
+        response = v1PromptResponse(stopReason, deps.turnAdmission !== undefined);
       },
       failure: (error) => {
-        throw error;
+        return v1FailureStopReason(error, deps);
       }
     }
   );
@@ -745,7 +792,7 @@ function enqueueV1(
         const idx = session.promptQueue.findIndex((q) => q.id === queuedId);
         if (idx >= 0) {
           session.promptQueue.splice(idx, 1);
-          resolve({ stopReason: "cancelled" });
+          resolve(v1PromptResponse("cancelled", deps.turnAdmission !== undefined));
         }
       });
       item.detachQueueCancel = detach;
@@ -770,8 +817,15 @@ async function executeQueuedV1Turn(item: QueuedPromptV1): Promise<void> {
       deps
     ),
     {
-      terminal: (stopReason) => resolve({ stopReason }),
-      failure: (error) => reject(error as Error)
+      terminal: (stopReason) => resolve(v1PromptResponse(stopReason, deps.turnAdmission !== undefined)),
+      failure: (error) => {
+        try {
+          return v1FailureStopReason(error, deps);
+        } catch (failure) {
+          reject(failure as Error);
+          return undefined;
+        }
+      }
     }
   );
 }
@@ -878,9 +932,7 @@ async function runV2Turn(
       terminal: emitTerminal,
       failure: async (error) => {
         console.error(`[agy-acp] v2 turn failed: ${(error as Error).message}`);
-        // The RPC already returned `{}`; a setup or backend failure must still
-        // land the client back in `idle` rather than leaving it in `running`.
-        await emitTerminal("end_turn").catch(() => {});
+        return deps.turnAdmission ? terminalStopReasonForError(error) : "end_turn";
       }
     }
   );
@@ -1018,7 +1070,7 @@ async function executeQueuedV2Turn(item: QueuedPromptV2): Promise<void> {
         terminal: emitTerminal,
         failure: async (error) => {
           console.error(`[agy-acp] queued v2 turn failed: ${(error as Error).message}`);
-          await emitTerminal("end_turn").catch(() => {});
+          return deps.turnAdmission ? terminalStopReasonForError(error) : "end_turn";
         }
       }
     );

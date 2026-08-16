@@ -1,0 +1,47 @@
+TASK_ID: S3-T03
+PHASE: authorized GREEN local method impact
+UTC: 2026-08-16T03:21:20Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Controller authorization:
+The Controller explicitly authorized the expected HIGH blast radius for Class AdmissionController, bounded to S3-T03 §6.3 and the allowed write set.
+
+Commands and results:
+
+1. node .gitnexus/run.cjs impact completeLiveTurn -r paseo-agy-acp -d upstream -f "Admission Controller/controller.ts" --kind Method --include-tests --limit 100
+- Exit code: 0
+- risk: LOW
+- direct: 3
+- affected processes: admit, settleFailure
+
+2. node .gitnexus/run.cjs impact abandonBeforePrompt -r paseo-agy-acp -d upstream -f "Admission Controller/controller.ts" --kind Method --include-tests --limit 100
+- Exit code: 0
+- risk: LOW
+- direct: 2
+- affected processes: settleFailure, admit
+
+3. node .gitnexus/run.cjs impact releaseExitedRecoverySeat -r paseo-agy-acp -d upstream -f "Admission Controller/controller.ts" --kind Method --include-tests --limit 100
+- Exit code: 0
+- risk: HIGH
+- direct: 1
+- affected processes: recoverExitedAdmissionSeats, createAdmissionRuntime, composeAcpRuntime
+- interpretation: This HIGH is inside the already authorized AdmissionController GREEN blast radius and is needed to attach drain completion to a non-success-only lease-release seam. No files outside S3-T03 allowed write set were edited.
+
+4. node .gitnexus/run.cjs impact hasDispatchCapacity -r paseo-agy-acp -d upstream -f "Admission Controller/controller.ts" --kind Method --include-tests --limit 100
+- Exit code: 0
+- risk: LOW
+- direct: 2
+- affected processes: admit, waitForLease
+
+5. node .gitnexus/run.cjs impact isSanitizedEventKind -r paseo-agy-acp -d upstream -f "Admission Controller/controller.ts" --kind Function --include-tests --limit 100
+- Exit code: 0
+- risk: LOW
+- direct: 1
+- affected processes: none
+
+Target lookup notes:
+- SanitizedEventKind was not indexed as an impact target; CLI returned risk UNKNOWN with target not found.
+- policyStateMatches was not indexed as an impact target; CLI returned risk UNKNOWN with target not found.
+
+Stop-check:
+No new HIGH/CRITICAL outside the authorized AdmissionController S3-T03 blast radius was used to expand the write set.

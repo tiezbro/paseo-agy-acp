@@ -1,7 +1,7 @@
 import type Database from "better-sqlite3";
 
 /** The newest AdmissionController schema this connector can safely use. */
-export const ADMISSION_SCHEMA_VERSION = 1;
+export const ADMISSION_SCHEMA_VERSION = 2;
 
 /** Raised when an admission database is not exactly the supported schema. */
 export class SchemaIntegrityError extends Error {
@@ -36,6 +36,7 @@ interface IndexColumnSpec {
 interface IndexSpec {
   name: string;
   unique: boolean;
+  partial: boolean;
   columns: readonly IndexColumnSpec[];
 }
 
@@ -99,7 +100,8 @@ interface MigrationRow {
 }
 
 const MIGRATIONS: readonly MigrationSpec[] = [
-  { version: 1, name: "shared-admission-queue" }
+  { version: 1, name: "shared-admission-queue" },
+  { version: 2, name: "shared-admission-queue-v2" }
 ];
 
 const TABLES: readonly TableSpec[] = [
@@ -119,7 +121,7 @@ const TABLES: readonly TableSpec[] = [
     columns: [
       column("request_id", "TEXT", false, 1),
       column("session_id", "TEXT", true),
-      column("parent_id", "TEXT", true),
+      column("agent_id", "TEXT", true),
       column("fingerprint", "TEXT", true),
       column("provider", "TEXT", true),
       column("model", "TEXT", true),
@@ -127,10 +129,15 @@ const TABLES: readonly TableSpec[] = [
       column("enqueued_at", "INTEGER", true),
       column("deadline_at", "INTEGER", true),
       column("lease_generation", "INTEGER", true, 0, "0"),
-      column("terminal_at", "INTEGER", false)
+      column("terminal_at", "INTEGER", false),
+      column("queued_owner_instance_id", "TEXT", false),
+      column("queued_owner_recorded_at", "INTEGER", false)
     ],
     foreignKeys: [],
-    namedIndexes: [index("turn_requests_queue", ["state", "enqueued_at"])],
+    namedIndexes: [
+      index("turn_requests_queue", ["state", "enqueued_at"]),
+      index("turn_requests_queued_owner", ["queued_owner_instance_id"], [], false, true)
+    ],
     uniqueConstraints: []
   },
   {
@@ -142,11 +149,16 @@ const TABLES: readonly TableSpec[] = [
       column("owner_instance_id", "TEXT", true),
       column("phase", "TEXT", true),
       column("acquired_at", "INTEGER", true),
-      column("heartbeat_at", "INTEGER", true)
+      column("heartbeat_at", "INTEGER", true),
+      column("suspect_since", "INTEGER", false),
+      column("suspect_reason", "TEXT", false)
     ],
     foreignKeys: [foreignKey("request_id", "turn_requests", "request_id")],
     namedIndexes: [index("leases_phase", ["phase"])],
-    uniqueConstraints: [["request_id"]]
+    uniqueConstraints: [["request_id"]],
+    requiredSqlFragments: [
+      "suspect_reason TEXT CHECK (suspect_reason IS NULL OR suspect_reason IN ('heartbeat_expired', 'identity_unverifiable'))"
+    ]
   },
   {
     name: "cooldowns",
@@ -214,6 +226,51 @@ const TABLES: readonly TableSpec[] = [
     columns: [column("lease_id", "TEXT", false, 1), column("started_at", "INTEGER", true)],
     foreignKeys: [],
     namedIndexes: [index("start_history_started", ["started_at"])],
+    uniqueConstraints: []
+  },
+  {
+    name: "policy_state",
+    columns: [
+      column("id", "INTEGER", false, 1),
+      column("max_active_turns", "INTEGER", true),
+      column("max_concurrent_starts", "INTEGER", true),
+      column("min_start_interval_ms", "INTEGER", true),
+      column("queue_timeout_ms", "INTEGER", true),
+      column("capacity_cooldown_ms", "INTEGER", true),
+      column("drain_state", "TEXT", true),
+      column("policy_fingerprint", "TEXT", true),
+      column("updated_at", "INTEGER", true),
+      column("updated_by_owner_instance_id", "TEXT", true)
+    ],
+    foreignKeys: [],
+    namedIndexes: [],
+    uniqueConstraints: [],
+    requiredSqlFragments: [
+      "id INTEGER PRIMARY KEY CHECK (id = 1)",
+      "max_active_turns INTEGER NOT NULL CHECK (max_active_turns IN (1, 3))",
+      "max_concurrent_starts INTEGER NOT NULL CHECK (max_concurrent_starts = 1)",
+      "min_start_interval_ms INTEGER NOT NULL CHECK (min_start_interval_ms >= 2000)",
+      "queue_timeout_ms INTEGER NOT NULL CHECK (queue_timeout_ms > 0 AND queue_timeout_ms <= 1800000)",
+      "capacity_cooldown_ms INTEGER NOT NULL CHECK (capacity_cooldown_ms >= 30000)",
+      "drain_state TEXT NOT NULL CHECK (drain_state IN ('steady', 'soft_draining_to_1'))"
+    ]
+  },
+  {
+    name: "queued_owner_instances",
+    columns: [
+      column("owner_instance_id", "TEXT", false, 1),
+      column("created_at", "TEXT", true),
+      column("boot_id", "TEXT", true),
+      column("pid", "INTEGER", true),
+      column("start_time_ticks", "TEXT", true),
+      column("pid_namespace_inode", "INTEGER", true),
+      column("ppid", "INTEGER", true),
+      column("pgrp", "INTEGER", true),
+      column("session", "INTEGER", true),
+      column("recorded_at", "INTEGER", true)
+    ],
+    foreignKeys: [],
+    namedIndexes: [],
     uniqueConstraints: []
   },
   {
@@ -313,12 +370,14 @@ function index(
   name: string,
   columns: readonly string[],
   descending: readonly boolean[] = [],
-  unique = false
+  unique = false,
+  partial = false
 ): IndexSpec {
   return {
     name,
     columns: columns.map((columnName, position) => ({ name: columnName, descending: descending[position] ?? false })),
-    unique
+    unique,
+    partial
   };
 }
 
@@ -395,7 +454,7 @@ function assertIndexes(db: Database.Database, expected: TableSpec): void {
     if (found === undefined) {
       fail(`table ${expected.name} named indexes do not match the schema contract`);
     }
-    if (found.unique !== Number(required.unique) || found.partial !== 0) {
+    if (found.unique !== Number(required.unique) || found.partial !== Number(required.partial)) {
       fail(`table ${expected.name} index ${required.name} does not match the schema contract`);
     }
     assertIndexColumns(db, expected.name, required.name, required.columns);

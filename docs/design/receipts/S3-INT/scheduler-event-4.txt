@@ -1,0 +1,58 @@
+TASK_ID=S3-INT-CONTROLLER-SCHEDULER-EVENT
+EVENT_SEQUENCE=4
+STAGE=3
+UTC=2026-08-16T07:48:59Z
+CONTROLLER_ID=79ab5347-5101-4eff-89ed-6a7aa550ae2e
+EVENT=fresh-single-integrator-launched-and-runtime-verified
+
+BASELINE
+CWD=/home/tiezbro/projects/paseo-agy-acp
+BRANCH=main
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+SOLE_PARENT=78931bff95ecbd9868f9cfa83a281cbbbf1a60d8
+INDEX_STAGED_PATHS=0
+UNMERGED_ENTRIES=0
+
+FRONTIER_READBACK
+READY_FRONTIER=[S3-INT-PHASE-CODE]
+RUNNING_SET=[S3-INT:e2f0c5b9-4622-4ffc-a4ee-27670c7c06ac]
+REVIEW_SET=[]
+INTEGRATION_SET=[S3-INT-PHASE-CODE]
+BLOCKER_SET=[T08:SOURCE_FIELD_GAP+REAL_PROVIDER_REQUIRED+SOURCE_IDENTITY_UNKNOWN]
+TASKS_LAUNCHED=[S3-INT]
+TASKS_DEFERRED=[]
+UNLAUNCHED_READY_TASK_RECORDS=[]
+
+LAUNCH_EVIDENCE
+TASK_ID=S3-INT
+READY_AT=2026-08-16T07:43:44Z
+LAUNCH_CREATED_AT=2026-08-16T07:48:59.348Z
+POST_CREATE_VERIFIED_AT=2026-08-16T07:48:59.895Z
+READY_TO_CREATE_LATENCY_MS=315348
+READY_TO_CREATE_BOUNDARY=soft archive and readback of 29 completed Stage 3 children, fresh routing-policy and provider-health read, live provider capability inspection, and complete six-stage acceptance/integration contract construction
+AGENT_ID=e2f0c5b9-4622-4ffc-a4ee-27670c7c06ac
+PARENT_AGENT_ID=79ab5347-5101-4eff-89ed-6a7aa550ae2e
+ACTUAL_PROVIDER=codex
+ACTUAL_MODEL=gpt-5.6-terra
+ACTUAL_THINKING=max
+ACTUAL_MODE=full-access
+ACTUAL_FEATURES=fast_mode:false,plan_mode:false
+PENDING_PERMISSIONS=[]
+STATUS=running
+ROUTE_HEALTH_CLASS=unknown
+ROUTE_LOG=using unverified provider codex/gpt-5.6-terra
+
+RESOURCE_READBACK
+COMPLETED_STAGE3_CHILDREN_ARCHIVED=29
+UNARCHIVED_COMPLETED_STAGE3_CHILDREN=0
+CONCURRENT_TEST_PROCESSES=0
+SINGLE_INDEX_WRITER=e2f0c5b9-4622-4ffc-a4ee-27670c7c06ac
+
+NEXT_REEVALUATION_TRIGGER=S3-INT terminal notification or typed blocker
+
+SCOPE_AND_NON_CLAIMS
+- This is the only launched integration identity and the only authorized git
+  index/ref writer for Stage 3.
+- No second acceptance, integration, test, or commit agent was launched.
+- This receipt records current scheduling evidence and does not reconstruct any
+  earlier event or claim integration/acceptance completion.

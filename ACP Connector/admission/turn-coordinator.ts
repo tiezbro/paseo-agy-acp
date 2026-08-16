@@ -3,7 +3,8 @@ import {
   type AdmissionController,
   type AdmissionLease,
   type AdmissionQueueSnapshot,
-  type LiveTurnCompletion
+  type LiveTurnCompletion,
+  type VerifiedLinuxProcessRecord
 } from "../../Admission Controller/controller.js";
 import {
   captureLinuxProcessIdentity,
@@ -49,7 +50,8 @@ export interface AdmissionTurnInput {
 
 export interface AdmissionTurnCoordinatorOptions {
   readonly controller: AdmissionController;
-  readonly parentId: string;
+  readonly agentId?: string;
+  readonly parentId?: string;
   readonly connectorPid?: number;
   readonly now?: () => number;
   readonly createRequestId?: () => string;
@@ -79,7 +81,7 @@ export class AdmissionTurnRecoveryRequiredError extends Error {
  */
 export class AdmissionTurnCoordinator {
   readonly #controller: AdmissionController;
-  readonly #parentId: string;
+  readonly #agentId: string;
   readonly #ownerIdentity: LinuxConnectorOwnerIdentity;
   readonly #now: () => number;
   readonly #createRequestId: () => string;
@@ -91,7 +93,7 @@ export class AdmissionTurnCoordinator {
 
   constructor(options: AdmissionTurnCoordinatorOptions) {
     this.#controller = options.controller;
-    this.#parentId = requireIdentifier(options.parentId, "parent ID");
+    this.#agentId = optionAgentId(options);
     this.#now = options.now ?? Date.now;
     this.#createRequestId = options.createRequestId ?? randomUUID;
     this.#queuePollIntervalMs = positiveInterval(
@@ -133,7 +135,7 @@ export class AdmissionTurnCoordinator {
     this.#controller.enqueueWithPayload({
       requestId,
       sessionId: input.sessionId,
-      parentId: this.#parentId,
+      agentId: this.#agentId,
       fingerprint: requestId,
       provider: "antigravity",
       model: input.model,
@@ -231,7 +233,13 @@ export class AdmissionTurnCoordinator {
     const now = this.readNow();
     try {
       const state = this.#controller.getRequest(lease.requestId)?.state;
-      if (state === "completed" || state === "failed" || state === "cancelled" || state === "recovery_required") {
+      if (
+        state === "completed" ||
+        state === "failed" ||
+        state === "cancelled" ||
+        state === "dispatch_ambiguous" ||
+        state === "recovery_required"
+      ) {
         return;
       }
       if (!boundary.promptWriteIssued) {
@@ -305,6 +313,7 @@ class TurnDispatchBoundary implements AgyAdmissionDispatchBoundary {
   #prepared = false;
   #promptWriteIssued = false;
   #active = false;
+  #record: VerifiedLinuxProcessRecord | undefined;
 
   constructor(
     controller: AdmissionController,
@@ -342,8 +351,7 @@ class TurnDispatchBoundary implements AgyAdmissionDispatchBoundary {
     });
     const recorded = this.#controller.recordProcessIdentity(record);
     if (recorded.status !== "recorded") throw new Error("admission process identity was not recorded");
-    const committed = this.#controller.commitDispatchIntent(record);
-    if (committed.status !== "committed") throw new Error("admission dispatch intent was not committed");
+    this.#record = record;
     this.#prepared = true;
   }
 
@@ -355,11 +363,31 @@ class TurnDispatchBoundary implements AgyAdmissionDispatchBoundary {
     }
   }
 
+  commitDispatchIntent(): void {
+    if (!this.#prepared || this.#record === undefined || this.#promptWriteIssued) {
+      throw new Error("admission prompt boundary is invalid");
+    }
+    const committed = this.#controller.commitDispatchIntent(this.#record);
+    if (committed.status !== "committed") throw new Error("admission dispatch intent was not committed");
+  }
+
   afterPromptWrite(): void {
     if (!this.#prepared || this.#promptWriteIssued) throw new Error("admission prompt boundary is invalid");
     this.#promptWriteIssued = true;
     this.#controller.markActive(this.#lease, readNow(this.#now));
     this.#active = true;
+  }
+
+  markDispatchAmbiguous(): void {
+    if (this.#promptWriteIssued) throw new Error("admission prompt boundary is invalid");
+    this.#promptWriteIssued = true;
+    if (!this.#prepared) {
+      this.#controller.markExecutionRecoveryRequired(this.#lease, readNow(this.#now));
+      this.#active = false;
+      return;
+    }
+    this.#controller.markDispatchAmbiguous(this.#lease, readNow(this.#now));
+    this.#active = false;
   }
 }
 
@@ -386,6 +414,16 @@ function failureFromAgyError(error: AgyCliError): NonNullable<LiveTurnCompletion
 
 function progressSignature(snapshot: AdmissionQueueSnapshot): string {
   return [snapshot.position, snapshot.eligiblePosition, snapshot.cooldownUntil].join(":");
+}
+
+function optionAgentId(options: AdmissionTurnCoordinatorOptions): string {
+  if (options.parentId !== undefined) {
+    throw new Error("admission parentId is not accepted");
+  }
+  if (options.agentId !== undefined) {
+    return requireIdentifier(options.agentId, "agent ID");
+  }
+  return requireIdentifier(undefined, "agent ID");
 }
 
 function requireIdentifier(value: unknown, label: string): string {

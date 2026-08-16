@@ -1,0 +1,38 @@
+TASK_ID=S3-INT
+ACCEPTANCE_STAGE=4
+TITLE=fake-agy-full-chain
+UTC=2026-08-16T08:11:23Z
+RESULT=PASS
+ORDER=focused -> affected -> broad
+
+FOCUSED
+COMMAND=rtk npm test -- tests/admission-auth-gate.test.ts tests/admission-permission.test.ts tests/admission-production-dispatch.test.ts tests/admission-typed-terminal.test.ts tests/admission-native-process.test.ts
+EXIT_CODE=0
+KEY_LINES:
+- npm run typecheck && npm run build && vitest run <five focused paths>
+- Test Files 5 passed (5)
+- Tests 19 passed (19)
+- Duration 3.98s
+
+AFFECTED
+COMMAND=rtk npm test -- tests/auth.test.ts tests/acp-server.test.ts tests/acp-runtime-wiring.test.ts tests/cli.test.ts tests/queue-steer.test.ts tests/admission-turn-coordinator.test.ts tests/agy-dispatch-boundary.test.ts tests/prompt-free-process.test.ts tests/prompt-free-canary.test.ts tests/admission-dispatch-faultpoints.test.ts tests/admission-fault-security-matrix.test.ts tests/admission-process.test.ts tests/admission-process-evidence.test.ts tests/admission-startup-recovery.test.ts
+EXIT_CODE=0
+KEY_LINES:
+- npm run typecheck && npm run build && vitest run <fourteen affected seam paths>
+- Test Files 14 passed (14)
+- Tests 222 passed | 1 skipped (223)
+- Duration 18.44s
+
+BROAD
+COMMAND=rtk npm run validate
+EXIT_CODE=0
+KEY_LINES:
+- Test Files 54 passed (54)
+- Tests 607 passed | 2 skipped (609)
+- architecture boundaries: PASS
+- secret scan: PASS (158 files checked)
+
+ASSERTIONS
+- Commands were run serially; no bounded-worker substitute was used.
+- All exercised paths use fake agy/native fixtures; no real Provider was invoked.
+- Stage 5 is eligible to begin only because all three Stage 4 barriers passed.

@@ -1,0 +1,21 @@
+Task: S3-T13 architecture verification
+UTC: 2026-08-16T01:27:09Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Impact:
+Risk remains HIGH after Controller authorization. This command checks that the
+test-only addition did not violate architecture import boundaries.
+
+Method evidence:
+Architecture validation was run after focused and expanded affected tests.
+No production source was modified.
+
+Command:
+npm run validate:architecture
+
+Exit code: 0
+
+Key output:
+> paseo-agy-acp@1.0.0.4 validate:architecture
+> node scripts/verify-import-boundaries.mjs
+architecture boundaries: PASS

@@ -1,0 +1,47 @@
+TASK_ID: S3-T12
+RECEIPT: repair-f1-status-2
+UTC: 2026-08-16T06:55:38Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Identity/readback:
+- PASEO_AGENT_ID: `d4445fd6-01b9-4fe2-bd87-8586541217ec`.
+- Paseo status: CHILD leaf; parent/controller
+  `79ab5347-5101-4eff-89ed-6a7aa550ae2e`; provider/model/thinking/mode
+  `codex/gpt-5.5/xhigh/full-access`; PendingPermissions=[].
+- Branch: `main`.
+- HEAD: `83fb97257814f9072770c77d1bb0da4cfa2b420e`.
+- Sole parent: `78931bff95ecbd9868f9cfa83a281cbbbf1a60d8`.
+- Index: clean (`git diff --cached --name-only` produced no paths).
+- Unmerged entries: 0.
+
+Final command:
+rtk git status --short --branch
+
+Exit:
+0
+
+Key output:
+`main...forgejo/main [ahead 16]` with shared dirty worktree entries from S3
+sibling/closeout tasks. No files were staged.
+
+Post-receipt readback:
+- `git ls-files --others --exclude-standard -- docs/design/receipts/S3-T12/repair-f1-{broad,detect,diff-check,status}-2.txt` lists exactly:
+  - `docs/design/receipts/S3-T12/repair-f1-broad-2.txt`
+  - `docs/design/receipts/S3-T12/repair-f1-detect-2.txt`
+  - `docs/design/receipts/S3-T12/repair-f1-diff-check-2.txt`
+  - `docs/design/receipts/S3-T12/repair-f1-status-2.txt`
+
+Repair presence readback:
+- Current T12 production repair is present via tracked diff in
+  `ACP Connector/admission/turn-coordinator.ts` and untracked
+  `tests/admission-production-dispatch.test.ts` plus S3-T12 repair receipts.
+- Sibling T14 F2/F3 repair is present via tracked diff in
+  `ACP Connector/admission/runtime.ts` and `Admission Controller/controller.ts`,
+  untracked `tests/admission-reaper.test.ts`, and S3-T14 receipts including
+  `repair-f2-f3-green-1.txt`, `repair-f2-f3-broad-1.txt`,
+  `repair-f2-f3-detect-1.txt`, and `repair-f2-f3-diff-check-1.txt`.
+
+Closeout conclusion:
+S3-T12 F1 validation-only closeout is complete. Broad validation is green,
+detect_changes is LOW with affected processes 0, diff check passed, index is
+clean, and unmerged entries remain zero.

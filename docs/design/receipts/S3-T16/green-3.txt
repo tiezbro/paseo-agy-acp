@@ -1,0 +1,15 @@
+TASK_ID: S3-T16
+PHASE: GREEN-3 idle zero-seat/process regression
+UTC: 2026-08-16T05:48:41Z
+GIT_HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+COMMAND: rtk npm test -- tests/admission-typed-terminal.test.ts
+EXIT_CODE: 0
+
+Key output:
+- Test Files 1 passed (1).
+- Tests 8 passed (8).
+- Command ran npm typecheck, npm build, and vitest for tests/admission-typed-terminal.test.ts.
+- S3-T16 terminal regressions include idle enabled-runtime zero seats and zero spawn assertions.
+
+Acceptance:
+An idle enabled admission runtime has leases=0, turn_requests=0, and spawnCalls=0.

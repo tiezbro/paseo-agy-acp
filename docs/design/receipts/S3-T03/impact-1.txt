@@ -1,0 +1,49 @@
+TASK_ID: S3-T03
+PHASE: PRE-GREEN GITNEXUS UPSTREAM IMPACT
+UTC: 2026-08-16T03:08:34Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Command 1:
+node .gitnexus/run.cjs impact AdmissionController -r paseo-agy-acp -d upstream -f "Admission Controller/controller.ts" --kind Class --include-tests --limit 100
+
+Exit code: 0
+
+Result 1:
+- target: Class AdmissionController at Admission Controller/controller.ts
+- risk: HIGH
+- impactedCount: 28
+- direct callers/importers: 17
+- processes affected: 2
+- modules affected: 3
+- affected processes:
+  - createAdmissionRuntime, ACP Connector/admission/runtime.ts, earliest_broken_step=1, affected_process_count=5
+  - composeAcpRuntime, ACP Connector/acp/agent.ts, earliest_broken_step=1, affected_process_count=1
+- direct d=1 production callers/importers include:
+  - createAdmissionRuntime, ACP Connector/admission/runtime.ts
+  - ACP Connector/admission/turn-coordinator.ts
+  - ACP Connector/admission/startup-recovery.ts
+  - Admission Controller/runtime-config.ts
+
+Command 2:
+node .gitnexus/run.cjs impact hasSeatCapacity -r paseo-agy-acp -d upstream -f "Admission Controller/controller.ts" --kind Method --include-tests --limit 100
+
+Exit code: 0
+
+Result 2:
+- target: Method AdmissionController.hasSeatCapacity at Admission Controller/controller.ts
+- risk: LOW
+- impactedCount: 9
+- direct callers: 1
+- processes affected: 2
+- modules affected: 2
+- affected processes:
+  - waitForLease, ACP Connector/admission/turn-coordinator.ts, earliest_broken_step=1, affected_process_count=5
+  - admit, ACP Connector/admission/turn-coordinator.ts, earliest_broken_step=2, affected_process_count=5
+- direct d=1 caller:
+  - AdmissionController.hasDispatchCapacity, Admission Controller/controller.ts
+
+Typed blocker:
+HIGH_IMPACT_REQUIRES_CONTROLLER_AUTHORIZATION
+
+Stop decision:
+AdmissionController upstream impact is HIGH. Per S3-T03 brief and Stage 3 Prompt §5/§6.3, production source editing must pause before any Admission Controller/controller.ts GREEN work. No production source change was made by S3-T03 in this round.

@@ -1,0 +1,29 @@
+S3-T07 green-2: non-capacity cooldown negative matrix
+
+UTC: 2026-08-16T01:26:56Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Command:
+rtk npm test -- tests/admission-503-classifier.test.ts
+
+Exit code: 0
+
+Key output:
+> npm run typecheck && npm run build && vitest run tests/admission-503-classifier.test.ts
+Test Files  1 passed (1)
+Tests  20 passed (20)
+Duration  889ms
+
+Assertion evidence:
+- {httpStatus:503, code:"QUOTA_EXHAUSTED"} is non-capacity and leaves cooldowns empty after completeLiveTurn.
+- {httpStatus:429}, {httpStatus:401}, {httpStatus:403}, {timeout:true}, and {httpStatus:502} are non-capacity and leave cooldowns empty after completeLiveTurn.
+- Additional quota and unknown structured cases keep the seven category matrix independent.
+
+Impact evidence:
+- classifyProviderFailure upstream impact: LOW; direct caller failureFromAgyError; affected processes admit and settleFailure.
+- setCapacityCooldown upstream impact: LOW; no upstream callers or affected processes reported.
+
+Method evidence:
+- No production source was edited.
+- No controller cooldown semantics were changed.
+- No trusted 503/free-text/regex source claim was added.

@@ -1,0 +1,37 @@
+TASK_ID: S3-T15
+UTC: 2026-08-16T01:44:00Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+GitNexus impact target:
+AdmissionTurnCoordinator upstream
+
+Risk:
+LOW
+
+Direct callers:
+- composeAcpRuntime (CALLS) in ACP Connector/acp/agent.ts
+- ACP Connector/acp/agent.ts (IMPORTS)
+- ACP Connector/acp/session/prompt.ts (IMPORTS)
+
+Affected processes:
+- composeAcpRuntime, earliest broken step 1
+
+Summary:
+impactedCount=18; direct=3; processes_affected=1; modules_affected=2.
+
+GitNexus impact target:
+completeLiveTurn upstream
+
+Risk:
+LOW
+
+Direct callers:
+- AdmissionTurnCoordinator.admit (CALLS) in ACP Connector/admission/turn-coordinator.ts
+- AdmissionTurnCoordinator.settleFailure (CALLS) in ACP Connector/admission/turn-coordinator.ts
+
+Affected processes:
+- admit, earliest broken step 1
+- settleFailure, earliest broken step 1
+
+Summary:
+impactedCount=2; direct=2; processes_affected=2; modules_affected=1.

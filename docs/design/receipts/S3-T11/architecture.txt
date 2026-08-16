@@ -1,0 +1,20 @@
+TASK_ID: S3-T11
+Receipt: architecture validation
+UTC: 2026-08-16T01:28:48Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Command:
+npm run validate:architecture
+
+Exit code: 0
+
+Key output:
+> paseo-agy-acp@1.0.0.4 validate:architecture
+> node scripts/verify-import-boundaries.mjs
+architecture boundaries: PASS
+
+Impact:
+- No production symbol was edited; architecture validation confirms no import-boundary violation from the new regression test.
+
+Method evidence:
+- implement skill typecheck/build guidance was applied through focused and affected test commands, both of which run typecheck and build before vitest.

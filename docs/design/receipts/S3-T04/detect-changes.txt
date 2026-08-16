@@ -1,0 +1,35 @@
+TASK_ID: S3-T04
+receipt: detect-changes
+utc: 2026-08-16T01:37:24Z
+branch: main
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+command:
+node .gitnexus/run.cjs detect-changes --repo paseo-agy-acp
+
+exit_code: 0
+
+key_output:
+No changes detected.
+
+interpretation:
+The S3-T04 write set consists only of new untracked files, so this CLI diff mapping did not report changed indexed symbols or flows.
+No production source was edited.
+This receipt was refreshed after the strict broad-only revalidation updated docs/design/receipts/S3-T04/broad.txt.
+
+status_command:
+git status --porcelain=v1 --untracked-files=all | rg 'S3-T04|admission-scheduling-contract'
+
+status_key_output:
+?? docs/design/receipts/S3-T04/affected.txt
+?? docs/design/receipts/S3-T04/architecture.txt
+?? docs/design/receipts/S3-T04/broad.txt
+?? docs/design/receipts/S3-T04/detect-changes.txt
+?? docs/design/receipts/S3-T04/green-1.txt
+?? docs/design/receipts/S3-T04/green-2.txt
+?? docs/design/receipts/S3-T04/green-3.txt
+?? docs/design/receipts/S3-T04/method-evidence.txt
+?? tests/admission-scheduling-contract.test.ts
+
+index_status:
+INDEX_CLEAN=YES

@@ -1,0 +1,75 @@
+TASK_ID=S3-INT
+PHASE=single-integrator-method-conformance
+UTC=2026-08-16T08:19:50Z
+ROLE=only fresh Single Integrator and only Stage 3 git index/ref writer
+PASEO_AGENT_ID=e2f0c5b9-4622-4ffc-a4ee-27670c7c06ac
+PARENT_AGENT_ID=79ab5347-5101-4eff-89ed-6a7aa550ae2e
+IDENTITY_GATE=PASS
+ACTUAL_PROVIDER=codex
+ACTUAL_MODEL=gpt-5.6-terra
+ACTUAL_THINKING=max
+ACTUAL_MODE=full-access
+PENDING_PERMISSIONS=[]
+DELEGATION=none; CHILD identity means no routing selector and no automatic orchestration.
+
+STARTUP_AND_AUTHORITY
+COMMAND=printenv PASEO_AGENT_ID; injected paseo get_agent_status
+EXIT_CODE=0
+KEY_LINES:
+- CHILD parent-agent-id=79ab5347-5101-4eff-89ed-6a7aa550ae2e
+- codex/gpt-5.6-terra, thinking=max, mode=full-access
+- pendingPermissions=[]
+- No shell paseo inspect and no production 127.0.0.1:6767 call were used.
+COMMAND=git rev-parse HEAD; git rev-list --parents -n 1 HEAD; rtk git diff --cached --name-status; git ls-files -u
+EXIT_CODE=0
+KEY_LINES:
+- startup HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+- sole parent=78931bff95ecbd9868f9cfa83a281cbbbf1a60d8
+- startup index clean and unmerged=0
+- current index contains only phase-1's declared 39 accepted code paths.
+
+IMMUTABLE_HASHES=PASS
+- Scheme /home/tiezbro/projects/MAACS/docs/maacs-paseo-agy-acp-confirmed-scheme.md d3b712ee5dd01029c66b0372a482f248a6f1ecbcf81572eb74d7b4ba5d98a98d
+- Stage2 Controller Prompt /home/tiezbro/projects/MAACS/docs/controller-prompts/PASEO_AGY_ACP_STAGE2_CONTROLLER_PROMPT.md 9f946e36e717547e5982eefcc37c188d236e48b3be495541bd12129f84207993
+- AGENTS.md 9bbd1e7b1bb7938cc3fd5922a1dcf9a036fa8639267d38789213f4fe9fc3198d
+- handoff c88be84fa4c86c4c63921aaccd08f5f9c765dc896f1c35592f6cb0ee16fafc48; 503 feasibility c742645666b456bd5f42602a407446f70cd55321a0d2be2da044f514cb27de19
+- ACP source map f2ded52a47a73773efcbbf27b1d395ad6a9abba7e95b0bdd2516c3b0fe65f860; Admission source map eee7e56c7ddaa09dc155cb92772298eb0b19710e88b336e16a3851546015fafb
+- architecture 7989c043603a11e4b5d88073d8352509d9ffcf7f8c0d736d2b48149aff03eb54; domain model 3b6fabc9a862ed515ea5d39643fdeff6d83f15d0a079d3ea166377004183c12e
+- test contracts 51e8e3bab735919b2d3643d1212fe289c6de281da4404bde033709a8cb22ed2b; Stage2 spec 3d90fe642f9322970c8e40e7a23b22228d62bfb3c52a5faac5a10960a9d03450
+- Stage3 execution prompt 24c06dbe19b720b27b4bb356d84d35918a0cffe94ee098d80d0c6da14fb2b462
+- all eight Stage2 git blobs at HEAD matched execution-prompt section 2.1.
+
+DUAL_REVIEW_AND_CONTROL=PASS
+- S3-REV-SPEC/verdict-2.txt=approved sha256=ada5b11ffb75b4cce6294c577ec8ee605a31b948500dbedf6589b1c1275cb333
+- S3-REV-QUAL/verdict-3.txt=approved sha256=0ed1344b1c620f7a0475a28203240b21ab29774751e2212daf5be173f553e20e
+- review method receipts: S3-REV-SPEC/method-evidence-2.txt=f838c4aa628471606f64dc0d8aad8c662cffe46ce436bcf74bc0de05831aaa51; S3-REV-QUAL/method-evidence-3.txt=279e5df36b11adadb01f8da69a4deded0279e0b1cce5185bc4164cd3a1a60fe2
+- S3-PARALLELISM-REPAIR/evidence-1.txt=3298c116eb09530416f395e6690fdffe84015d52c31a09e7f363a2a6a533d535
+- S3-INT/controller-preintegration-1.txt=52dae716d61ac66cb94e0431e604fd9e166867f94373bead47f5cd94d138fa67
+- scheduler-event-2.txt=1320a50b23cabe4af613886d344538e8e485276018a8bd188afc1c2f28258070; scheduler-event-3.txt=59d89c3fca05a1f0cb893b6f8f080ddbd8d9d564d29b677b837d41e0dafaafca
+- scheduler-event-4.txt=10fda20278f071baac48405b6b4748c44f034b8721d9fc34c3bf39116131165d; read and preserved byte-for-byte; required in phase 2 and pre/postcommit bindings.
+- T03 acknowledgment is accepted in controller-preintegration-1.txt from S3-T03/method-1.txt f08b8a1b96c2e352897e5117ff07aafca326cb794d98bdcb4eafb2b51ae03888.
+- T16 source-object note is accepted informational from S3-T16/method-1.txt 7a56a843c570520df78e73e232a54180bb06c18336bbbe5e8f8b5e1e405f3c61.
+- parentId is an accepted intentional runtime-rejection negative path, not a v2 alias or dual-name terminal.
+- T08 remains exact external typed stop: SOURCE_FIELD_GAP + REAL_PROVIDER_REQUIRED + SOURCE_IDENTITY_UNKNOWN; not closed or counted as an internal acceptance blocker.
+
+SKILLS
+- implement: path=/home/tiezbro/.agents/skills/implement/SKILL.md; source=mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df; sha256=6d3fd9e83b8f36e5213854779db49b256a457a7ebb4a503e53fa7dcff696adc3; read fully. Executed: acceptance regression discipline and exact selective code staging; final one-commit instruction remains pending until precommit gates. Inapplicable: implementation edits, TDD authorship, and its review-subagent convention because accepted dual reviews already exist and delegation is forbidden.
+- code-review: path=/home/tiezbro/.agents/skills/code-review/SKILL.md; source=mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df; sha256=9cf46653dd9c710ea1e6c22423caf31a794c88773bc94bdaa23140277f470442; read fully. Executed: pinned authority/candidate verification and independent accepted verdict verification. Inapplicable: spawning Standards/Spec subagents, issue-tracker use, and another review, because the user forbids delegation and dual review is already accepted.
+- writing-for-agents: path=/home/tiezbro/.agents/skills/writing-for-agents/SKILL.md; source=mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df; sha256=a842323e664e5af104eac5c97ad22fda929ebeb62d81c501161ac1f6f482db58; read fully. Executed: concise, evidence-first receipt structure with clear completion criteria. Inapplicable: skill/AGENTS/CLAUDE modification; no accepted documentation content was changed.
+- paseo-isolated-testing: path=/home/tiezbro/.agents/skills/paseo/paseo-isolated-testing/SKILL.md; source=not asserted by the project authority; sha256=1e64d81484efd78ac12d75be44066921c8a65d737dff42a3a9e05e436b35ff4e; read fully. Executed: exact temp-home lifecycle start/health/zero-agent/stop/port-closure/cleanup at 6768. Inapplicable: referenced /home/tiezbro/.agents/skills/paseo/paseo-isolated-testing/references/isolated-daemon-testing.md is missing; production-home before/after guard is inapplicable because canonical authority forbids ~/.paseo and 6767 access.
+
+ACCEPTANCE=PASS
+- stage 1: focused 9 files/44 tests; affected 18 files/262 tests plus 2 skipped; broad 54 files/607 tests plus 2 skipped, architecture PASS, secrets PASS.
+- stage 2: focused 6 files/16 tests; affected 14 files/115 tests plus 1 skipped; broad 54 files/607 tests plus 2 skipped, architecture PASS, secrets PASS.
+- stage 3: focused 2 files/6 tests; affected 13 files/219 tests plus 1 skipped; broad 54 files/607 tests plus 2 skipped, architecture PASS, secrets PASS.
+- stage 4: focused 5 files/19 tests; affected 14 files/222 tests plus 1 skipped; broad 54 files/607 tests plus 2 skipped, architecture PASS, secrets PASS.
+- stage 5: focused 2 files/5 tests; affected architecture and secrets PASS; broad 54 files/607 tests plus 2 skipped, architecture PASS, secrets PASS; GitNexus unstaged=21 files/17 symbols/0 processes/low; untracked classifier unexpected=0.
+- stage 6: isolated 6768 health PASS, global agents=[], graceful stop forced=false, port closed, exact temp home removed, no prefix leftovers or test/daemon leak.
+
+RESOURCE_AND_CONFLICT
+- All 29 completed Stage3 children have archivedAt under the Controller parent; no archive or kill action was taken by this integrator.
+- Vitest/npm process scans before acceptance and after canary were empty; no unrelated process was killed.
+- S3-INT-CONFLICT=inapplicable: git reports no merge, rebase, content conflict, or unmerged entry; resolving-merge-conflicts skill was not loaded.
+
+EXCLUSIONS
+- NOT PERFORMED: installation, switch, real Provider request, production 127.0.0.1:6767 contact, push, tag, deploy, release, or source/test/README/CHANGELOG/design modification by this integrator.

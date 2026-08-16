@@ -1,0 +1,19 @@
+TASK_ID=S3-T14
+RECEIPT=repair-f2-f3-high-expanded-1
+UTC=2026-08-16T06:50:02Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+COMMAND=rtk npm test -- tests/acp-server.test.ts tests/acp-runtime-wiring.test.ts tests/queue-steer.test.ts tests/cli.test.ts
+EXIT_CODE=0
+
+KEY_OUTPUT:
+tests/acp-server.test.ts PASS
+tests/acp-runtime-wiring.test.ts PASS
+tests/queue-steer.test.ts PASS
+tests/cli.test.ts PASS
+Test Files 4 passed
+Tests 168 passed, 1 skipped
+
+HIGH_CRITICAL_DISPOSITION:
+Controller-authorized CRITICAL/HIGH expanded coverage for ACP runtime wiring,
+server, queue steering, and CLI passed.

@@ -1,0 +1,40 @@
+TASK_ID=S3-INT-FINAL-COMMIT
+PHASE=precommit-validation
+UTC=2026-08-16T08:28:00Z
+RESULT=PASS
+
+CACHED_WHITESPACE
+COMMAND=rtk git diff --cached --check
+EXIT_CODE=0
+KEY_LINES:
+- no output
+- no whitespace errors
+
+STAGED_NAME_STATUS
+COMMAND=rtk git diff --cached --name-status
+EXIT_CODE=0
+KEY_LINES:
+- 279 staged entries were emitted before this receipt was added.
+- Statuses are limited to accepted M/A paths under the phase-1 code manifest and phase-2 docs/evidence roots.
+- No deletion, rename, conflict, or unrelated path was present.
+
+STAGED_STAT
+COMMAND=rtk git diff --cached --stat
+EXIT_CODE=0
+KEY_LINES:
+- 279 files changed, 14628 insertions(+), 495 deletions(-)
+- The source/test/docs/evidence stat matches the accepted Stage 3 candidate and additive receipt set.
+
+FINAL_VALIDATION
+COMMAND=rtk npm run validate
+EXIT_CODE=0
+KEY_LINES:
+- Test Files 54 passed (54)
+- Tests 607 passed | 2 skipped (609)
+- architecture boundaries: PASS
+- secret scan: PASS (158 files checked)
+
+ASSERTIONS
+- The command was the exact standard validation, serially executed, with no bounded-worker substitution or resource retry.
+- Candidate build output came only from validation; installation, Provider, production, and release actions remain excluded.
+- This receipt is staged next; a final exact validation will then cover the complete index including it.

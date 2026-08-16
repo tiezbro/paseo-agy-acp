@@ -1,0 +1,26 @@
+TASK_ID: S3-T12
+RECEIPT: repair-f1-broad-deferred-1
+UTC: 2026-08-16T06:45:54Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Requested broad condition:
+Run full `npm run validate` only after sibling T14 repair no longer makes the
+tree transiently red. If blocked, record an external blocker and wait for
+Controller follow-up.
+
+Readback:
+rtk find docs/design/receipts/S3-T14 -maxdepth 1 -type f
+
+Exit:
+0
+
+Key output:
+- `repair-f2-f3-impact-1.txt` exists.
+- No corresponding S3-T14 repair GREEN / affected / broad closeout receipt is
+  present in `docs/design/receipts/S3-T14/`.
+
+Decision:
+Full `npm run validate` was deferred for this F1 repair to avoid treating the
+active sibling S3-T14 repair window as S3-T12 evidence. Focused, affected,
+HIGH-expanded, and architecture validations for S3-T12 F1 all passed. Awaiting
+Controller follow-up or T14 repair closeout before broad revalidation.

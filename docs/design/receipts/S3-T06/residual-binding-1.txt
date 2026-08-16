@@ -1,0 +1,13 @@
+TASK_ID=S3-T06
+UTC=2026-08-16T03:59:16Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+RESIDUAL_BINDING:
+S3-T06 writes the durable queued-owner state transition and sanitized event:
+state=cancelled and event kind=queued_owner_dead. The physical ACP v1/v2 typed
+terminal mapping is not implemented or claimed here because Stage 3 Prompt
+§6.16 assigns prompt-turn terminal ownership to downstream S3-T16
+(`ACP Connector/acp/session/prompt.ts`). S3-T06 therefore leaves the downstream
+binding explicit: T16 must map this cancellation reason/event to exactly one
+cancel terminal on the wire and must not reinterpret it as replay,
+recovery_required, provider_failure, or end_turn.

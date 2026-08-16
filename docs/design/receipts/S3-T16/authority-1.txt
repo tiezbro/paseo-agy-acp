@@ -1,0 +1,16 @@
+TASK_ID: S3-T16
+PHASE: CONTROLLER_AUTHORIZATION
+UTC: 2026-08-16T05:41:55Z
+GIT_HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+AUTHORITY: Controller 79ab5347-5101-4eff-89ed-6a7aa550ae2e
+
+Authorization:
+Controller accepts the reported live impact and authorizes minimal GREEN under the existing S3-T16 task contract with expanded regressions.
+
+Accepted blast radius:
+- completeTurn: HIGH; 4 direct callers; 4 affected processes; 2 modules.
+- v2TerminalEmitter: LOW.
+- AdmissionTurnCoordinator.admit: LOW.
+
+Boundary:
+This closes typed-blocked.txt blocker CONTROLLER_AUTHORIZATION_REQUIRED for the already reported completeTurn HIGH surface. Any HIGH/CRITICAL impact outside that authorized surface still requires a new pause.

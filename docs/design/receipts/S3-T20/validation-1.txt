@@ -1,0 +1,22 @@
+UTC: 2026-08-16T06:03:35Z
+Task: S3-T20 secret scan / validation
+
+Validation command results:
+- npm run validate:secrets: exit 1 before GREEN; Missing script: "validate:secrets"; archived in red-1.txt.
+- rtk npm test -- tests/secret-scan.test.ts: exit 1 during TDD diagnostic; built-in fixture was not detected by the first generic assignment rule.
+- rtk npm test -- tests/secret-scan.test.ts: exit 1 during TDD diagnostic; repository scan false-positive on Admission Controller/key-derivation.ts:81.
+- npm run validate:secrets: exit 1 during TDD diagnostic; same false-positive on Admission Controller/key-derivation.ts:81.
+- rtk npm test -- tests/secret-scan.test.ts: exit 0; Test Files 1 passed (1), Tests 2 passed (2).
+- npm run validate:secrets: exit 0; secret scan: PASS (158 files checked).
+- npm run validate:architecture: exit 0; architecture boundaries: PASS.
+- npm run validate: exit 0; Test Files 54 passed (54), Tests 605 passed | 2 skipped (607), architecture boundaries: PASS, secret scan: PASS (158 files checked).
+- node .gitnexus/run.cjs detect-changes --repo paseo-agy-acp --scope unstaged: exit 0; Changes 20 files, 17 symbols; Affected processes 0; Risk level low. Scope includes accepted shared predecessor/sibling dirty files outside S3-T20.
+- rtk git diff --check: exit 0.
+- npm run validate:secrets after receipt creation: exit 0; secret scan: PASS (158 files checked).
+- rtk git diff --check after receipt creation: exit 0.
+- git diff --cached --quiet after receipt creation: exit 0; index clean.
+- scoped git status readback after receipt creation: package.json modified; scripts/verify-no-secrets.mjs, tests/secret-scan.test.ts, and docs/design/receipts/S3-T20/ untracked; package-lock.json unchanged.
+
+External-running-task handling:
+- Full validation did not fail because of the concurrent S3-T21 worker.
+- GitNexus detect-changes observed shared dirty worktree state beyond S3-T20; no sibling paths were edited or repaired.

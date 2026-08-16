@@ -59,6 +59,16 @@ export function recoverExitedAdmissionSeats(
   let released = 0;
   let retained = 0;
   let markedRecoveryRequired = 0;
+  for (const queuedOwner of controller.listRecoverableQueuedOwners()) {
+    const owner = observePersistedLinuxConnectorOwnerIdentity(queuedOwner.owner, readers);
+    if (!isGoneIdentity(owner)) continue;
+    try {
+      controller.settleQueuedOwnerDeath(queuedOwner.requestId, queuedOwner.owner.ownerInstanceId, now);
+    } catch {
+      // A concurrent owner may have admitted, cancelled, or otherwise settled the request.
+    }
+  }
+
   const dispatches = controller.listRecoverableDispatches();
   for (const dispatch of dispatches) {
     const identity = dispatch.processIdentity;

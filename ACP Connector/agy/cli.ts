@@ -6,13 +6,16 @@ import { chmodSync, existsSync, statSync } from "node:fs";
 import * as os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import type {
-  AgyDispatchCancellationRecheck,
-  AgyDispatchFence,
-  AgyDispatchIdentityPersistenceResult,
-  AgyDispatchIntentCommitResult,
-  AgyDispatchProcessRecord,
-  AgyDispatchWriteResult
+import {
+  AgyPromptFreeDispatchBoundary,
+  type AgyDispatchBoundaryResult,
+  type AgyDispatchCancellationRecheck,
+  type AgyDispatchFence,
+  type AgyDispatchIdentityPersistenceResult,
+  type AgyDispatchIntentCommitResult,
+  type AgyDispatchProcess,
+  type AgyDispatchProcessRecord,
+  type AgyDispatchWriteResult
 } from "./dispatch-boundary.js";
 import {
   isVerifiedAgyBinary,
@@ -292,6 +295,16 @@ export interface AgyAdmissionDispatchBoundary {
   afterPromptWrite(): void;
 }
 
+type PromptFreeDispatchProcessIdentity = { readonly pid: number } | null;
+
+interface AgyAdmissionDispatchAmbiguousBridge {
+  markDispatchAmbiguous(): void;
+}
+
+interface AgyAdmissionDispatchIntentBridge {
+  commitDispatchIntent(): void;
+}
+
 export class AgyCliError extends Error {
   readonly command: string[];
   readonly exitCode: number | null;
@@ -496,13 +509,19 @@ export class AgyCliSession {
     return command;
   }
 
-  interactiveCommandForPrompt(prompt: string): string[] {
-    const command = this.commandForPrompt(prompt);
+  interactiveCommandForPrompt(
+    prompt: string,
+    options: { includeStartupPrompt?: boolean } = {}
+  ): string[] {
+    const includeStartupPrompt = options.includeStartupPrompt !== false;
+    const command = includeStartupPrompt
+      ? this.commandForPrompt(prompt)
+      : this.commandForPromptValue(undefined, false);
     const timeout = command.indexOf("--print-timeout");
     if (timeout >= 0) command.splice(timeout, 2);
     const print = command.indexOf("--print");
-    if (print >= 0) command.splice(print, this.config.promptInArgv ? 2 : 1);
-    command.splice(1, 0, "--prompt-interactive", prompt);
+    if (print >= 0) command.splice(print, includeStartupPrompt && this.config.promptInArgv ? 2 : 1);
+    if (includeStartupPrompt) command.splice(1, 0, "--prompt-interactive", prompt);
     return command;
   }
 
@@ -532,11 +551,6 @@ export class AgyCliSession {
     if (this.config.promptFreeDispatch?.enabled === true) {
       throw new AgyPromptFreeDispatchError("blocked", "dispatcher_owned_prompt_required");
     }
-    if (admissionBoundary !== undefined) {
-      if (this.config.promptInArgv || this.shouldUseInteractivePermissions()) {
-        throw new AgyPromptFreeDispatchError("blocked", "admission_requires_prompt_free_print_mode");
-      }
-    }
     if (this.shouldUseInteractivePermissions() && !onPermission) {
       throw new Error("interactive permissions require a permission callback");
     }
@@ -544,16 +558,27 @@ export class AgyCliSession {
     this.#cancelWait = new Promise((resolve) => { this.#cancelTurn = resolve; });
     try {
       if (this.shouldUseInteractivePermissions()) {
-        return await this.runInteractivePrompt(prompt, onUpdate, onPermission!, fsBridge, elicitationCap);
+        return await this.runInteractivePrompt(
+          prompt,
+          onUpdate,
+          onPermission!,
+          fsBridge,
+          elicitationCap,
+          admissionBoundary
+        );
       }
-      const command = this.commandForPrompt(prompt);
+      const command = admissionBoundary === undefined
+        ? this.commandForPrompt(prompt)
+        : this.commandForPromptFreeProcess();
       try {
         return await this.runPromptCommand(command, prompt, onUpdate, fsBridge, admissionBoundary);
       } catch (error) {
         if (this.shouldInstallAfterError(error)) {
           await this.installAgy();
           return await this.runPromptCommand(
-            this.commandForPrompt(prompt),
+            admissionBoundary === undefined
+              ? this.commandForPrompt(prompt)
+              : this.commandForPromptFreeProcess(),
             prompt,
             onUpdate,
             fsBridge,
@@ -572,7 +597,8 @@ export class AgyCliSession {
     onUpdate: (update: SessionUpdate) => Promise<void>,
     onPermission: PermissionCallback,
     fsBridge?: ClientFileSystem,
-    elicitationCap?: ClientElicitationCapability
+    elicitationCap?: ClientElicitationCapability,
+    admissionBoundary?: AgyAdmissionDispatchBoundary
   ): Promise<PromptOutcome> {
     // Snapshot the pre-edit working tree so edits agy makes outside recognized
     // structured-edit tool-calls (shell commands, unrecognized payloads) still
@@ -595,7 +621,9 @@ export class AgyCliSession {
     if (!this.#pty) {
       const factory = this.ptyFactory ?? await defaultPtyFactory();
       if (this.#cancelled) { this.#cancelTurn = undefined; return { stopReason: "cancelled" }; }
-      const [program, ...args] = this.interactiveCommandForPrompt(prompt);
+      const [program, ...args] = this.interactiveCommandForPrompt(prompt, {
+        includeStartupPrompt: admissionBoundary === undefined
+      });
       this.#pty = launchAgyProcess(
         this.config.startupLauncher,
         "resident_pty",
@@ -637,8 +665,23 @@ export class AgyCliSession {
         this.#ptyOutput = (this.#ptyOutput + data).slice(-16_384);
       });
       this.#ptyExit = new Promise((resolve) => this.#pty!.onExit(resolve));
-    } else {
-      this.#pty.write(`\x1b[200~${prompt.replaceAll("\x1b", "")}\x1b[201~\r`);
+    }
+    if (!freshPty || admissionBoundary !== undefined) {
+      const writePrompt = () => {
+        this.#pty?.write(`\x1b[200~${prompt.replaceAll("\x1b", "")}\x1b[201~\r`);
+      };
+      if (admissionBoundary !== undefined) {
+        const processId = ptyProcessId(this.#pty);
+        if (processId === undefined) {
+          throw new AgyPromptFreeDispatchError("blocked", "child_process_identity_unavailable");
+        }
+        admissionBoundary.prepare(processId);
+        admissionBoundary.beforePromptWrite();
+        writePrompt();
+        admissionBoundary.afterPromptWrite();
+      } else {
+        writePrompt();
+      }
     }
     const poller = new StreamPoller({ dir: this.config.conversationsDir, conversationId: this.#conversationId,
       baseStepIdx: this.#lastStepIdx, skipNarration: false, cwd: this.config.cwd, snapshot });
@@ -1100,24 +1143,34 @@ export class AgyCliSession {
     }
     if (this.#cancelled) return { stopReason: "cancelled" };
 
-    const child = this.startLegacyPrintProcess(command, program, args);
-    // Cancel may have landed in the gap between snapshot and spawn assignment.
-    if (this.#cancelled) {
-      if (process.platform === "win32") child.kill();
-      else child.kill("SIGINT");
-      return { stopReason: "cancelled" };
-    }
-    const exitPromise = waitForExit(child);
-    const errorPromise = once(child, "error") as Promise<[NodeJS.ErrnoException]>;
+    let child: SpawnedProcess | undefined;
+    let exitPromise: Promise<[number | null, NodeJS.Signals | null]> | undefined;
+    let errorPromise: Promise<[NodeJS.ErrnoException]> | undefined;
     const stderrChunks: Buffer[] = [];
 
-    // agy persists its output to its own conversation database; stdout carries
-    // nothing we read, but it must still be drained so the child can't block on
-    // a full pipe.
-    child.stdout.on("data", () => {});
-    child.stderr.on("data", (chunk: Buffer | string) => {
-      stderrChunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-    });
+    const bindChild = (nextChild: SpawnedProcess): void => {
+      child = nextChild;
+      exitPromise = waitForExit(nextChild);
+      errorPromise = once(nextChild, "error") as Promise<[NodeJS.ErrnoException]>;
+      // agy persists its output to its own conversation database; stdout carries
+      // nothing we read, but it must still be drained so the child can't block on
+      // a full pipe.
+      nextChild.stdout.on("data", () => {});
+      nextChild.stderr.on("data", (chunk: Buffer | string) => {
+        stderrChunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      });
+    };
+
+    if (admissionBoundary === undefined) {
+      const legacyChild = this.startLegacyPrintProcess(command, program, args);
+      bindChild(legacyChild);
+      // Cancel may have landed in the gap between snapshot and spawn assignment.
+      if (this.#cancelled) {
+        if (process.platform === "win32") legacyChild.kill();
+        else legacyChild.kill("SIGINT");
+        return { stopReason: "cancelled" };
+      }
+    }
 
     const poller = new StreamPoller({
       dir: this.config.conversationsDir,
@@ -1130,15 +1183,21 @@ export class AgyCliSession {
 
     try {
       if (admissionBoundary !== undefined) {
-        if (!Number.isSafeInteger(child.pid) || child.pid === undefined || child.pid < 1) {
-          throw new AgyPromptFreeDispatchError("blocked", "child_process_identity_unavailable");
+        const dispatch = this.runAdmittedPromptFreeDispatch(prompt, admissionBoundary, bindChild);
+        if (dispatch.state !== "active") {
+          markAdmissionDispatchAmbiguous(admissionBoundary);
+          throw new AgyPromptFreeDispatchError(
+            dispatch.state,
+            dispatch.state === "blocked" ? dispatch.reason : undefined
+          );
         }
-        admissionBoundary.prepare(child.pid);
-        admissionBoundary.beforePromptWrite();
-        child.stdin.end(prompt);
         admissionBoundary.afterPromptWrite();
       } else {
-        child.stdin.end(this.config.promptInArgv ? undefined : prompt);
+        child?.stdin.end(this.config.promptInArgv ? undefined : prompt);
+      }
+
+      if (child === undefined || exitPromise === undefined || errorPromise === undefined) {
+        throw new AgyPromptFreeDispatchError("blocked", "process_start_failed");
       }
 
       const pollOnce = async () => {
@@ -1240,7 +1299,7 @@ export class AgyCliSession {
 
       return { stopReason: this.#cancelled ? "cancelled" : "end_turn" };
     } catch (error) {
-      if (admissionBoundary !== undefined && child.exitCode === null) {
+      if (admissionBoundary !== undefined && child !== undefined && child.exitCode === null) {
         try {
           if (process.platform === "win32") child.kill();
           else child.kill("SIGINT");
@@ -1254,9 +1313,82 @@ export class AgyCliSession {
       this.#lastStepIdx = Math.max(this.#lastStepIdx, poller.lastStepIdx);
       this.#lastPromptUserStepIdxs = poller.userStepIdxs;
       poller.close();
-      if (this.#process === child) {
+      if (child !== undefined && this.#process === child) {
         this.#process = undefined;
       }
+    }
+  }
+
+  private runAdmittedPromptFreeDispatch(
+    prompt: string,
+    admissionBoundary: AgyAdmissionDispatchBoundary,
+    bindChild: (child: SpawnedProcess) => void
+  ): AgyDispatchBoundaryResult<SpawnedProcess, PromptFreeDispatchProcessIdentity> {
+    const boundary = new AgyPromptFreeDispatchBoundary<SpawnedProcess, PromptFreeDispatchProcessIdentity>(
+      prompt,
+      {
+        requestId: "admission-boundary",
+        leaseId: "admission-boundary",
+        generation: 0,
+        ownerInstanceId: "admission-boundary"
+      },
+      {
+        spawnPromptFree: () => {
+          const process = this.startPromptFreeProcessInternal(prompt);
+          bindChild(process.child);
+          return this.dispatchProcessForPromptFree(process, prompt);
+        },
+        persistProcessIdentity: (record) => this.persistAdmittedProcessIdentity(admissionBoundary, record),
+        recheckCancellation: (record) => this.recheckAdmittedDispatch(admissionBoundary, record),
+        commitDispatchIntent: () => commitAdmissionDispatchIntent(admissionBoundary)
+      }
+    );
+    return boundary.run();
+  }
+
+  private dispatchProcessForPromptFree(
+    process: AgyPromptFreeProcess<SpawnedProcess>,
+    prompt: string
+  ): AgyDispatchProcess<SpawnedProcess, PromptFreeDispatchProcessIdentity> {
+    const processId = process.child.pid;
+    return {
+      process: process.child,
+      identity: Number.isSafeInteger(processId) && processId !== undefined && processId > 0
+        ? { pid: processId }
+        : null,
+      promptChannel: process.promptChannel,
+      writeInitialPrompt: (candidatePrompt) => {
+        if (candidatePrompt !== prompt) return { status: "ambiguous" };
+        return process.writeBusinessPrompt();
+      }
+    };
+  }
+
+  private persistAdmittedProcessIdentity(
+    admissionBoundary: AgyAdmissionDispatchBoundary,
+    record: AgyDispatchProcessRecord<PromptFreeDispatchProcessIdentity>
+  ): AgyDispatchIdentityPersistenceResult {
+    try {
+      if (record.processIdentity === null) return { status: "not_recorded" };
+      admissionBoundary.prepare(record.processIdentity.pid);
+      return { status: "recorded" };
+    } catch {
+      return { status: "not_recorded" };
+    }
+  }
+
+  private recheckAdmittedDispatch(
+    admissionBoundary: AgyAdmissionDispatchBoundary,
+    _record: AgyDispatchProcessRecord<PromptFreeDispatchProcessIdentity>
+  ): AgyDispatchCancellationRecheck {
+    if (this.#cancelled) {
+      return { generationMatches: true, ownerMatches: true, cancelled: true };
+    }
+    try {
+      admissionBoundary.beforePromptWrite();
+      return { generationMatches: true, ownerMatches: true, cancelled: false };
+    } catch {
+      return { generationMatches: false, ownerMatches: false, cancelled: true };
     }
   }
 
@@ -1524,6 +1656,32 @@ function markerPrefixTail(output: string, marker: string): string {
     if (marker.startsWith(suffix)) return suffix;
   }
   return "";
+}
+
+function ptyProcessId(pty: PtyProcess | undefined): number | undefined {
+  const pid = (pty as { pid?: unknown } | undefined)?.pid;
+  return typeof pid === "number" && Number.isSafeInteger(pid) && pid > 0 ? pid : undefined;
+}
+
+function markAdmissionDispatchAmbiguous(boundary: AgyAdmissionDispatchBoundary): void {
+  const bridge = boundary as Partial<AgyAdmissionDispatchAmbiguousBridge>;
+  if (typeof bridge.markDispatchAmbiguous !== "function") {
+    throw new Error("admission prompt boundary cannot mark dispatch ambiguous");
+  }
+  bridge.markDispatchAmbiguous();
+}
+
+function commitAdmissionDispatchIntent(boundary: AgyAdmissionDispatchBoundary): AgyDispatchIntentCommitResult {
+  const bridge = boundary as Partial<AgyAdmissionDispatchIntentBridge>;
+  if (typeof bridge.commitDispatchIntent !== "function") {
+    return { status: "not_committed" };
+  }
+  try {
+    bridge.commitDispatchIntent();
+    return { status: "committed" };
+  } catch {
+    return { status: "not_committed" };
+  }
 }
 
 export class AgyCliBackend {

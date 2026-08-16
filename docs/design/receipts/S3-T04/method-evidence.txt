@@ -1,0 +1,43 @@
+TASK_ID: S3-T04
+receipt: method-evidence
+utc: 2026-08-16T01:28:12Z
+branch: main
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+startup_gate:
+PASEO_AGENT_ID=3d2c7c08-8296-426f-ab39-0aee60698cf8
+ParentAgentId=79ab5347-5101-4eff-89ed-6a7aa550ae2e
+Provider=codex; Model=gpt-5.5; Thinking=xhigh; Mode=full-access; PendingPermissions=[]
+cwd=/home/tiezbro/projects/paseo-agy-acp; branch=main; HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e; sole parent=78931bff95ecbd9868f9cfa83a281cbbbf1a60d8; index clean=YES
+
+authority_hashes:
+Scheme /home/tiezbro/projects/MAACS/docs/maacs-paseo-agy-acp-confirmed-scheme.md sha256=d3b712ee5dd01029c66b0372a482f248a6f1ecbcf81572eb74d7b4ba5d98a98d
+Stage 2 Controller Prompt /home/tiezbro/projects/MAACS/docs/controller-prompts/PASEO_AGY_ACP_STAGE2_CONTROLLER_PROMPT.md sha256=9f946e36e717547e5982eefcc37c188d236e48b3be495541bd12129f84207993
+AGENTS.md sha256=9bbd1e7b1bb7938cc3fd5922a1dcf9a036fa8639267d38789213f4fe9fc3198d
+handoff docs/design/v2.0.0.0-stage2-handoff.md sha256=c88be84fa4c86c4c63921aaccd08f5f9c765dc896f1c35592f6cb0ee16fafc48
+S2-SPEC-001 docs/design/v2.0.0.0-stage2-spec.md sha256=3d90fe642f9322970c8e40e7a23b22228d62bfb3c52a5faac5a10960a9d03450; complete read command executed with rtk read, plus S3-T04/C1 sections read back.
+S2-TEST-001 docs/design/v2.0.0.0-stage2-test-contracts.md sha256=51e8e3bab735919b2d3643d1212fe289c6de281da4404bde033709a8cb22ed2b; complete read command executed with rtk read, plus S3-T04/M2 sections read back.
+
+skills:
+tdd SKILL.md sha256=5e6b9c16b547113e90afbb946489d1c1384be5c2128f0159bd0bee57251ecf08; source mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df; complete read executed.
+implement SKILL.md sha256=6d3fd9e83b8f36e5213854779db49b256a457a7ebb4a503e53fa7dcff696adc3; source mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df; complete read executed.
+
+tdd_steps:
+pre-agreed seam: executed; markStarting/admitNext/getQueueSnapshot observe the contracted public scheduling boundaries.
+good tests through behavior: executed; assertions check thrown error, admitted request id, queued state, and queue positions.
+anti-pattern avoidance: executed; no source-string-only assertion, no mocks, no tautological recomputation, no missing-file RED, no mutation-as-RED.
+red-before-green: inapplicable under this green regression/test-evidence contract; S2-TEST-001 M2 explicitly marks S3-T04 as regression only.
+one slice at a time: executed within one focused contract file, one assertion group per required S3-T04 receipt.
+
+implement_steps:
+implement the specified work: executed; added tests/admission-scheduling-contract.test.ts only.
+use tdd where possible: executed, with RED step inapplicable by task authority.
+run typecheck/single test/full suite: executed via focused, affected, architecture, and validate commands; full validate is blocked by S3-T17-owned failure recorded in broad.txt.
+code-review: inapplicable; leaf worker was forbidden to delegate and task requested implementation/evidence, not review.
+commit: inapplicable; user explicitly forbade stage/commit/push.
+
+gitnexus_impact:
+markStarting upstream: risk LOW; direct callers makeActive, starting, dispatch, AdmissionTurnCoordinator.admit; affected process admit.
+completeLiveTurn upstream: risk LOW; direct callers admission-controller.test.ts, AdmissionTurnCoordinator.admit, AdmissionTurnCoordinator.settleFailure; affected processes admit and settleFailure.
+AdmissionTurnCoordinator upstream: risk MEDIUM; direct callers/importers admission-turn-coordinator.test.ts, agent.ts, prompt.ts, composeAcpRuntime, coordinator; affected process composeAcpRuntime.
+No HIGH or CRITICAL result occurred; no production symbol was edited.

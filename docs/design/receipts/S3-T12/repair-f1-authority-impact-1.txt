@@ -1,0 +1,42 @@
+TASK_ID: S3-T12
+RECEIPT: repair-f1-authority-impact-1
+UTC: 2026-08-16T06:42:39Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Authority:
+- Controller authorized S3-T12 QUALITY REPAIR F1 only.
+- The accepted quality verdict is `docs/design/receipts/S3-REV-QUAL/verdict-1.txt`.
+- F1 binding: Scheme C4, Stage 3 S3-T12, and G8/M6 production dispatch mapping.
+- Existing HIGH surface is explicitly authorized only for this bounded F1 repair.
+- Exact write set for this repair:
+  - `ACP Connector/agy/cli.ts`
+  - `ACP Connector/admission/turn-coordinator.ts`
+  - `tests/admission-production-dispatch.test.ts`
+  - additive repair receipts under `docs/design/receipts/S3-T12/`
+
+Fresh gates:
+- Agent status: CHILD leaf; parent/controller `79ab5347-5101-4eff-89ed-6a7aa550ae2e`; provider/model/mode `codex/gpt-5.5/xhigh/full-access`; PendingPermissions=[].
+- Branch: `main`.
+- HEAD: `83fb97257814f9072770c77d1bb0da4cfa2b420e`.
+- Sole parent: `78931bff95ecbd9868f9cfa83a281cbbbf1a60d8`.
+- Index: clean.
+- Unmerged entries: 0.
+- Dirty ownership: shared dirty worktree contains sibling/predecessor/closeout reservations; this repair only edits the F1 write set above.
+
+Impact commands and exits:
+1. node .gitnexus/run.cjs impact --repo paseo-agy-acp --direction upstream --summary-only --depth 3 --file 'ACP Connector/admission/turn-coordinator.ts' --kind Class TurnDispatchBoundary
+   exit=0
+2. node .gitnexus/run.cjs impact --repo paseo-agy-acp --direction upstream --summary-only --depth 3 --file 'ACP Connector/admission/turn-coordinator.ts' --kind Method markDispatchAmbiguous
+   exit=0
+3. node .gitnexus/run.cjs impact --repo paseo-agy-acp --direction upstream --summary-only --depth 3 'tests/admission-production-dispatch.test.ts'
+   exit=0
+
+Key output:
+- TurnDispatchBoundary: risk=LOW; direct=3; processes_affected=1; affected_process=admit; modules_affected=1 Admission Controller.
+- markDispatchAmbiguous in `turn-coordinator.ts`: target not found; risk=UNKNOWN; the private method is covered by the enclosing `TurnDispatchBoundary` class impact above.
+- tests/admission-production-dispatch.test.ts: target not found; risk=UNKNOWN; the test file is untracked in the current worktree and outside GitNexus symbol coverage.
+
+Risk conclusion:
+No new unauthorized HIGH or CRITICAL target appeared before edits. The only
+known HIGH surface remains the Controller-authorized S3-T12 production
+dispatch/admission boundary surface.

@@ -1,0 +1,42 @@
+TASK_ID=S3-INT-FINAL-COMMIT
+PHASE=precommit-manifest
+UTC=2026-08-16T08:24:36Z
+RESULT=PASS_PENDING_FINAL_GATES
+
+BASELINE
+- branch=main
+- expected parent for the only commit=83fb97257814f9072770c77d1bb0da4cfa2b420e
+- no merge/rebase/content conflict; S3-INT-CONFLICT=inapplicable.
+
+PRE_SELF_STAGED_COMPLETENESS
+COMMAND=node -e '<exact staged whitelist auditor>'
+EXIT_CODE=0
+KEY_LINES:
+- total=277
+- code=39
+- docs=4
+- receipts=234
+- unexpected=[]; missingCode=[]; missingDocs=[]
+- Phase manifests define the exact code list (S3-INT-CODE/phase-1.txt) and docs/evidence roots (S3-INT-DOCS/phase-2.txt).
+
+CONTROL_HASH_BINDINGS
+- S3-REV-SPEC/verdict-2.txt ada5b11ffb75b4cce6294c577ec8ee605a31b948500dbedf6589b1c1275cb333
+- S3-REV-QUAL/verdict-3.txt 0ed1344b1c620f7a0475a28203240b21ab29774751e2212daf5be173f553e20e
+- S3-PARALLELISM-REPAIR/evidence-1.txt 3298c116eb09530416f395e6690fdffe84015d52c31a09e7f363a2a6a533d535
+- S3-INT/controller-preintegration-1.txt 52dae716d61ac66cb94e0431e604fd9e166867f94373bead47f5cd94d138fa67
+- S3-INT/scheduler-event-2.txt 1320a50b23cabe4af613886d344538e8e485276018a8bd188afc1c2f28258070
+- S3-INT/scheduler-event-3.txt 59d89c3fca05a1f0cb893b6f8f080ddbd8d9d564d29b677b837d41e0dafaafca
+- S3-INT/scheduler-event-4.txt 10fda20278f071baac48405b6b4748c44f034b8721d9fc34c3bf39116131165d
+- acceptance-stage-1.txt af46716e88e172c32272e0954dd8224c86e6a6f68224c0c75ecc5fbf087f6b3c
+- acceptance-stage-2.txt bb4c9378b12999f4273ea2a6587d753c8178debedb450009e6f54d19dde06ad6
+- acceptance-stage-3.txt a43e3d27ac0b858e55db8fd1d9d49512d4a48b7e73b9456958b84cbb92b4fe4d
+- acceptance-stage-4.txt 0be941e5ede41387729ed40d67ac13a60f5bac239d0cdb8b8da193b5b6226209
+- acceptance-stage-5.txt 6bddd5762e14c343154a33510fd7d336fca429c452c6d878853c73230b205c02
+- acceptance-stage-6.txt 9f8b1997b1383e580934d4714a80389f13fdd5fc6993f8a9243003b9a192daf3
+- method-evidence.txt 22ea1a6941dffa1efbd00dca29b8be94cd0c4b6dc98d1853f8922c67fc8b4d3a
+- S3-INT-CODE/phase-1.txt d697a7aab877c3bc63a2aa5152b1f07106678cfcde446d8b06cf0e91b86b7825
+- S3-INT-DOCS/phase-2.txt 3fd5c3ce8a14141e814de869090ead766ec88251fae97f2172059a0f339961a1
+
+NEXT_GATES
+- Add this receipt, re-audit staged completeness, run staged GitNexus detection, then cached whitespace/name-status/stat and final exact validation.
+- No post-commit receipt is present or staged.

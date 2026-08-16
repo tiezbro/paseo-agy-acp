@@ -1,0 +1,13 @@
+TASK_ID=S3-T18
+RECEIPT=red-1
+UTC=2026-08-16T01:42:40Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+COMMAND=npm test -- tests/admission-schema-v2.test.ts
+EXIT_CODE=1
+
+KEY_OUTPUT:
+> tests/admission-schema-v2.test.ts (2 tests | 2 failed)
+AssertionError: expected 1 to be 2 // Object.is equality
+expect(ADMISSION_SCHEMA_VERSION).toBe(2);
+AssertionError: expected [Function] to not throw an error but 'Error: invalid request metadata parentId' was thrown
+Test Files  1 failed (1); Tests  2 failed (2)

@@ -1,0 +1,19 @@
+TASK_ID: S3-T04
+receipt: affected
+utc: 2026-08-16T01:28:12Z
+branch: main
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+command:
+rtk npm test -- tests/admission-controller.test.ts tests/admission-turn-coordinator.test.ts tests/queue-steer.test.ts
+
+exit_code: 0
+
+key_output:
+> npm run typecheck && npm run build && vitest run tests/admission-controller.test.ts tests/admission-turn-coordinator.test.ts tests/queue-steer.test.ts
+Test Files  3 passed (3)
+Tests  46 passed | 1 skipped (47)
+Duration  12.93s
+
+scope:
+Reasonable affected regression for S3-T04 scheduling/fairness/start gate seams.

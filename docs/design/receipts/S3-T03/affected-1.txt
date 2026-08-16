@@ -1,0 +1,18 @@
+TASK_ID: S3-T03
+PHASE: affected seam regression
+UTC: 2026-08-16T03:17:19Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Command:
+rtk npm test -- tests/admission-policy-consistency.test.ts tests/admission-controller.test.ts tests/admission-seats-contract.test.ts tests/admission-timeout-contract.test.ts tests/admission-turn-coordinator.test.ts tests/admission-startup-recovery.test.ts
+
+Exit code: 0
+
+Key output:
+> npm run typecheck && npm run build && vitest run tests/admission-policy-consistency.test.ts tests/admission-controller.test.ts tests/admission-seats-contract.test.ts tests/admission-timeout-contract.test.ts tests/admission-turn-coordinator.test.ts tests/admission-startup-recovery.test.ts
+Test Files  6 passed (6)
+Tests  20 passed (20)
+Duration  1.19s (transform 687ms, setup 0ms, import 1.07s, tests 2.73s, environment 1ms)
+
+Interpretation:
+Affected admission policy, seat, timeout, controller, turn-coordinator, and startup-recovery seams stayed green after S3-T03 soft-drain changes.

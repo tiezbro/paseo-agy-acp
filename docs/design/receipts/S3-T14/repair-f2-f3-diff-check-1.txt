@@ -1,0 +1,14 @@
+TASK_ID=S3-T14
+RECEIPT=repair-f2-f3-diff-check-1
+UTC=2026-08-16T06:51:03Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+COMMAND=git diff --check
+EXIT_CODE=0
+
+KEY_OUTPUT:
+git diff --check produced no output
+No whitespace error reported
+
+DIFF_CHECK_DISPOSITION:
+Whitespace validation passed for the current shared worktree diff.

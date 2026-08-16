@@ -1,0 +1,19 @@
+TASK_ID: S3-T12
+RECEIPT: architecture-1
+UTC: 2026-08-16T04:11:11Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Command:
+npm run validate:architecture
+
+Exit:
+0
+
+Key output:
+> paseo-agy-acp@1.0.0.4 validate:architecture
+> node scripts/verify-import-boundaries.mjs
+architecture boundaries: PASS
+
+Scope:
+Architecture import-boundary validation passed after S3-T12 production dispatch
+wiring. No canonical Stage3 prompt edit was made.

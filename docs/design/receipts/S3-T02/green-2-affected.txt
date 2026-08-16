@@ -1,0 +1,18 @@
+TASK_ID=S3-T02
+RECEIPT=green-2-affected
+UTC=2026-08-16T02:45:11Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+COMMAND=rtk npm test -- tests/admission-policy-consistency.test.ts tests/admission-controller.test.ts tests/admission-seats-contract.test.ts tests/admission-runtime-config.test.ts tests/admission-runtime.test.ts tests/admission-process.test.ts tests/admission-schema-v2.test.ts tests/admission-sqlite-contention.test.ts
+EXIT_CODE=0
+
+KEY_OUTPUT:
+> npm run typecheck && npm run build && vitest run tests/admission-policy-consistency.test.ts tests/admission-controller.test.ts tests/admission-seats-contract.test.ts tests/admission-runtime-config.test.ts tests/admission-runtime.test.ts tests/admission-process.test.ts tests/admission-schema-v2.test.ts tests/admission-sqlite-contention.test.ts
+Test Files  8 passed (8)
+Tests  28 passed (28)
+
+COVERAGE:
+controller seam: tests/admission-controller.test.ts.
+policy seam: tests/admission-seats-contract.test.ts and tests/admission-runtime-config.test.ts.
+runtime/opening seam: tests/admission-runtime.test.ts.
+cross-process/schema consumption: tests/admission-process.test.ts, tests/admission-schema-v2.test.ts, tests/admission-sqlite-contention.test.ts, tests/admission-policy-consistency.test.ts.

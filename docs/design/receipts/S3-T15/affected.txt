@@ -1,0 +1,15 @@
+TASK_ID: S3-T15
+UTC: 2026-08-16T01:48:14Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Command:
+rtk npm test -- tests/admission-turn-coordinator.test.ts tests/queue-steer.test.ts tests/acp-server.test.ts
+
+Exit code: 0
+
+Key output:
+> npm run typecheck && npm run build && vitest run tests/admission-turn-coordinator.test.ts tests/queue-steer.test.ts tests/acp-server.test.ts
+> tsc -p tsconfig.test.json
+> node scripts/clean-dist.mjs && tsc
+Test Files  3 passed (3)
+Tests  103 passed | 1 skipped (104)

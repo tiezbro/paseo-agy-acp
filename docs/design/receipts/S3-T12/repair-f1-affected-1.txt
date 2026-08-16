@@ -1,0 +1,21 @@
+TASK_ID: S3-T12
+RECEIPT: repair-f1-affected-1
+UTC: 2026-08-16T06:45:54Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Command:
+rtk npm test -- tests/admission-production-dispatch.test.ts tests/admission-turn-coordinator.test.ts tests/admission-dispatch-faultpoints.test.ts tests/agy-dispatch-boundary.test.ts tests/prompt-free-process.test.ts tests/prompt-free-canary.test.ts tests/cli.test.ts tests/admission-permission.test.ts
+
+Exit:
+0
+
+Key output:
+> npm run typecheck && npm run build && vitest run tests/admission-production-dispatch.test.ts tests/admission-turn-coordinator.test.ts tests/admission-dispatch-faultpoints.test.ts tests/agy-dispatch-boundary.test.ts tests/prompt-free-process.test.ts tests/prompt-free-canary.test.ts tests/cli.test.ts tests/admission-permission.test.ts
+> tsc -p tsconfig.test.json
+> node scripts/clean-dist.mjs && tsc
+Test Files  8 passed (8)
+Tests  108 passed (108)
+
+Scope:
+Affected production dispatch, turn coordinator, prompt-free process/boundary,
+prompt-free canary, CLI, permission, and dispatch fault-point regressions passed.

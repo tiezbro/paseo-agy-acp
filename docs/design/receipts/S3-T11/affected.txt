@@ -1,0 +1,22 @@
+TASK_ID: S3-T11
+Receipt: affected regression
+UTC: 2026-08-16T01:28:48Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Command:
+rtk npm test -- tests/admission-fault-security-matrix.test.ts tests/agy-dispatch-boundary.test.ts tests/admission-turn-coordinator.test.ts tests/prompt-free-process.test.ts
+
+Exit code: 0
+
+Key output:
+RUN  v4.1.10 /home/tiezbro/projects/paseo-agy-acp
+Test Files  4 passed (4)
+Tests  24 passed (24)
+Duration  961ms
+
+Impact:
+- Same impact basis as green receipts: all required upstream impact targets returned LOW.
+
+Method evidence:
+- Affected set selected around dispatch fault rollback, prompt-free boundary, coordinator fence, and native prompt-free process seams.
+- No source edit was made for affected pass.

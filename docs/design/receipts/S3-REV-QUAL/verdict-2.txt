@@ -1,0 +1,65 @@
+TASK_ID=S3-REV-QUAL
+ROUND=2
+PHASE=verdict
+UTC=2026-08-16T07:24:21Z
+ROLE=fresh independent leaf quality reviewer
+REVIEWER=PASEO_AGENT_ID=e4816ee7-3bed-4200-bd92-66a122c2e51c
+FIXED_POINT=HEAD 83fb97257814f9072770c77d1bb0da4cfa2b420e
+CANDIDATE=all tracked git diff from HEAD plus every untracked Stage 3 file; HEAD...HEAD emptiness was not treated as an empty review
+BASELINE=branch=main; sole parent=78931bff95ecbd9868f9cfa83a281cbbbf1a60d8; index clean; unmerged=0; dirty ownership is shared with sibling Stage 3 reservations
+AUTHORITY=confirmed Scheme plus the eight immutable Stage 2 inputs, Stage 2 Controller Prompt, AGENTS.md, and canonical Stage 3 prompt were fully read and hash-verified
+
+SPEC_CONFORMANCE
+RESULT=The independent S3-REV-SPEC round-2 verdict is approved; no new Spec contradiction was found in the repaired production paths or the F4 evidence package.
+AUTHORITY_HASHES=Scheme d3b712ee5dd01029c66b0372a482f248a6f1ecbcf81572eb74d7b4ba5d98a98d; Stage2 Controller Prompt 9f946e36e717547e5982eefcc37c188d236e48b3be495541bd12129f84207993; AGENTS.md 9bbd1e7b1bb7938cc3fd5922a1dcf9a036fa8639267d38789213f4fe9fc3198d; Stage2 siblings c742645666b456bd5f42602a407446f70cd55321a0d2be2da044f514cb27de19, f2ded52a47a73773efcbbf27b1d395ad6a9abba7e95b0bdd2516c3b0fe65f860, eee7e56c7ddaa09dc155cb92772298eb0b19710e88b336e16a3851546015fafb, 7989c043603a11e4b5d88073d8352509d9ffcf7f8c0d736d2b48149aff03eb54, 3b6fabc9a862ed515ea5d39643fdeff6d83f15d0a079d3ea166377004183c12e, 3d90fe642f9322970c8e40e7a23b22228d62bfb3c52a5faac5a10960a9d03450, 51e8e3bab735919b2d3643d1212fe289c6de281da4404bde033709a8cb22ed2b, c88be84fa4c86c4c63921aaccd08f5f9c765dc896f1c35592f6cb0ee16fafc48; Stage3 prompt 24c06dbe19b720b27b4bb356d84d35918a0cffe94ee098d80d0c6da14fb2b462
+T08_STATUS=External typed stop remains SOURCE_FIELD_GAP + REAL_PROVIDER_REQUIRED + SOURCE_IDENTITY_UNKNOWN; it has no RED/GREEN and is excluded from the internal frontier as required.
+SPEC_REVIEW_BOUNDARY=The Spec reviewer remains the authority for Scheme coverage; this field records its independent approved result and the live source consistency observed during Quality review.
+
+QUALITY_CONFORMANCE
+RESULT=revisions-required
+F1_STATUS=CLOSED. The real production AdmissionTurnCoordinator/TurnDispatchBoundary pre-identity path performs zero business writes and durably enters recovery_required with payload deleted and the recovery lease retained.
+F2_STATUS=CLOSED. AdmissionRuntime schedules a bounded interval reaper through createAdmissionRuntime and composeAcpRuntime, guards overlap, fails closed on evidence errors, unreferences the timer, and clears it on close.
+F3_STATUS=CLOSED. Heartbeat suspicion uses the exact strict predicate now - heartbeat_at > 4000 ms, with below/equal/above tests.
+F4_STATUS=OPEN LOW. Static frontier and safe-overlap evidence are sufficient to reject a concrete unjustified serialization, but the required per-event dynamic fields are not durably recorded; no historical fields were invented.
+SEAM_REALITY=F1 is covered by the production AdmissionTurnCoordinator/TurnDispatchBoundary and real temporary SQLite state; F2 is covered through createAdmissionRuntime; F3 is covered at the controller reaper seam; T16 terminal tests cover one typed idle terminal and turn release.
+TRANSACTION_ERROR_LIFECYCLE=Inspected payload deletion, lease fencing, durable intent, ambiguous/recovery transitions, process evidence, timer unref/close cleanup, and error settlement. No replay, duplicate terminal, time-only release, or second delivery path was found.
+RED_GREEN=Repair RED receipts are behavioral failures at the real F1 seam and runtime reaper/threshold seam; repair GREEN receipts and current focused tests pass. Recording-only or source-string-only acceptance was not used for F1-F3.
+VALIDATION_OFFICIAL=Fresh exact npm run validate attempts exited nonzero in Vitest before architecture/secrets: first run had 15 failed files and 17 timeout failures; second run hit native pthread_create Resource temporarily unavailable and worker EPIPE. Typecheck/build completed before the Vitest failures.
+VALIDATION_CONTROLLED=Existing-node_modules direct Vitest with --pool=forks --maxWorkers=1 --no-file-parallelism passed 54 files, 607 tests, 2 skipped; the fresh focused run passed 4 files and 19 tests. Standalone npm run validate:architecture passed; npm run validate:secrets passed with 158 files.
+VALIDATION_DISPOSITION=The official parallel-run failures are environment resource exhaustion, not business assertion failures; they remain reported and require a resource-clean runner for a final broad-green claim. They do not close or replace F4.
+DIFF_CHECK=PASS; read-only forbidden-surface scans found only existing implementation/comments/tests/docs describing retained or forbidden absence; no production 6767, Provider, network, install, stage, commit, push, or delegation action was used for review.
+
+METHOD_CONFORMANCE
+IDENTITY_GATE=Injected Paseo status reports CHILD leaf; parent Controller 79ab5347-5101-4eff-89ed-6a7aa550ae2e is running; provider/model=codex/gpt-5.6-luna; thinking=max; mode=full-access; pending=[]; no shell production 6767 inspection.
+SKILLS=code-review /home/tiezbro/.agents/skills/code-review/SKILL.md SHA-256 9cf46653dd9c710ea1e6c22423caf31a794c88773bc94bdaa23140277f470442; codebase-design /home/tiezbro/.agents/skills/codebase-design/SKILL.md SHA-256 a8d50abac5a4018f60e1d911d4b6f4e36454ca14d6c390c0695a578c7de65dad; both were read completely.
+CODE_REVIEW=Fixed-point and candidate-scope rules were executed against tracked diff plus untracked files; Standards and Spec observations were kept separate. The skill's sub-agent step was inapplicable because this task requires a leaf reviewer with no delegation and independent reviewers already exist.
+CODEBASE_DESIGN=Applied module/interface/seam/depth/leverage/locality vocabulary to the AdmissionRuntime, AdmissionTurnCoordinator, TurnDispatchBoundary, and terminal ownership review. The repaired production seams are exercised through public behavior rather than recording fakes.
+GITNEXUS=No application symbol was edited by this reviewer, so impact-before-edit was not required; no commit was attempted, so detect_changes-before-commit was not applicable. Existing task impact/detect receipts were inspected.
+FORBIDDEN_ACTIONS=No source, test, canonical doc, prior receipt, index, ref, commit, push, tag, release, deploy, Provider, network, or production 127.0.0.1:6767 action was performed. One attempted pnpm exec probe was stopped by the dependency policy before test execution; its two generated root files were removed and final dirty scope was restored.
+
+PARALLELISM_CONFORMANCE
+PARALLELISM_CONFORMANCE=revisions-required for dynamic evidence completeness; static dependency/write/resource conformance is acceptable, no concrete unjustified serialization was found, and T20/T21 plus T14/T19 safe overlap is evidenced.
+READY_TASKS_OBSERVED=T01; T04/T05/T07/T11/T13/T17; T08 typed-stop plus T15/T18; T02/T09; T03/T10; T06/T12; T14/T19; T16; T20/T21; then S3-REV-SPEC/S3-REV-QUAL and the integration chain. T08 is external and excluded from the internal frontier.
+TASKS_LAUNCHED=T01-T07, T09-T21 have task-owned receipts; T08 has only typed-blocked evidence; review nodes have verdict receipts. Exact scheduler launch moments are not durably recorded and are not inferred from receipt timestamps.
+TASKS_DEFERRED=T08 by its typed stop; T20/T21 behind all internal T01-T19; shared schema/controller/agent/cli/startup-recovery seams; authorized HIGH/CRITICAL gates; test prerequisites; and recorded interim validation gates later closed by revalidation. These map to canonical DAG/write/resource contracts.
+VALID_DEFER_REASONS=Canonical dependency edges; shared write or semantic seams; schema/migration ordering; test prerequisites; typed safety blockers; authorized HIGH/CRITICAL gates; and recorded-and-closed validation failures. No other defer reason was accepted.
+UNJUSTIFIED_SERIALIZATION=No concrete unjustified serialization found in the static DAG. Dynamic exhaustive immediate-launch claims remain unsupported because scheduler-event records are absent.
+BOUNDARY_RELEASE_LATENCY=NOT DURABLY RECORDED. Receipts have activity/completion timestamps but no worker-finished-to-resource-release interval or boundary-event timestamp from which latency can be calculated.
+FRONTIER_RECOMPUTE_EVENTS=NOT DURABLY RECORDED. READY_AT, NOT_LAUNCHED_REASON, CONFLICTING_TASK, CONFLICTING_BOUNDARY, NEXT_REEVALUATION_TRIGGER, launch events, and recompute events were not fabricated; S3-PARALLELISM-REPAIR/evidence-1.txt records the unavailability and the static/overlap evidence.
+
+FINDINGS
+F1 [CLOSED] TASK_ID=S3-T12; CONTRACT=Scheme C4, S3-T12 G8/M6, S2-TEST-001 M6/G8; PATH=ACP Connector/admission/turn-coordinator.ts:381-392 and Admission Controller/controller.ts:744-769; TEST=tests/admission-production-dispatch.test.ts:123-163; EVIDENCE=real production coordinator seam, zero prompt writes before identity, recovery_required state, same-transaction payload deletion, retained lease, exactly one recovery event; no replay.
+F2 [CLOSED] TASK_ID=S3-T14; CONTRACT=Scheme C5/F6/G6, S3-T14 G6/M7; PATH=ACP Connector/admission/runtime.ts:22-84 and ACP Connector/acp/agent.ts:652-697; TEST=tests/admission-reaper.test.ts:309-349; EVIDENCE=production createAdmissionRuntime timer, bounded [1,4000]ms interval, overlap guard, native readers, no-restart recovery, and close timer cleanup.
+F3 [CLOSED] TASK_ID=S3-T14; CONTRACT=Scheme C5/F6, S3-T14 G6; PATH=Admission Controller/controller.ts:19 and :2543-2545; TEST=tests/admission-reaper.test.ts:402-425; EVIDENCE=strict >4000 ms threshold with below/equal/above cases; heartbeat suspicion retains the live seat.
+F4 [LOW][OPEN] TASK_ID=S3-REV-QUAL; CONTRACT=Stage 3 prompt sections 7.2-7.4; PATH=docs/design/receipts/S3-PARALLELISM-REPAIR/evidence-1.txt:108-300 and docs/design/v2.0.0.0-stage3-execution-prompt.md:1097-1128; EVIDENCE=static frontier and safe overlap are durable, but per-event READY_AT/launch/release-latency/recompute data is unavailable; the evidence package explicitly records why and does not invent it; REPAIR_BOUNDARY=Controller must preserve a durable scheduler event/readback receipt per scheduling boundary or record the approved unavailability reason before integration acceptance.
+OPEN_TYPED_BLOCKER=T08 remains SOURCE_FIELD_GAP + REAL_PROVIDER_REQUIRED + SOURCE_IDENTITY_UNKNOWN; this is external and not counted as a new Quality finding.
+NO_OTHER_QUALITY_FINDING=No additional executable production, RED/GREEN seam, transaction/error, lifecycle/timer, duplicate-terminal, role/write/resource, or forbidden-recovery defect was found in the reviewed candidate.
+
+AFFECTED_SCOPE
+REVIEWED=All 21 tracked modified paths from HEAD, all 241 untracked files attributable to Stage 3 task/receipt write sets, S3-REV-QUAL/verdict-1.txt, S3-PARALLELISM-REPAIR/evidence-1.txt, S3-T12 repair-f1 receipts, S3-T14 repair-f2-f3 receipts, T08 typed stop, and independent S3-REV-SPEC round-2 evidence.
+FUNCTIONAL_PATHS=F1 affects ACP Connector/agy/cli.ts:1185-1193/1322-1393 and ACP Connector/admission/turn-coordinator.ts:307-392; F2 affects Admission Controller/controller.ts:868-935 and ACP Connector/admission/runtime.ts:38-84 plus composeAcpRuntime; F3 affects controller.ts:19/2543-2545; F4 affects scheduler evidence only.
+REVIEW_WRITE_SET=Only docs/design/receipts/S3-REV-QUAL/verdict-2.txt and docs/design/receipts/S3-REV-QUAL/method-evidence-2.txt were added by this reviewer. verdict-1.txt was not overwritten.
+DOWNSTREAM=Integration is blocked by this Quality verdict until F4 dynamic evidence disposition is accepted by the Controller; no S3-INT path was touched.
+
+VERDICT
+revisions-required

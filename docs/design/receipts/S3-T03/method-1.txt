@@ -1,0 +1,42 @@
+TASK_ID: S3-T03
+PHASE: method conformance
+UTC: 2026-08-16T03:21:20Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Selected skills:
+- primary: tdd
+- supporting: implement
+
+Skill source identity:
+- source: mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df
+- /home/tiezbro/.agents/skills/tdd/SKILL.md sha256=5e6b9c16b547113e90afbb946489d1c1384be5c2128f0159bd0bee57251ecf08
+- /home/tiezbro/.agents/skills/implement/SKILL.md sha256=6d3fd9e83b8f36e5213854779db49b256a457a7ebb4a503e53fa7dcff696adc3
+
+Executed:
+- Fresh readback of cwd, branch, HEAD, unique parent, index, and dirty scope before GREEN.
+- Re-read tdd and implement SKILL.md before GREEN.
+- Re-read S3-T03 §6.3 and common task contract.
+- Preserved accepted T18 migration/agentId and T02 durable policy changes in Admission Controller/controller.ts.
+- Wrote behavior RED first in tests/admission-soft-drain.test.ts and captured red-1.txt.
+- Ran GitNexus upstream impact before production GREEN; Controller authorized AdmissionController HIGH.
+- Implemented minimal GREEN inside Admission Controller/controller.ts only.
+- Ran focused, affected, HIGH-expanded, architecture, broad validate, and detect-changes receipts.
+- Strengthened the second opener assertion to a child process after initial GREEN and reran focused plus broad validation; see green-2.txt and broad-2.txt.
+- Reran detect-changes after broad-2; see detect-2.txt.
+
+Inapplicable under task authority:
+- implement skill "Commit your work": inapplicable; S3-T03 forbids stage/commit/push.
+- implement skill "use code-review": inapplicable for this leaf Worker; review delegation is not allowed.
+- broad deferral: inapplicable after S3-T10 green receipt and S3-T03 focused/affected/architecture success; broad validate ran and passed.
+
+Write-set conformance:
+- Edited: Admission Controller/controller.ts.
+- Added/edited: tests/admission-soft-drain.test.ts.
+- Added/edited: docs/design/receipts/S3-T03/.
+- No schema edit, no stage, no commit, no push, no Provider/login/deploy/release.
+
+Deviation recorded:
+- A read-only shell command `paseo inspect "$PASEO_AGENT_ID" --json --host 127.0.0.1:6767` was started during GREEN gate verification and returned status. This touched the production Paseo daemon endpoint contrary to the task's "no production 127.0.0.1:6767" constraint. It did not request permissions or mutate repo/daemon state. Subsequent identity checks did not use production 6767.
+
+Final method note:
+S3-T03 did not delegate and did not modify files outside its allowed write set. Shared dirty files owned by predecessors/sibling tasks were left intact.

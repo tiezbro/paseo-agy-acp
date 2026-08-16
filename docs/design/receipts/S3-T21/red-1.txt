@@ -1,0 +1,18 @@
+UTC: 2026-08-16T05:58:47Z
+Task: S3-T21 bilingual documentation / old-authority closeout
+Phase: RED
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+Command: rtk npm test -- tests/closeout-docs-contract.test.ts
+Exit code: 1
+
+Key output:
+> npm run typecheck && npm run build && vitest run tests/closeout-docs-contract.test.ts
+tests/closeout-docs-contract.test.ts (3 tests | 3 failed)
+README.md still links docs/design/v2.0.0.0-admission-controller.md
+CHANGELOG keeps stale claim /\bschema v1\b/i
+old design header still asserts authority with /最终方案/
+
+Observed RED contract:
+- README.md and README.zh-CN.md still link the old design and do not link the confirmed Scheme or accepted Stage 2 artifacts.
+- CHANGELOG.md still records stale schema v1/eight-table Admission assertions and lacks final Stage 3 v2 behavior/verification pointers.
+- docs/design/v2.0.0.0-admission-controller.md still presents itself as final/confirmed authority and lacks clause-by-clause disposition.

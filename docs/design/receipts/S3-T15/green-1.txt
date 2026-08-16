@@ -1,0 +1,25 @@
+TASK_ID: S3-T15
+UTC: 2026-08-16T01:47:11Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Business obligation:
+Heartbeat throws LeaseFenceError before provider terminal; the coordinator must
+call markExecutionRecoveryRequired and retain non-replayable recovery debt.
+
+Method evidence:
+The test uses a real AdmissionController database and AdmissionTurnCoordinator.
+Only the public heartbeat method is fault-injected to throw LeaseFenceError; the
+markExecutionRecoveryRequired path calls through to the real controller and
+leaves the request in recovery_required with the payload deleted.
+
+Command:
+rtk npm test -- tests/admission-race-contract.test.ts
+
+Exit code: 0
+
+Key output:
+> npm run typecheck && npm run build && vitest run tests/admission-race-contract.test.ts
+> tsc -p tsconfig.test.json
+> node scripts/clean-dist.mjs && tsc
+Test Files  1 passed (1)
+Tests  3 passed (3)

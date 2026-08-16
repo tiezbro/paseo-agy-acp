@@ -1,0 +1,19 @@
+TASK_ID: S3-T03
+PHASE: RED
+UTC: 2026-08-16T03:06:22Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Command:
+rtk npm test -- tests/admission-soft-drain.test.ts
+
+Exit code: 1
+
+Key output:
+> npm run typecheck && npm run build && vitest run tests/admission-soft-drain.test.ts
+× soft drains from three seats to one without killing active turns or admitting new work
+TypeError: admission.beginSoftDrainTo1 is not a function
+❯ beginSoftDrainTo1 tests/admission-soft-drain.test.ts:90:47
+❯ tests/admission-soft-drain.test.ts:171:5
+
+RED interpretation:
+The test file exists and the command reached the live behavior seam after typecheck/build. The failure is the expected missing soft-drain API/semantics on AdmissionController, not a missing file, source-string check, mock-only assertion, or mutation-as-RED.

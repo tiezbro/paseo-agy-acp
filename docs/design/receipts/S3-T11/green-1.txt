@@ -1,0 +1,30 @@
+TASK_ID: S3-T11
+Receipt: green-1
+UTC: 2026-08-16T01:28:48Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Assertion:
+- faultInjection.afterProcessIdentityPersisted rolls back the atomic dispatch transaction.
+- recordProcessIdentity returns not_recorded/transaction_fault.
+- request and lease remain starting; lease_process_identities rows=0.
+
+Command:
+rtk npm test -- tests/admission-dispatch-faultpoints.test.ts
+
+Exit code: 0
+
+Key output:
+Test Files  1 passed (1)
+Tests  3 passed (3)
+Duration  736ms
+
+Impact:
+- recordProcessIdentity upstream LOW; direct caller TurnDispatchBoundary.prepare; affected process runPromptCommand.
+- AdmissionController.commitDispatchIntent upstream LOW; direct caller TurnDispatchBoundary.prepare; affected process runPromptCommand.
+- TurnDispatchBoundary upstream LOW; direct caller AdmissionTurnCoordinator.admit; affected process admit.
+- AgyPromptFreeDispatchBoundary.commitDispatchIntent upstream LOW; direct caller runOnce; affected process runOnce.
+
+Method evidence:
+- tdd SKILL.md sha256 5e6b9c16b547113e90afbb946489d1c1384be5c2128f0159bd0bee57251ecf08 read completely.
+- implement SKILL.md sha256 6d3fd9e83b8f36e5213854779db49b256a457a7ebb4a503e53fa7dcff696adc3 read completely.
+- RED step inapplicable by S3-T11 green regression contract; no missing-file RED, mutation-as-RED, source-string-only, mock-only, or tautological assertion used.

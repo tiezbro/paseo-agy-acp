@@ -1,0 +1,16 @@
+TASK_ID=S3-T18R
+RECEIPT=green-2-t18-focused
+UTC=2026-08-16T02:17:31Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+COMMAND=rtk npm test -- tests/admission-schema-v2.test.ts
+> npm run typecheck && npm run build && vitest run tests/admission-schema-v2.test.ts
+> tsc -p tsconfig.test.json
+> node scripts/clean-dist.mjs && tsc
+ RUN  v4.1.10 /home/tiezbro/projects/paseo-agy-acp
+ Test Files  1 passed (1)
+      Tests  4 passed (4)
+   Start at  02:17:33
+   Duration  2.37s (transform 102ms, setup 0ms, import 132ms, tests 2.08s, environment 0ms)
+
+EXIT_CODE=0

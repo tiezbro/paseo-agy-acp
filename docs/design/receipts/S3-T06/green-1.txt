@@ -1,0 +1,18 @@
+TASK_ID=S3-T06
+UTC=2026-08-16T03:59:16Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+COMMAND=rtk npm test -- tests/admission-owner-crash.test.ts
+EXIT=0
+
+KEY_OUTPUT:
+- tsc -p tsconfig.test.json
+- node scripts/clean-dist.mjs && tsc
+- Test Files  1 passed (1)
+- Tests  1 passed (1)
+
+GREEN_DISPOSITION:
+Focused S3-T06 behavior passes. A real child process enqueues into a shared
+SQLite database, exits via SIGKILL before dispatch, and startup recovery
+settles the queued request as cancelled via queued_owner_dead exactly once,
+deletes payload, performs no replay, remains idempotent on repeated recovery,
+and lets later eligible work admit.

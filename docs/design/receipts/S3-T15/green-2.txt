@@ -1,0 +1,26 @@
+TASK_ID: S3-T15
+UTC: 2026-08-16T01:47:11Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Business obligation:
+Queued cancel racing admission must settle with exactly one terminal result,
+leave no queued payload, and leave no lease for the cancelled request.
+
+Method evidence:
+The test uses a real AdmissionController with one occupied seat, then schedules
+cancelQueued and admitRequest for the same queued request in the same Promise
+turn. The authoritative result is cancelled, admitRequest returns null, the
+payload is deleted, and the sanitized event journal has exactly one terminal
+transition.
+
+Command:
+rtk npm test -- tests/admission-race-contract.test.ts
+
+Exit code: 0
+
+Key output:
+> npm run typecheck && npm run build && vitest run tests/admission-race-contract.test.ts
+> tsc -p tsconfig.test.json
+> node scripts/clean-dist.mjs && tsc
+Test Files  1 passed (1)
+Tests  3 passed (3)

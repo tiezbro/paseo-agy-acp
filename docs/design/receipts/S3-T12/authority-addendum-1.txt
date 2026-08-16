@@ -1,0 +1,40 @@
+TASK_ID: S3-T12
+RECEIPT: authority-addendum-1
+UTC: 2026-08-16T03:56:01Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Controller authority addendum:
+Independent read-only preflight audit `4ffd2e35-0729-4176-8a57-438ff14920b2`
+CONFIRMED one HIGH blocking canonical contradiction: S3-T12 cannot complete the
+true production `blocked`/`dispatch_ambiguous` mapping unless the real Admission
+boundary implementation exposes a durable `markDispatchAmbiguous` bridge.
+
+Accepted disposition:
+- The audit's single disposition is accepted.
+- Canonical DAG ordering remains unchanged:
+  `T18 -> T09 -> T10 -> T12 -> {T16,T19}`.
+- T18 retains its completed `ACP Connector/admission/turn-coordinator.ts`
+  `agentId` refs.
+- S3-T12 is additionally authorized as a sequential shared writer for
+  `ACP Connector/admission/turn-coordinator.ts`, restricted ONLY to the existing
+  `TurnDispatchBoundary` / `AgyAdmissionDispatchBoundary` minimal durable
+  `markDispatchAmbiguous` bridge required by production dispatch wiring.
+
+Updated runtime WRITE_SET_MAP row for S3-T12:
+- `ACP Connector/agy/cli.ts`
+- `ACP Connector/agy/prompt-free-process.ts`
+- `ACP Connector/agy/dispatch-boundary.ts`
+- `ACP Connector/admission/turn-coordinator.ts`
+  - restriction: ONLY `AgyAdmissionDispatchBoundary` / existing
+    `TurnDispatchBoundary` `markDispatchAmbiguous` bridge; no unrelated
+    coordinator behavior
+- `tests/admission-production-dispatch.test.ts`
+- `docs/design/receipts/S3-T12/`
+
+HIGH authorization:
+The audit proved `AgyAdmissionDispatchBoundary` upstream impact HIGH, direct
+consumers 18, affected process `admit`. Controller explicitly authorizes this
+HIGH target for the bounded S3-T12 GREEN and requires HIGH-expanded regressions.
+
+Canonical prompt:
+`docs/design/v2.0.0.0-stage3-execution-prompt.md` is not edited by this addendum.

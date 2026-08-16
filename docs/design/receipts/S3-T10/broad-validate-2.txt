@@ -1,0 +1,26 @@
+TASK_ID=S3-T10
+PHASE=BROAD_REVALIDATION
+UTC=2026-08-16T03:22:54Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+PRECONDITION
+docs/design/receipts/S3-T03/broad-1.txt records rtk npm run validate exit 0 with 47 files passed, 581 passed, 2 skipped, and architecture PASS. The earlier S3-T10 broad-deferred blocker is therefore closed for this strict revalidation.
+
+COMMAND
+rtk npm run validate
+
+EXIT
+0
+
+KEY_OUTPUT
+> npm test && npm run validate:architecture
+> npm run typecheck && npm run build && vitest run
+> tsc -p tsconfig.test.json
+> node scripts/clean-dist.mjs && tsc
+Test Files  47 passed (47)
+Tests  581 passed | 2 skipped (583)
+> node scripts/verify-import-boundaries.mjs
+architecture boundaries: PASS
+
+NOTE
+The output also included temporary git clone progress under /tmp for reconcile fixtures; no repository production/test source was edited by this validation-only task.

@@ -65,7 +65,7 @@ function dispatch(admission: AdmissionController): AdmissionLease {
   admission.enqueueWithPayload({
     requestId: "startup-recovery-request",
     sessionId: "startup-recovery-session",
-    parentId: "startup-recovery-parent",
+    agentId: "startup-recovery-agent",
     fingerprint: "startup-recovery-fingerprint",
     provider: "antigravity",
     model: "model-test",

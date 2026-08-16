@@ -1,0 +1,25 @@
+TASK_ID: S3-T18R
+STAGE: 3
+TASK_TYPE: bounded repair / green regression compatibility（test-only；生产源码写集为空）
+BUSINESS_OBLIGATION: 关闭 S3-T18 F7 canonical parentId->agentId 与 schema v2 导致的 affected/broad 旧测试断言；保留拒绝 parentId alias、v1->v2 only、sessions unchanged、完整 v2 shape，不改变生产行为。
+SELECTED_PRIMARY_SKILL: tdd
+SELECTED_SUPPORTING_SKILLS: implement
+SKILL_SELECTION_REASON: T18 GREEN candidate 已真实暴露 14 个 affected tests 的旧 API/schema 断言；这是 test-only compatibility repair，tdd seam/anti-pattern 纪律适用，implement 支持有界验证。
+SKILL_SOURCE_IDENTITY: mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df；/home/tiezbro/.agents/skills/tdd/SKILL.md 与 /home/tiezbro/.agents/skills/implement/SKILL.md，启动时核验 path/hash。
+SKILL_REQUIRED_STEPS: 完整读取两份 SKILL；逐失败断言回到 live production API/schema；仅把 current API callsites parentId 改为 agentId、把旧 v1终态 schema 断言更新为 exact v2；保留专门验证 parentId 被拒的 negative tests；禁止机械全局替换；focused/affected/architecture/broad；逐项报告 executed/inapplicable。
+SKILL_EXPECTED_OUTPUT: task-contract receipt；14 个测试的最小兼容性修改；green/affected/architecture/broad/detect receipts。
+SKILL_FORBIDDEN_SHORTCUTS: 不改任何生产源码；不削弱/删除断言；不把 parentId 恢复为 alias；不接受双命名终态；不修改 sessions contract；不把 v2表从 schema assertion 移除；不 source-string-only/mock-only；不修改其他 task receipts。
+SKILL_COMPLETION_CRITERIA: 14 个原失败测试全部通过；T18 focused与HIGH-expanded保持绿；architecture PASS；npm run validate全绿。
+METHOD_CONFORMANCE_EVIDENCE: 记录两份 skill installed path/source commit/SHA 与逐项 executed/inapplicable；无委派/越权写。
+DEPENDENCIES: S3-T18 GREEN candidate（docs/design/receipts/S3-T18/green-1.txt）已完成但尚未 accepted；本 task 位于 T18_GREEN_CANDIDATE -> S3-T18R -> T18_ACCEPTED 内部子边，T18 原有对 T02/T09/T06/T14/T19 的 accepted 前驱边不变。
+EXACT_GIT_BASELINE: repo=/home/tiezbro/projects/paseo-agy-acp；branch=main；runtime HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e；sole parent=78931bff95ecbd9868f9cfa83a281cbbbf1a60d8；index clean；允许 T18 tracked diff及已知 task-owned untracked reservations。
+AUTHORITY_PATHS_AND_HASHES: Stage3 Prompt §6.0 base + S2-ARCH-001 §11/§17-9 + S2-DOMAIN-001 §10.1 F7 + S2-TEST-001 G2/M10 + S3-T18 red/impact/green/validation receipts + 本 Controller task prompt。
+ALLOWED_WRITE_SET: tests/admission-schema.test.ts；tests/admission-controller.test.ts；tests/admission-fault-security-matrix.test.ts；tests/admission-sqlite-contention.test.ts；tests/admission-startup-recovery.test.ts；tests/admission-turn-coordinator.test.ts；tests/admission-503-classifier.test.ts；tests/admission-dispatch-faultpoints.test.ts；tests/admission-process-evidence-contract.test.ts；tests/admission-race-contract.test.ts；tests/admission-scheduling-contract.test.ts；tests/admission-seats-contract.test.ts；tests/admission-timeout-contract.test.ts；tests/admission-process.test.ts；docs/design/receipts/S3-T18R/。此处显式临时转移这些 test reservations 给 S3-T18R，原 Worker 均 idle，不存在并发 writer。
+FORBIDDEN_SURFACES: 上述写集外全部路径，尤其 T18 四个生产文件、schema-v2 test、其他 receipts、Stage2 artifacts、git index/refs、真实Provider/生产6767/install/network/release。
+RESOURCE_SET: repo/live source只读；GitNexus只读；npm test runner；临时测试 state；无委派/真实Provider/网络。
+EXACT_ACCEPTANCE: 先重现并记录当前 T18 validation 的旧断言失败；最小修复后运行 14-file focused affected set；再运行 tests/admission-schema-v2.test.ts；再运行 HIGH expanded tests/acp-server.test.ts tests/acp-runtime-wiring.test.ts tests/queue-steer.test.ts tests/cli.test.ts；npm run validate:architecture；npm run validate；全部 exit 0。任何非本写集缺陷只记录 blocker。
+TYPED_BLOCKERS: §6.0通用集 + LEGACY_TEST_WRITESET_GAP + TEST_ASSERTION_WEAKENING_FORBIDDEN。
+RED_RECEIPT_CONTRACT: 不适用。T18 RED 已在未修改 baseline 上完成；本 repair 的当前失败来自已授权 T18 GREEN candidate，不能冒充新的 baseline RED。记录为 repair-before evidence，不命名 red。
+GREEN_EVIDENCE_CONTRACT: rtk npm test -- tests/admission-schema.test.ts tests/admission-controller.test.ts tests/admission-fault-security-matrix.test.ts tests/admission-sqlite-contention.test.ts tests/admission-startup-recovery.test.ts tests/admission-turn-coordinator.test.ts tests/admission-503-classifier.test.ts tests/admission-dispatch-faultpoints.test.ts tests/admission-process-evidence-contract.test.ts tests/admission-race-contract.test.ts tests/admission-scheduling-contract.test.ts tests/admission-seats-contract.test.ts tests/admission-timeout-contract.test.ts tests/admission-process.test.ts；加 T18 focused/HIGH-expanded/architecture/broad receipts。
+REVIEW_ASSIGNMENT_CONSTRAINT: S3-T18R Worker != T18 Worker != Spec Reviewer != Quality Reviewer != Single Integrator；本 Worker 不审/集成自身输出。
+INTEGRATION_TARGET: 成功后回到 S3-T18 broad acceptance；这些 test refs 与 T18 accepted refs 一起进入最终双审和 Single Integrator，不形成独立 commit。

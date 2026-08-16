@@ -1,0 +1,49 @@
+S3-REV-SPEC method evidence — review-side skill conformance and readback, fresh independent round 2
+
+TASK_ID: S3-REV-SPEC
+PHASE: method-conformance
+UTC: 2026-08-16T07:06:00Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+REVIEWER: PASEO_AGENT_ID=3617f14a-ad47-438e-bb6a-e3d8b6a90dd0; child leaf reviewer (parent Controller; pending=[]); provider=pi; model=MindStackLab-opencode-go/deepseek-v4-flash; thinking=max; mode=default; no delegation.
+
+Identity verification:
+- Injected Paseo status tooling (get_agent_status / paseo_get_agent_status) is NOT present in this session's toolset.
+- Task instruction explicitly forbids shell-inspecting production 127.0.0.1:6767, so the standard fallback (`paseo inspect ... --host 127.0.0.1:6767`) was NOT executed.
+- Identity therefore verified via injected environment only: PASEO_AGENT_ID=3617f14a-ad47-438e-bb6a-e3d8b6a90dd0, PASEO_AGENT_CWD=/home/tiezbro/projects/paseo-agy-acp, PI_PROVIDER=MindStackLab-opencode-go, PI_MODEL=deepseek-v4-flash, PI_CODING_AGENT=true — matching the task's asserted child identity (leaf reviewer, parent Controller, pending=[]). No orchestration, no routing selector, no delegation performed.
+
+Skills (read completely; hashes identical to round 1):
+- code-review (primary): /home/tiezbro/.agents/skills/code-review/SKILL.md @ 9cf46653dd9c710ea1e6c22423caf31a794c88773bc94bdaa23140277f470442
+- to-spec (supporting): /home/tiezbro/.agents/skills/to-spec/SKILL.md @ 5d26479544b08048d3a8f79d937b39bc613a617f026b3fd083bafc1e99a7b811
+Both installed under the pinned source identity mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df (STAGE3-PROMPT-GEN/skill-inventory.md remains the inventory authority).
+
+code-review step disposition (round 2; per §6.22 SKILL_REQUIRED_STEPS):
+1. Pin fixed point — executed, adapted as in round 1: fixed point = HEAD 83fb97257814f9072770c77d1bb0da4cfa2b420e; candidate = `git diff HEAD` (21 tracked paths) + `git ls-files --others --exclude-standard` (24 receipt/evidence dirs incl. S3-PARALLELISM-REPAIR, scripts/verify-no-secrets.mjs, 21 task test files) + direct reads. git diff HEAD...HEAD empty is expected (§0/§1.2/§6.0 EXACT_GIT_BASELINE), not an empty review.
+2. Identify spec source — executed: confirmed Scheme (d3b712ee…) + S2-HANDOFF-001 (c88be84f…) + seven Stage 2 siblings + stage3 prompt §2.2/§6 briefs; no issue-tracker needed or authorized.
+3. Standards sources — executed in reduced form: AGENTS.md GitNexus rules (impact-before-edit / detect_changes-before-commit verified in worker and repair receipts: S3-T12/repair-f1-authority-impact-1, S3-T12/repair-f1-detect-1/2, S3-T14/repair-f2-f3-impact-1, S3-T14/repair-f2-f3-detect-1) + Fowler smell baseline applied to the repair diff (F1 bridge is a minimal, named, single-responsibility method on the existing boundary class — no Feature Envy/Middle Man/Shotgun Surgery introduced; F2 reaper loop is a bounded lifecycle member of AdmissionRuntime — no speculative generality; F3 threshold is a named constant). Primary axis per brief is Spec conformance.
+4. Spawn two parallel sub-agents — inapplicable under Stage 3 authority (Controller already created two fresh independent reviewers in parallel; this reviewer is a leaf). Recorded inapplicable, not executed.
+5. Issue-tracker setup / ticket publishing (code-review + to-spec) — inapplicable: no external tracker authority; publication conflicts with canonical authority and the review-only write set (S2-HANDOFF-001 §2.2, §16).
+6. Aggregate — executed: single-axis verdict (this file set), severity-ordered findings, no cross-axis reranking.
+
+to-spec step disposition:
+- Explore repo / domain glossary — executed (repo-wide reads of source/tests/receipts; domain vocabulary per S2-DOMAIN-001).
+- Sketch/verify test seams — executed as verification lens: round-2 repair tests use the pre-agreed seams and real production objects — tests/admission-production-dispatch.test.ts drives real AdmissionTurnCoordinator + TurnDispatchBoundary + AgyCliSession.prompt (fake native agy child only, per §2.4 RESOURCE_SET_MAP); tests/admission-reaper.test.ts drives createAdmissionRuntime (real production factory) with injected evidence readers and fake timers.
+- Check seams with the user — inapplicable: no user interview under the review-only write set; seams fixed by Stage 2/Controller.
+- Write spec + publish to issue tracker + ready-for-agent label — inapplicable: no spec authoring; the spec source is the accepted Scheme + handoff + siblings.
+
+Read-only verification commands executed (all exit 0 unless noted):
+- git rev-parse HEAD / HEAD^ / branch / merge-base / parent count — confirmed HEAD 83fb9725…, sole parent 78931bff…, branch main.
+- git status --porcelain (68 entries: 21 modified tracked + untracked receipt/test/script set); git diff --cached --quiet (index staged set empty); git ls-files -u (empty, unmerged=0); git diff --check (empty).
+- sha256sum on all 8 Stage 2 artifacts + Scheme + Stage 2 Controller Prompt + AGENTS.md — all match §2.1 bindings (listed in verdict-2.txt).
+- sha256sum on code-review/to-spec SKILL.md — unchanged from round 1.
+- Scripted brief-field audit: 27/27 briefs carry exactly 25 hard fields (0 missing, 0 extra).
+- Scripted DAG audit: §2.2 69 directed edges parsed; brief DEPENDENCIES mirror incoming edges for T01..T21 (T08 = {T07}; T20/T21 = all internal T01..T19 excluding T08); acyclicity verified by DFS.
+- Diff keyword scan for forbidden surfaces (outbox/delivery_claim/custom ack/replay/requeue/shadow/parity/startup-permit/dangerously-skip-permissions): only doc/comment negations and retentions; no new forbidden code.
+- Grep scans: markExecutionRecoveryRequired (controller.ts:744-769, payload DELETE same transaction), isHeartbeatStale (controller.ts:2543-2545, strict > 4000 with LEASE_HEARTBEAT_STALE_MS=4_000 at :19), TurnDispatchBoundary.markDispatchAmbiguous (turn-coordinator.ts:381-392), runtime reaper (runtime.ts AdmissionRuntime ctor/close/reapOnce + createAdmissionRuntime), composeAcpRuntime wiring (agent.ts:661), parentId runtime rejection (controller.ts:2239), prompt.ts typed terminal set.
+- Fresh `npm run validate` executed twice at review time (read-only): 54 test files / 607 tests passed / 2 skipped; architecture PASS; secret scan PASS (158 files). Exit 0 both runs.
+
+Review activity and write-set:
+- Wrote only docs/design/receipts/S3-REV-SPEC/verdict-2.txt and docs/design/receipts/S3-REV-SPEC/method-evidence-2.txt (additive; verdict-1.txt and method-evidence-1.txt untouched).
+- No edits to implementation, tests, docs, prior task receipts, review receipts, git index, or refs; no stage/commit/push/tag/deploy/release/install/network/real Provider; no 127.0.0.1:6767 access of any kind; no delegation; no read of production daemon state.
+
+Startup gate result: no AGENT_MODE_UNAVAILABLE — identity verified as child leaf reviewer (env + task assertion), provider/model/thinking/mode matched the brief exactly, pending permissions empty.
+Baseline gate: HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e; sole parent=78931bff95ecbd9868f9cfa83a281cbbbf1a60d8; index clean; unmerged=0; Scheme and all eight Stage 2 artifact hashes live-verified (see verdict-2.txt).

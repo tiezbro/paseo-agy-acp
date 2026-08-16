@@ -1,0 +1,77 @@
+SPEC_CONFORMANCE
+TASK_ID=S3-REV-QUAL
+REVIEW_SCOPE=Quality/Standards/Execution conformance only; S3-REV-SPEC remains an independent axis.
+FIXED_POINT=HEAD 83fb97257814f9072770c77d1bb0da4cfa2b420e
+CANDIDATE=complete current worktree: git diff HEAD plus all git ls-files --others --exclude-standard plus direct source/test/receipt reads. An empty git diff HEAD...HEAD is not an empty review.
+AUTHORITY=confirmed Scheme plus all eight immutable Stage 2 inputs and Stage 3 prompt sections required by the brief were hash-verified before review.
+CLAUSE_RESULT=The checked normative clauses are executable in the main paths and the T08 typed-stop remains correctly external, but F1-F3 are direct current-worktree deviations from the pinned C4/C5/G6/G8 contracts. The candidate therefore cannot be accepted as quality-conformant.
+T08_STATUS=External typed stop only. The exact open blockers remain SOURCE_FIELD_GAP, REAL_PROVIDER_REQUIRED, and SOURCE_IDENTITY_UNKNOWN from docs/design/receipts/S3-T08/typed-blocked.txt:13-17. T08 is not GREEN and is not an internal completion predecessor.
+
+QUALITY_CONFORMANCE
+RESULT=revisions-required
+VALIDATION=Fresh review-time npm run validate completed with 54 test files passed, 605 tests passed, 2 skipped, architecture boundaries PASS, and secret scan PASS for 158 files. git diff --check passed.
+RED_AUTHENTICITY=The inspected T01-T21 RED receipts are behavioral failures on unmodified HEAD where RED applies; no missing-file, mutation-as-RED, source-string-only, mock-only, or health-only acceptance was accepted. T08 is typed-blocked and has no RED/GREEN by contract.
+SEAM_REALITY=Focused tests generally use the pre-agreed public seams and real temporary SQLite state or injected process readers. The T12 pre-identity case uses RecordingAdmissionBoundary rather than production TurnDispatchBoundary, and the T14 reaper test invokes AdmissionController.reapSuspects directly rather than a production AdmissionRuntime path; these limitations are material findings below.
+SCOPE_AND_DESIGN=The implementation remains bounded: no forbidden outbox, delivery claim, retry/replay path, second live database, second output path, downgrade, or large migration framework was added. T12's turn-coordinator expansion is covered by the controller authority addendum. T18R is test-only and its write set is bounded.
+ERROR_AND_TRANSACTION_REVIEW=The current code preserves single-write fencing, durable intent, payload deletion, evidence-gated release, rollback/fail-closed checks, and idempotent controller operations in the tested paths. The findings identify state classification and missing production scheduling paths that the passing broad suite does not exercise.
+IMPACT_STATUS=T12 has an explicit HIGH authorization addendum and HIGH-expanded regressions; T14 has recorded CRITICAL/HIGH impact authorization and HIGH-expanded regressions. No unresolved CRITICAL correctness finding was accepted, so open Critical=0 is supported. Open High=0 is rejected: F1 and F2 are unresolved HIGH findings. The impact receipts are complete as blast-radius evidence, but they are not correctness proof for the uncovered paths.
+ROLE_AND_WRITE_SET=All reviewed workers stayed within their task receipt/test/source reservations as recorded, including T12's authorized turn-coordinator bridge and T18R's authorized test reservation transfer. This reviewer writes only the receipt named in AFFECTED_SCOPE.
+
+METHOD_CONFORMANCE
+IDENTITY_GATE=PASEO_AGENT_ID=35200a5f-2742-49c7-908f-18bb4f13517a; ParentAgentId/paseo.parent-agent-id=79ab5347-5101-4eff-89ed-6a7aa550ae2e; provider/model=codex/gpt-5.6-luna; thinking=max; mode=full-access; PendingPermissions=[]; status tool readback matched the brief.
+BASELINE_GATE=cwd=/home/tiezbro/projects/paseo-agy-acp; branch=main; HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e; sole parent=78931bff95ecbd9868f9cfa83a281cbbbf1a60d8; index empty; unmerged entries=0.
+SKILLS=code-review /home/tiezbro/.agents/skills/code-review/SKILL.md SHA-256 9cf46653dd9c710ea1e6c22423caf31a794c88773bc94bdaa23140277f470442; codebase-design /home/tiezbro/.agents/skills/codebase-design/SKILL.md SHA-256 a8d50abac5a4018f60e1d911d4b6f4e36454ca14d6c390c0695a578c7de65dad. Both were read completely.
+FIXED_POINT_METHOD=The code-review fixed-point step was adapted exactly as required because no implementation commit exists: candidate evidence is tracked diff from HEAD plus every task-owned untracked file and direct reads.
+CODE_REVIEW_CONFLICTS=The code-review skill's request to spawn two internal subagents is inapplicable because Stage 3 authority already created two independent reviewers in parallel and this reviewer must remain a leaf. Issue-tracker publication, ready-for-agent labels, user seam interview, and spec authoring are inapplicable under the canonical review-only write set and authority.
+CODEBASE_DESIGN_LENS=Review used deep-module, interface, seam, depth, leverage, and locality vocabulary. The hidden optional bridge in cli.ts is a shallow/incomplete public interface, and the reaper method is not connected to the runtime module that owns production lifecycle.
+GITNEXUS=No application symbol was edited by this reviewer, so no impact-before-edit was required for the receipt write. No commit was attempted, so detect_changes-before-commit was not applicable. Existing task impact and detect-changes receipts were inspected.
+FORBIDDEN_ACTIONS=No implementation/test/doc/prior-receipt edits, stage, commit, push, tag, deploy, release, install, network, real Provider, production 127.0.0.1:6767, or delegation was performed by this reviewer.
+
+PARALLELISM_CONFORMANCE
+READY_TASKS_OBSERVED=The canonical DAG in Stage 3 prompt section 2.2 yields the observed safe frontier sequence: T01; T04/T05/T07/T11/T13/T17; T08 typed-stop plus T15/T18; T02/T09; T03/T10; T06/T12; T14/T19; T16; T20/T21. T08 is excluded from the internal frontier. This is a static dependency/write/resource calculation, not an agent-count judgment.
+TASKS_LAUNCHED=T01-T07, T09-T21 have task-owned receipts; T08 has only typed-blocked evidence; S3-REV-SPEC and S3-REV-QUAL were independent review nodes. Receipt timestamps prove task activity/completion provenance, not scheduler launch intervals.
+TASKS_DEFERRED=T08 was deferred by its external typed-stop gate. T20 and T21 were held behind all internal T01-T19 prerequisites, excluding T08. T18/T02/T03/T06/T14, T18/T09/T10, T10/T12, and T06/T14 serializations were held by shared schema/controller/agent/cli/startup-recovery write seams; HIGH/CRITICAL authorization gates and test reservations also caused recorded pauses.
+VALID_DEFER_REASONS=Only canonical dependency edges, shared write or semantic seams, schema/migration ordering, test prerequisites, typed safety blockers, and authorized HIGH/CRITICAL gates were accepted as valid reasons. T10's early broad defer and T18's interim validation failure were later closed by their explicit revalidation receipts.
+UNJUSTIFIED_SERIALIZATION=No concrete unjustified serialization was found in the static DAG. T20/T21 overlap is safely evidenced by T20 method timestamp 2026-08-16T06:03:35Z and T21 method timestamp 2026-08-16T06:03:41Z, disjoint write sets, and T20's concurrent-worker note. T14/T19 timestamps likewise show safe overlap. An exhaustive dynamic claim is unsupported; see F4.
+BOUNDARY_RELEASE_LATENCY=Not independently evidenced. Task receipts contain task UTC timestamps but no durable worker-finished-to-resource-release interval or scheduler boundary event record required to calculate latency. This is a LOW evidence finding under Stage 3 prompt sections 7.2-7.4 (F4).
+FRONTIER_RECOMPUTE_EVENTS=Not independently evidenced. The repository contains the static DAG and task receipts but no durable per-event READY_AT, NOT_LAUNCHED_REASON, NEXT_REEVALUATION_TRIGGER, or frontier-recompute log for the scheduling lifecycle. Static frontier correctness is reviewable; runtime recompute timing is not proven (F4).
+PARALLELISM_CONFORMANCE=revisions-required for dynamic evidence completeness; static dependency/write/resource conformance is acceptable, T20/T21 overlap is safe, and no concrete unjustified serialization was found.
+
+FINDINGS
+F1 [HIGH] TASK_ID=S3-T12
+TITLE=Production blocked dispatch can lose the required dispatch_ambiguous durable state.
+BINDING=Confirmed Scheme C4; docs/design/v2.0.0.0-stage2-spec.md:434-442; S2-TEST-001 M6/G8 at docs/design/v2.0.0.0-stage2-test-contracts.md:257-263; Stage 3 prompt S3-T12 at docs/design/v2.0.0.0-stage3-execution-prompt.md:609-629.
+EVIDENCE=ACP Connector/agy/cli.ts:1185-1193 maps every non-active result, including blocked, through markAdmissionDispatchAmbiguous. ACP Connector/agy/cli.ts:1367-1376 returns not_recorded when the process identity is unavailable, before TurnDispatchBoundary.prepare has succeeded. ACP Connector/admission/turn-coordinator.ts:381-386 rejects markDispatchAmbiguous unless #prepared. AdmissionTurnCoordinator.settleFailure at ACP Connector/admission/turn-coordinator.ts:245-251 then calls abandonBeforePrompt and settles failed. The green test at tests/admission-production-dispatch.test.ts:124-153 uses RecordingAdmissionBoundary, so it proves the CLI callback shape but not this production coordinator path.
+RISK=The required blocked/dispatch_ambiguous -> durable ambiguity/recovery mapping is not fail-closed on the real pre-identity production path. The caller can report a blocked dispatch while the durable request is abandoned as failed, leaving the mandated ambiguity state unrecorded.
+REPAIR_BOUNDARY=Add or expose the minimal durable bridge on the real production TurnDispatchBoundary and cover the pre-identity case with the production AdmissionTurnCoordinator, or obtain a bounded authority update if the write set must expand. Do not replace this with a recording fake or a retry.
+
+F2 [HIGH] TASK_ID=S3-T14
+TITLE=The runtime reaper is not connected to the production runtime lifecycle.
+BINDING=Confirmed Scheme C5/F6/G6; docs/design/v2.0.0.0-stage2-spec.md:444-450; S2-TEST-001 M7/G6 at docs/design/v2.0.0.0-stage2-test-contracts.md:265-279; Stage 3 prompt S3-T14 at docs/design/v2.0.0.0-stage3-execution-prompt.md:669-689.
+EVIDENCE=Admission Controller/controller.ts:867-935 implements reapSuspects, but ACP Connector/admission/runtime.ts:23-46 gives AdmissionRuntime only a controller getter and close method. Its factory at ACP Connector/admission/runtime.ts:48-69 calls recoverExitedAdmissionSeats once during construction and starts no reaper loop or runtime callback. A repository call-site search found no production call to reapSuspects; the only current invocation is the direct test helper at tests/admission-reaper.test.ts:130-145. The green tests at tests/admission-reaper.test.ts:285-359 therefore exercise the controller method directly, not the live AdmissionRuntime/composeAcpRuntime lifecycle.
+RISK=Verified recovery_required seats and stale leases will not be reclaimed during a running connector, so the no-restart bounded recovery obligation is not present in production behavior despite the focused unit suite passing.
+REPAIR_BOUNDARY=Connect the reaper through the production runtime owner with bounded evidence-reader scheduling and an integration test that proves no-restart recovery through createAdmissionRuntime/composeAcpRuntime. The current S3-T14 write set excludes runtime.ts, so Controller authority/write-set handling is required before implementation.
+
+F3 [MEDIUM] TASK_ID=S3-T14
+TITLE=Heartbeat suspicion ignores the required four-second threshold.
+BINDING=Confirmed Scheme C5/F6; docs/design/v2.0.0.0-stage2-spec.md:448; Stage 3 prompt S3-T14 at docs/design/v2.0.0.0-stage3-execution-prompt.md:669-677.
+EVIDENCE=Admission Controller/controller.ts:887-889 marks heartbeat_expired whenever dispatch.heartbeatAt < now. The contract requires now - heartbeat_at > 4,000 ms. tests/admission-reaper.test.ts:317-333 only checks a very old heartbeat (1,003 to 10,000), so it does not distinguish the current predicate from the required threshold.
+RISK=A lease can be marked suspect immediately after any positive heartbeat age, causing premature suspicion and violating the deterministic liveness contract. It does not itself release capacity, but it changes durable suspicion state too early.
+REPAIR_BOUNDARY=Use the exact >4,000 ms predicate and add below/equal/above threshold cases at the reaper seam.
+
+F4 [LOW] TASK_ID=S3-REV-QUAL
+TITLE=Dynamic scheduler parallelism evidence is incomplete.
+BINDING=Stage 3 prompt sections 7.2-7.4 at docs/design/v2.0.0.0-stage3-execution-prompt.md:1099-1128.
+EVIDENCE=The task receipts provide UTC timestamps and local method notes, including docs/design/receipts/S3-T20/method-1.txt:1-3 and docs/design/receipts/S3-T21/method-1.txt:1-3, which support the safe T20/T21 overlap. They do not provide per-scheduling-event READY_AT, NOT_LAUNCHED_REASON, CONFLICTING_BOUNDARY, NEXT_REEVALUATION_TRIGGER, worker resource release latency, or frontier recomputation events. The static DAG and receipt timestamps are insufficient to verify the prompt's immediate-release/immediate-recompute requirements across all events.
+RISK=Quality review cannot make an evidence-backed exhaustive claim that every safe ready task was launched immediately or that every completed task triggered prompt frontier recomputation. No concrete unjustified serialization was found, so this remains LOW rather than a fabricated green/High claim.
+REPAIR_BOUNDARY=Controller should preserve a durable scheduler event/readback receipt for each scheduling boundary, or explicitly record why the required dynamic fields are unavailable before integration acceptance.
+
+AFFECTED_SCOPE
+FUNCTIONAL_PATHS=F1 affects ACP Connector/agy/cli.ts:1185-1193, ACP Connector/agy/cli.ts:1367-1376, and ACP Connector/admission/turn-coordinator.ts:381-386/245-251. F2 affects Admission Controller/controller.ts:867-935 and its missing production connection in ACP Connector/admission/runtime.ts:23-69. F3 affects Admission Controller/controller.ts:887-889 and tests/admission-reaper.test.ts:317-333. F4 affects the scheduler evidence contract only.
+CANDIDATE_SCOPE=The review covered all tracked changes from HEAD, all task-owned untracked implementation/test/receipt/script files, the complete T01-T21 receipt directory set, S3-REV-SPEC receipts, current source/tests/package/docs, and the required immutable authorities.
+REVIEW_WRITE_SET=Only docs/design/receipts/S3-REV-QUAL/verdict-1.txt is written by this reviewer. No other path, index entry, ref, daemon, or external system was changed.
+BLOCKERS=Open typed blockers remain T08: SOURCE_FIELD_GAP, REAL_PROVIDER_REQUIRED, SOURCE_IDENTITY_UNKNOWN. Quality blockers are F1/F2 HIGH, F3 MEDIUM, and F4 LOW. No production fix is authorized in this receipt.
+READBACK_EXPECTATION=At closeout: receipt path docs/design/receipts/S3-REV-QUAL/verdict-1.txt; findings count 4 (HIGH=2, MEDIUM=1, LOW=1); index must remain empty; unmerged entries must remain zero; implementation and prior receipts must remain unchanged.
+
+VERDICT
+revisions-required

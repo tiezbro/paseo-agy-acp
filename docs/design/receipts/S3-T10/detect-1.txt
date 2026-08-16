@@ -1,0 +1,47 @@
+TASK_ID=S3-T10
+PHASE=GITNEXUS_DETECT_CHANGES
+UTC=2026-08-16T03:17:38Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+COMMAND
+node .gitnexus/run.cjs detect-changes --repo paseo-agy-acp
+
+EXIT
+0
+
+KEY_OUTPUT
+Changes: 12 files, 7 symbols
+Affected processes: 0
+Risk level: low
+Changed symbols include enqueue, starting, runWorker, waitForLine, dispatch, coordinator, enqueueHolder in existing admission tests.
+
+MCP_CROSSCHECK
+mcp__gitnexus.detect_changes(scope="all") returned changed_count=7, changed_files=12, affected_count=0, risk_level=low.
+
+DIRTY_SCOPE_LIMITS
+Tracked dirty files from git diff --name-only:
+- ACP Connector/acp/agent.ts
+- ACP Connector/acp/session/setup.ts
+- ACP Connector/admission/turn-coordinator.ts
+- ACP Connector/agy/cli.ts
+- Admission Controller/controller.ts
+- Admission Controller/schema.ts
+- tests/admission-controller.test.ts
+- tests/admission-fault-security-matrix.test.ts
+- tests/admission-process.test.ts
+- tests/admission-schema.test.ts
+- tests/admission-startup-recovery.test.ts
+- tests/admission-turn-coordinator.test.ts
+
+S3_T10_OWNED_DIRTY
+- ACP Connector/acp/agent.ts: S3-T10 removed applyConfigOption mode restriction while preserving existing T09 auth-gate and T18 agentId changes in the same dirty file.
+- ACP Connector/acp/session/setup.ts: S3-T10 removed buildSession non-skip rejection.
+- ACP Connector/agy/cli.ts: S3-T10 enabled admission interactive permissions through the existing AgyAdmissionDispatchBoundary.
+- tests/admission-permission.test.ts: S3-T10 focused behavior test, untracked.
+- docs/design/receipts/S3-T10/: S3-T10 receipts, untracked.
+
+NON_S3_T10_DIRTY
+All other tracked and untracked files are outside S3-T10 ownership and were not edited by this worker.
+
+DETECT_LIMITATION
+GitNexus detect_changes did not report untracked tests/receipts and did not map every tracked dirty S3-T10 hunk to a changed symbol. This receipt therefore records both GitNexus output and git dirty-scope limits.

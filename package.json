@@ -40,7 +40,8 @@
     "typecheck": "tsc -p tsconfig.test.json",
     "test": "npm run typecheck && npm run build && vitest run",
     "validate:architecture": "node scripts/verify-import-boundaries.mjs",
-    "validate": "npm test && npm run validate:architecture",
+    "validate:secrets": "node scripts/verify-no-secrets.mjs",
+    "validate": "npm test && npm run validate:architecture && npm run validate:secrets",
     "test:watch": "vitest",
     "prepublishOnly": "npm run build"
   },

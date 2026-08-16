@@ -1,0 +1,16 @@
+TASK_ID=S3-T18R
+RECEIPT=green-1-focused-affected
+UTC=2026-08-16T02:17:31Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+COMMAND=rtk npm test -- tests/admission-schema.test.ts tests/admission-controller.test.ts tests/admission-fault-security-matrix.test.ts tests/admission-sqlite-contention.test.ts tests/admission-startup-recovery.test.ts tests/admission-turn-coordinator.test.ts tests/admission-503-classifier.test.ts tests/admission-dispatch-faultpoints.test.ts tests/admission-process-evidence-contract.test.ts tests/admission-race-contract.test.ts tests/admission-scheduling-contract.test.ts tests/admission-seats-contract.test.ts tests/admission-timeout-contract.test.ts tests/admission-process.test.ts
+> npm run typecheck && npm run build && vitest run tests/admission-schema.test.ts tests/admission-controller.test.ts tests/admission-fault-security-matrix.test.ts tests/admission-sqlite-contention.test.ts tests/admission-startup-recovery.test.ts tests/admission-turn-coordinator.test.ts tests/admission-503-classifier.test.ts tests/admission-dispatch-faultpoints.test.ts tests/admission-process-evidence-contract.test.ts tests/admission-race-contract.test.ts tests/admission-scheduling-contract.test.ts tests/admission-seats-contract.test.ts tests/admission-timeout-contract.test.ts tests/admission-process.test.ts
+> tsc -p tsconfig.test.json
+> node scripts/clean-dist.mjs && tsc
+ RUN  v4.1.10 /home/tiezbro/projects/paseo-agy-acp
+ Test Files  14 passed (14)
+      Tests  55 passed (55)
+   Start at  02:17:33
+   Duration  2.12s (transform 2.29s, setup 0ms, import 3.76s, tests 9.19s, environment 2ms)
+
+EXIT_CODE=0

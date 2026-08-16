@@ -1,0 +1,21 @@
+TASK_ID: S3-T05
+EVIDENCE: architecture validation
+UTC: 2026-08-16T01:24:36Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Command:
+rtk npm run validate:architecture
+
+Exit code: 0
+
+Key output:
+> node scripts/verify-import-boundaries.mjs
+architecture boundaries: PASS
+
+Impact before write:
+- expireQueued upstream impact: LOW; direct callers admitNext, admitRequest, getQueueSnapshot; affected processes admit and waitForLease.
+- selectEligibleRequest upstream impact: LOW; direct callers admitNext and admitRequest; affected processes admit and waitForLease.
+
+Method evidence:
+- No import-boundary or production-source changes were made.
+- tdd/implement skill readback completed before writing; RED step inapplicable for this green regression task.

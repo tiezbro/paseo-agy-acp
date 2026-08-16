@@ -1,0 +1,35 @@
+Task: S3-T13 green-1
+UTC: 2026-08-16T01:27:09Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Business obligation:
+S-27 complete process evidence tuple; PID reuse fail closed.
+
+Impact:
+Risk remains HIGH after Controller authorization.
+observeLinuxProcessIdentity upstream impact: direct callers 2
+(observePersistedLinuxConnectorOwnerIdentity, recoverExitedAdmissionSeats);
+affected processes: recoverExitedAdmissionSeats, createAdmissionRuntime,
+composeAcpRuntime.
+releaseExitedRecoverySeat upstream impact: direct caller 1
+(recoverExitedAdmissionSeats); affected processes: recoverExitedAdmissionSeats,
+createAdmissionRuntime, composeAcpRuntime.
+
+Method evidence:
+Test seam: observeLinuxProcessIdentity with injected LinuxProcessEvidenceReaders.
+The test captures a persisted child identity, then injects a fresh observation
+with the same PID and same startTimeTicks but a different bootId. The assertion
+expects pid_reused, proving PID alone is not accepted as identity evidence.
+No production source was modified.
+
+Command:
+rtk npm test -- tests/admission-process-evidence-contract.test.ts
+
+Exit code: 0
+
+Key output:
+> npm run typecheck && npm run build && vitest run tests/admission-process-evidence-contract.test.ts
+RUN  v4.1.10 /home/tiezbro/projects/paseo-agy-acp
+Test Files  1 passed (1)
+Tests  2 passed (2)
+Duration  361ms

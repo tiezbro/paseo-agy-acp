@@ -1,0 +1,22 @@
+TASK_ID: S3-T12
+RECEIPT: affected-1
+UTC: 2026-08-16T04:11:11Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Command:
+rtk npm test -- tests/agy-dispatch-boundary.test.ts tests/prompt-free-process.test.ts tests/prompt-free-canary.test.ts tests/cli.test.ts tests/admission-dispatch-faultpoints.test.ts tests/admission-permission.test.ts
+
+Exit:
+0
+
+Key output:
+> npm run typecheck && npm run build && vitest run tests/agy-dispatch-boundary.test.ts tests/prompt-free-process.test.ts tests/prompt-free-canary.test.ts tests/cli.test.ts tests/admission-dispatch-faultpoints.test.ts tests/admission-permission.test.ts
+> tsc -p tsconfig.test.json
+> node scripts/clean-dist.mjs && tsc
+Test Files  6 passed (6)
+Tests  99 passed (99)
+
+Scope:
+Affected agy dispatch, prompt-free primitive/canary, CLI, dispatch fault-point,
+and admission permission regressions all passed after the S3-T12 production
+dispatch wiring.

@@ -1,0 +1,29 @@
+TASK_ID=S3-T10
+PHASE=FOCUSED_GREEN_WITH_EXTERNAL_TYPECHECK_BLOCKER
+UTC=2026-08-16T03:17:38Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+OFFICIAL_COMMAND
+rtk npm test -- tests/admission-permission.test.ts
+
+OFFICIAL_EXIT
+1
+
+OFFICIAL_KEY_OUTPUT
+> npm run typecheck && npm run build && vitest run tests/admission-permission.test.ts
+> tsc -p tsconfig.test.json
+Admission Controller/controller.ts(941,24): error TS2339: Property 'requirePolicyStateInTransaction' does not exist on type 'AdmissionController'.
+Admission Controller/controller.ts(942,26): error TS2304: Cannot find name 'policyDrainState'.
+Admission Controller/controller.ts(1411,28): error TS2304: Cannot find name 'policyFromState'.
+
+DIRECT_BEHAVIOR_COMMAND
+rtk vitest run tests/admission-permission.test.ts
+
+DIRECT_BEHAVIOR_EXIT
+0
+
+DIRECT_BEHAVIOR_KEY_OUTPUT
+PASS (2) FAIL (0)
+
+INTERPRETATION
+The S3-T10 behavior test is green under direct Vitest. The required npm test wrapper is blocked before Vitest by current dirty Admission Controller/controller.ts typecheck failures outside the S3-T10 write set. No Admission Controller file was edited by S3-T10.

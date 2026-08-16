@@ -1,0 +1,20 @@
+TASK_ID=S3-T18R
+RECEIPT=detect-changes
+UTC=2026-08-16T02:19:09Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+COMMAND=node .gitnexus/run.cjs detect-changes --repo paseo-agy-acp
+Changes: 10 files, 7 symbols
+Affected processes: 0
+Risk level: low
+
+Changed symbols:
+  Symbol enqueue → tests/admission-controller.test.ts
+  Symbol starting → tests/admission-fault-security-matrix.test.ts
+  Symbol runWorker → tests/admission-process.test.ts
+  Symbol waitForLine → tests/admission-process.test.ts
+  Symbol dispatch → tests/admission-startup-recovery.test.ts
+  Symbol coordinator → tests/admission-turn-coordinator.test.ts
+  Symbol enqueueHolder → tests/admission-turn-coordinator.test.ts
+
+EXIT_CODE=0

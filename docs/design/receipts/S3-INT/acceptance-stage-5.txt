@@ -1,0 +1,71 @@
+TASK_ID=S3-INT
+ACCEPTANCE_STAGE=5
+TITLE=full-validation-gitnexus
+UTC=2026-08-16T08:13:50Z
+RESULT=PASS
+ORDER=focused -> affected -> broad -> scope
+
+FOCUSED
+COMMAND=rtk npm test -- tests/secret-scan.test.ts tests/closeout-docs-contract.test.ts
+EXIT_CODE=0
+KEY_LINES:
+- npm run typecheck && npm run build && vitest run <two focused paths>
+- Test Files 2 passed (2)
+- Tests 5 passed (5)
+- Duration 308ms
+
+AFFECTED_ARCHITECTURE
+COMMAND=rtk npm run validate:architecture
+EXIT_CODE=0
+KEY_LINES:
+- node scripts/verify-import-boundaries.mjs
+- architecture boundaries: PASS
+
+AFFECTED_SECRETS
+COMMAND=rtk npm run validate:secrets
+EXIT_CODE=0
+KEY_LINES:
+- node scripts/verify-no-secrets.mjs
+- secret scan: PASS (158 files checked)
+
+BROAD
+COMMAND=rtk npm run validate
+EXIT_CODE=0
+KEY_LINES:
+- Test Files 54 passed (54)
+- Tests 607 passed | 2 skipped (609)
+- architecture boundaries: PASS
+- secret scan: PASS (158 files checked)
+
+GITNEXUS
+COMMAND=node .gitnexus/run.cjs detect-changes --repo paseo-agy-acp --scope unstaged
+EXIT_CODE=0
+KEY_LINES:
+- Changes: 21 files, 17 symbols
+- Affected processes: 0
+- Risk level: low
+- Changed symbols are limited to accepted Stage 3 source/test/docs candidate paths.
+
+IMPACT_RECEIPTS_ARCHIVED=PASS
+IMPLEMENTATION_IMPACT_RECEIPTS=docs/design/receipts/S3-T02/impact-1.txt,docs/design/receipts/S3-T03/impact-1.txt,docs/design/receipts/S3-T03/impact-2.txt,docs/design/receipts/S3-T06/impact-1.txt,docs/design/receipts/S3-T09/impact-1.txt,docs/design/receipts/S3-T10/impact-1.txt,docs/design/receipts/S3-T12/impact-1.txt,docs/design/receipts/S3-T12/impact-2.txt,docs/design/receipts/S3-T12/authority-addendum-1.txt,docs/design/receipts/S3-T14/impact-1.txt,docs/design/receipts/S3-T16/impact-1.txt,docs/design/receipts/S3-T18/impact-1.txt,docs/design/receipts/S3-T18R/method-impact.txt
+
+WHITESPACE
+COMMAND=rtk git diff --check
+EXIT_CODE=0
+KEY_LINES:
+- no output
+- no whitespace errors
+
+UNTRACKED_SCOPE
+COMMAND=git ls-files --others --exclude-standard | awk '<accepted-scope classifier>'
+EXIT_CODE=0
+KEY_LINES:
+- tests=21
+- scripts=1
+- receipts=229
+- unexpected=0
+
+ASSERTIONS
+- All commands were run serially; the exact standard broad command passed without a resource retry.
+- Current tracked diff contains the 21 accepted Stage 3 candidate paths; untracked files are limited to accepted task tests, scripts/verify-no-secrets.mjs, and docs/design/receipts/S3-*/ evidence.
+- Stage 6 is eligible to begin only because Stage 5 is fully green.

@@ -1,0 +1,39 @@
+TASK_ID: S3-T03
+PHASE: GitNexus detect-changes
+UTC: 2026-08-16T03:20:39Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Command:
+node .gitnexus/run.cjs detect-changes --repo paseo-agy-acp
+
+Exit code: 0
+
+Key output:
+Changes: 12 files, 7 symbols
+Affected processes: 0
+Risk level: low
+Changed symbols: enqueue, starting, runWorker, waitForLine, dispatch, coordinator, enqueueHolder
+
+Current dirty-scope limitation:
+GitNexus detect-changes reported only mapped tracked dirty symbols and did not include untracked S3-T03 test/receipt files. It also did not map the S3-T03 controller soft-drain hunks to changed symbols in this shared dirty worktree. This receipt therefore records detect-changes as a live low-risk result for mapped changes, not as a complete ownership proof.
+
+Tracked dirty paths at this point:
+- ACP Connector/acp/agent.ts: predecessor/sibling ownership, not edited by S3-T03.
+- ACP Connector/acp/session/setup.ts: S3-T10 sibling ownership, not edited by S3-T03.
+- ACP Connector/admission/turn-coordinator.ts: predecessor ownership, not edited by S3-T03.
+- ACP Connector/agy/cli.ts: S3-T10 sibling ownership, not edited by S3-T03.
+- Admission Controller/controller.ts: shared Stage 3 file; S3-T03 added beginSoftDrainTo1, durable drain capacity checks, policy_drain_completed journaling, and completion calls on lease-release seams while preserving existing T18/T02 changes.
+- Admission Controller/schema.ts: T18 predecessor ownership, not edited by S3-T03.
+- tests/admission-controller.test.ts: predecessor ownership, not edited by S3-T03.
+- tests/admission-fault-security-matrix.test.ts: predecessor ownership, not edited by S3-T03.
+- tests/admission-process.test.ts: predecessor ownership, not edited by S3-T03.
+- tests/admission-schema.test.ts: predecessor ownership, not edited by S3-T03.
+- tests/admission-startup-recovery.test.ts: predecessor ownership, not edited by S3-T03.
+- tests/admission-turn-coordinator.test.ts: predecessor ownership, not edited by S3-T03.
+
+S3-T03 untracked ownership:
+- tests/admission-soft-drain.test.ts
+- docs/design/receipts/S3-T03/
+
+Index:
+No files were staged by S3-T03.

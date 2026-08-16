@@ -1,0 +1,22 @@
+TASK_ID: S3-T12
+RECEIPT: green-1
+UTC: 2026-08-16T04:11:11Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Command:
+rtk npm test -- tests/admission-production-dispatch.test.ts
+
+Exit:
+0
+
+Key output:
+> npm run typecheck && npm run build && vitest run tests/admission-production-dispatch.test.ts
+> tsc -p tsconfig.test.json
+> node scripts/clean-dist.mjs && tsc
+Test Files  1 passed (1)
+Tests  3 passed (3)
+
+Behavior proven:
+- accepted production stdin dispatch enters `AgyCliSession.prompt` and completes through `AdmissionTurnCoordinator`, writes the business prompt once, leaves no legacy `stdin.end(prompt)` payload, and records exactly one durable `request_active` transition before completion.
+- unprovable stdin write returns `dispatch_ambiguous`, writes once, never replays, durably records `dispatch_ambiguous`, and terminates the fake native child with the existing SIGINT cleanup path on Linux.
+- pre-identity blocked dispatch reaches the admission ambiguous bridge through the public `AgyCliSession.prompt` seam and performs zero business writes.

@@ -1,0 +1,11 @@
+TASK_ID=S3-T02
+RECEIPT=architecture
+UTC=2026-08-16T02:46:41Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+COMMAND=rtk npm run validate:architecture
+EXIT_CODE=0
+
+KEY_OUTPUT:
+> node scripts/verify-import-boundaries.mjs
+architecture boundaries: PASS

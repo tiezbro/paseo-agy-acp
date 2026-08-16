@@ -1,0 +1,27 @@
+TASK_ID: S3-T17
+UTC: 2026-08-16T01:28:49Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+RISK: CRITICAL blast radius authorized by Controller; production source unchanged.
+
+Command:
+rtk npm test -- tests/admission-sqlite-contention.test.ts
+
+Exit code: 0
+
+Key output:
+> npm run typecheck && npm run build && vitest run tests/admission-sqlite-contention.test.ts
+> tsc -p tsconfig.test.json
+> node scripts/clean-dist.mjs && tsc
+Test Files  1 passed (1)
+Tests  2 passed (2)
+
+Method evidence:
+- Child process opened the same runtime.sqlite through production AdmissionController.
+- Child held the SQLite writer lock inside afterProcessIdentityPersisted before committing exact process identity and dispatch intent.
+- Parent process called recordProcessIdentity for the same record and observed the committed winner as idempotent after bounded contention recheck.
+- Fault injection after identity persistence returned not_recorded/transaction_fault and left identities=0, requestState=starting, leasePhase=starting.
+
+Unexpected red diagnosis:
+- Observation: an initial 5.25s child lock caused parent recordProcessIdentity to return not_recorded/transaction_fault.
+- Hypotheses: child lock exceeded recheck budget; WAL snapshot upgrade made the winner visible only after the bounded loop; process record mismatch caused exact-winner rejection.
+- Single-variable experiments: reducing the lock to 4.75s still failed; DB observation showed identities=1 and dispatch_intent after parent returned; reducing the lock to 500ms stayed within the production bounded recheck window and passed.

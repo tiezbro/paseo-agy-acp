@@ -1,0 +1,60 @@
+TASK_ID=S3-INT-CONTROLLER-SCHEDULER-EVENT
+EVENT_SEQUENCE=2
+STAGE=3
+UTC=2026-08-16T07:32:32Z
+CONTROLLER_ID=79ab5347-5101-4eff-89ed-6a7aa550ae2e
+EVENT=fresh-quality-round-3-launched-and-runtime-verified
+
+BASELINE
+CWD=/home/tiezbro/projects/paseo-agy-acp
+BRANCH=main
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+SOLE_PARENT=78931bff95ecbd9868f9cfa83a281cbbbf1a60d8
+INDEX_STAGED_PATHS=0
+UNMERGED_ENTRIES=0
+
+FRONTIER_READBACK
+DEPENDENCY_DAG=docs/design/v2.0.0.0-stage3-execution-prompt.md section 2.2
+READY_FRONTIER=[S3-REV-QUAL-R3]
+RUNNING_SET=[S3-REV-QUAL-R3:228c3eea-cb99-436e-b55f-acc8a416bd09]
+REVIEW_SET=[S3-REV-QUAL-R3]
+INTEGRATION_SET=[]
+BLOCKER_SET=[S3-INT-PHASE-CODE:dual-review-not-yet-approved,T08:SOURCE_FIELD_GAP+REAL_PROVIDER_REQUIRED+SOURCE_IDENTITY_UNKNOWN]
+TASKS_LAUNCHED=[S3-REV-QUAL-R3]
+TASKS_DEFERRED=[]
+UNLAUNCHED_READY_TASK_RECORDS=[]
+
+LAUNCH_EVIDENCE
+TASK_ID=S3-REV-QUAL-R3
+READY_AT=2026-08-16T07:29:34Z
+LAUNCH_CREATED_AT=2026-08-16T07:32:13.603Z
+POST_CREATE_VERIFIED_AT=2026-08-16T07:32:32.939Z
+READY_TO_CREATE_LATENCY_MS=159603
+READY_TO_CREATE_BOUNDARY=mandatory Controller receipt readback/hash/diff verification, routing-policy health gate, and complete audit task contract construction
+AGENT_ID=228c3eea-cb99-436e-b55f-acc8a416bd09
+PARENT_AGENT_ID=79ab5347-5101-4eff-89ed-6a7aa550ae2e
+ACTUAL_PROVIDER=opencode
+ACTUAL_MODEL=opencode/deepseek-v4-flash-free
+ACTUAL_THINKING=max
+ACTUAL_MODE=build
+ACTUAL_FEATURES=auto_accept:true
+PENDING_PERMISSIONS=[]
+STATUS=running
+ROUTE_HEALTH_CLASS=unknown
+ROUTE_LOG=using unverified provider opencode/opencode/deepseek-v4-flash-free
+
+SERIALIZATION_REASON
+No implementation or acceptance test task was launched alongside the Quality
+reviewer. S3-INT-PHASE-CODE is not ready because its canonical dependency is an
+approved Quality verdict. Acceptance commands share npm/Vitest/PID resources
+with the reviewer and are held until the reviewer terminates. This is a valid
+dependency and runtime-capacity boundary, not an unlaunched ready task.
+
+NEXT_REEVALUATION_TRIGGER=S3-REV-QUAL-R3 terminal notification
+
+SCOPE_AND_NON_CLAIMS
+- This receipt records an observed Controller scheduling event after the F4
+  historical evidence disposition.
+- It does not reconstruct any earlier scheduling event.
+- It does not claim Quality approval or integration readiness.
+- No source, test, prior receipt, git index, or git ref was modified.

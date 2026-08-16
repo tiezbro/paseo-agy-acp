@@ -1,0 +1,42 @@
+TASK_ID=S3-T18R
+RECEIPT=broad-validate
+UTC=2026-08-16T02:18:36Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+COMMAND=npm run validate
+
+> paseo-agy-acp@1.0.0.4 validate
+> npm test && npm run validate:architecture
+
+
+> paseo-agy-acp@1.0.0.4 test
+> npm run typecheck && npm run build && vitest run
+
+
+> paseo-agy-acp@1.0.0.4 typecheck
+> tsc -p tsconfig.test.json
+
+
+> paseo-agy-acp@1.0.0.4 build
+> node scripts/clean-dist.mjs && tsc
+
+
+ RUN  v4.1.10 /home/tiezbro/projects/paseo-agy-acp
+
+Cloning into '/tmp/agy-acp-reconcile-ctMZRu/parent/vendor'...
+done.
+Cloning into '/tmp/agy-acp-reconcile-lDPqZj/parent/vendor'...
+done.
+
+ Test Files  43 passed (43)
+      Tests  573 passed | 2 skipped (575)
+   Start at  02:18:38
+   Duration  18.43s (transform 6.18s, setup 0ms, import 11.09s, tests 73.34s, environment 5ms)
+
+
+> paseo-agy-acp@1.0.0.4 validate:architecture
+> node scripts/verify-import-boundaries.mjs
+
+architecture boundaries: PASS
+
+EXIT_CODE=0

@@ -1,0 +1,77 @@
+TASK_ID=S3-REV-QUAL
+ROUND=2
+RECEIPT=method-evidence-2
+UTC=2026-08-16T07:24:21Z
+ROLE=fresh independent leaf reviewer; no delegation
+PASEO_AGENT_ID=e4816ee7-3bed-4200-bd92-66a122c2e51c
+PARENT_CONTROLLER=79ab5347-5101-4eff-89ed-6a7aa550ae2e; injected status running
+IDENTITY=CHILD; provider/model=codex/gpt-5.6-luna; thinking=max; mode=full-access; pending=[]
+CWD=/home/tiezbro/projects/paseo-agy-acp
+
+1. BASELINE AND SCOPE
+BRANCH=main
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+SOLE_PARENT=78931bff95ecbd9868f9cfa83a281cbbbf1a60d8
+INDEX=clean; no staged paths
+UNMERGED=0
+DIRTY_OWNERSHIP=shared sibling Stage 3 worktree; 21 tracked modified paths and 241 untracked files are attributable to canonical Stage 3 task/receipt reservations; no dirty path was treated as owned by this reviewer.
+FIXED_POINT_METHOD=The review set is git diff HEAD plus git ls-files --others --exclude-standard plus direct source/test/receipt reads. The fixed-point expression HEAD...HEAD is empty by construction and was not used as an empty-review shortcut.
+WRITE_SET=Only docs/design/receipts/S3-REV-QUAL/verdict-2.txt and docs/design/receipts/S3-REV-QUAL/method-evidence-2.txt.
+
+2. AUTHORITY READ AND HASH GATE
+CONFIRMED_SCHEME=/home/tiezbro/projects/MAACS/docs/maacs-paseo-agy-acp-confirmed-scheme.md SHA-256=d3b712ee5dd01029c66b0372a482f248a6f1ecbcf81572eb74d7b4ba5d98a98d
+STAGE2_CONTROLLER_PROMPT=/home/tiezbro/projects/MAACS/docs/controller-prompts/PASEO_AGY_ACP_STAGE2_CONTROLLER_PROMPT.md SHA-256=9f946e36e717547e5982eefcc37c188d236e48b3be495541bd12129f84207993
+AGENTS=/home/tiezbro/projects/paseo-agy-acp/AGENTS.md SHA-256=9bbd1e7b1bb7938cc3fd5922a1dcf9a036fa8639267d38789213f4fe9fc3198d
+S2_503=docs/design/v2.0.0.0-stage2-503-feasibility.md SHA-256=c742645666b456bd5f42602a407446f70cd55321a0d2be2da044f514cb27de19
+S2_ACP=docs/design/v2.0.0.0-stage2-acp-source-map.md SHA-256=f2ded52a47a73773efcbbf27b1d395ad6a9abba7e95b0bdd2516c3b0fe65f860
+S2_ADMISSION=docs/design/v2.0.0.0-stage2-admission-source-map.md SHA-256=eee7e56c7ddaa09dc155cb92772298eb0b19710e88b336e16a3851546015fafb
+S2_ARCHITECTURE=docs/design/v2.0.0.0-stage2-architecture.md SHA-256=7989c043603a11e4b5d88073d8352509d9ffcf7f8c0d736d2b48149aff03eb54
+S2_DOMAIN=docs/design/v2.0.0.0-stage2-domain-model.md SHA-256=3b6fabc9a862ed515ea5d39643fdeff6d83f15d0a079d3ea166377004183c12e
+S2_SPEC=docs/design/v2.0.0.0-stage2-spec.md SHA-256=3d90fe642f9322970c8e40e7a23b22228d62bfb3c52a5faac5a10960a9d03450
+S2_TEST_CONTRACTS=docs/design/v2.0.0.0-stage2-test-contracts.md SHA-256=51e8e3bab735919b2d3643d1212fe289c6de281da4404bde033709a8cb22ed2b
+S2_HANDOFF=docs/design/v2.0.0.0-stage2-handoff.md SHA-256=c88be84fa4c86c4c63921aaccd08f5f9c765dc896f1c35592f6cb0ee16fafc48
+STAGE3_PROMPT=docs/design/v2.0.0.0-stage3-execution-prompt.md SHA-256=24c06dbe19b720b27b4bb356d84d35918a0cffe94ee098d80d0c6da14fb2b462
+AUTHORITY_READ=confirmed Scheme, Stage 2 Controller Prompt, AGENTS.md, all eight immutable Stage 2 inputs, and canonical Stage 3 prompt were read in full; Stage 2 files have no current worktree diff.
+
+3. SKILL CONFORMANCE
+CODE_REVIEW_SKILL=/home/tiezbro/.agents/skills/code-review/SKILL.md SHA-256=9cf46653dd9c710ea1e6c22423caf31a794c88773bc94bdaa23140277f470442; fully read.
+CODEBASE_DESIGN_SKILL=/home/tiezbro/.agents/skills/codebase-design/SKILL.md SHA-256=a8d50abac5a4018f60e1d911d4b6f4e36454ca14d6c390c0695a578c7de65dad; fully read.
+CODE_REVIEW_EXECUTED=Fixed-point pinning, candidate inventory, independent Standards/Spec separation, and smell-baseline judgment were applied to the current worktree.
+CODE_REVIEW_INAPPLICABLE=The skill requests spawning two sub-agents; user authority requires a leaf reviewer with no delegation, and S3-REV-SPEC plus this Quality reviewer already provide independent axes.
+CODEBASE_DESIGN_EXECUTED=Used module, interface, implementation, seam, adapter, depth, leverage, and locality terms to inspect production dispatch, runtime reaper, process evidence, and terminal ownership.
+GITNEXUS_INAPPLICABLE=No application symbol was edited and no commit was attempted; existing task impact/detect receipts were read. No reviewer-owned symbol edit needed impact, and no reviewer commit needed detect_changes.
+
+4. CURRENT CANDIDATE QUALITY CHECKS
+F1_PRODUCTION=TurnDispatchBoundary.markDispatchAmbiguous handles unprepared pre-identity dispatch by markExecutionRecoveryRequired, while prepared ambiguity uses markDispatchAmbiguous; tests/admission-production-dispatch.test.ts:123-163 drives the real coordinator and durable SQLite state.
+F2_PRODUCTION=AdmissionRuntime setInterval(reapOnce) is bounded to [1,4000]ms, uses native readers, unref, close cleanup, fail-closed catch, and #reaping; composeAcpRuntime calls createAdmissionRuntime; tests/admission-reaper.test.ts:309-349 proves no-restart recovery and timer cleanup.
+F3_THRESHOLD=Admission Controller/controller.ts:2543-2545 applies strict now - heartbeatAt > 4000; tests/admission-reaper.test.ts:402-425 covers below/equal/above.
+TERMINAL=prompt.ts completeTurn releases the turn in finally; v2 typed terminal tests assert exactly one non-end_turn idle update; no duplicate terminal or replay path was observed.
+TRANSACTIONS=Inspected fenced lease transitions, durable dispatch intent, payload deletion, recovery settlement, reaper release, queued-owner settlement, and error catches; uncertain execution remains visible and non-replayable.
+ROLE_WRITE_RESOURCE=No production recovery surface outside the two bounded contexts, no second output/delivery path, no new schema authority, and no receipt write outside task reservations was found.
+FORBIDDEN_SCAN=Source/test scans found only existing comments, tests, and documentation about forbidden outbox/replay/recovery surfaces; no newly introduced forbidden production symbol was found.
+
+5. VALIDATION EVIDENCE
+OFFICIAL_VALIDATE_ATTEMPT_1=Fresh npm run validate exited 1 after typecheck/build; Vitest reported 15 failed files, 17 failed timeout tests, 39 passed files, 590 passed tests, and 2 skipped. The command short-circuited before architecture/secrets.
+OFFICIAL_VALIDATE_ATTEMPT_2=Fresh exact npm run validate exited 1 after typecheck/build; Vitest workers hit pthread_create Resource temporarily unavailable and EPIPE, with 3 production-dispatch tests failing because workers crashed. The command again short-circuited before architecture/secrets.
+CONTROLLED_FULL=./node_modules/.bin/vitest run --pool=forks --maxWorkers=1 --no-file-parallelism exited 0: 54 files, 607 tests passed, 2 skipped.
+CONTROLLED_FOCUSED=The fresh focused run for admission-production-dispatch, admission-reaper, admission-race-contract, and admission-typed-terminal exited 0: 4 files, 19 tests passed.
+ARCHITECTURE= npm run validate:architecture exited 0; architecture boundaries: PASS.
+SECRETS= npm run validate:secrets exited 0; secret scan: PASS (158 files checked).
+DIFF_CHECK=git diff --check exited 0.
+ENVIRONMENT_DISPOSITION=The two official parallel Vitest failures are resource-limited runner evidence, not accepted code-green evidence; no business assertion failure was substituted or hidden. A resource-clean broad npm run validate remains a downstream verification need.
+
+6. PARALLELISM EVIDENCE
+STATIC_FRONTIER=T01; T04/T05/T07/T11/T13/T17; T08 typed-stop plus T15/T18; T02/T09; T03/T10; T06/T12; T14/T19; T16; T20/T21; review and integration chain.
+STATIC_CONFORMANCE=The frontier and shared-writer serializations match Stage 3 prompt sections 2.2-2.4; no concrete unjustified serialization found.
+SAFE_OVERLAP=T20/T21 and T14/T19 have interleaved receipt timestamps, disjoint write sets, and no DAG edge ordering them.
+DYNAMIC_GAP=No durable controller scheduling-event receipt provides READY_AT, launch time, NOT_LAUNCHED_REASON, conflicting boundary, next reevaluation, worker release latency, or frontier recompute events. S3-PARALLELISM-REPAIR/evidence-1.txt:108-300 explicitly records the gap and does not invent fields.
+F4_DISPOSITION=Keep F4 LOW and revisions-required for dynamic evidence completeness before integration acceptance; this is not a claim of unjustified serialization.
+
+7. FORBIDDEN ACTIONS AND ACCIDENTAL COMMAND CLEANUP
+NO_DELEGATION=true; NO_PROVIDER=true; NO_NETWORK=true; NO_PRODUCTION_6767=true; NO_STAGE_COMMIT_PUSH=true.
+ACCIDENTAL_PNPM=One exploratory pnpm exec vitest attempt invoked the project's supply-chain policy and exited before test execution because build scripts were ignored; it did not complete an install. It generated pnpm-lock.yaml and pnpm-workspace.yaml at 2026-08-16T07:15:55Z; those exact generated files were removed, and final status no longer lists them.
+FINAL_SCOPE_CHECK=The only reviewer-created paths are verdict-2.txt and method-evidence-2.txt under docs/design/receipts/S3-REV-QUAL; verdict-1.txt and all source/test/canonical docs remain untouched by this reviewer.
+
+8. CLOSEOUT EXPECTATION
+VERDICT=revisions-required
+REASON=F1/F2/F3 are closed; F4 remains the only open Quality finding because static/overlap evidence cannot prove the prompt's per-event dynamic scheduling contract. T08 remains an external typed blocker.

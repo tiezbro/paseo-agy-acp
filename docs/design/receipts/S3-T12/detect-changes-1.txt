@@ -1,0 +1,27 @@
+TASK_ID: S3-T12
+RECEIPT: detect-changes-1
+UTC: 2026-08-16T04:11:11Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Commands and exits:
+1. node .gitnexus/run.cjs detect-changes --repo paseo-agy-acp --scope unstaged
+   exit=0
+2. git diff --check
+   exit=0
+3. git diff --name-only -- 'ACP Connector/agy/cli.ts' 'ACP Connector/admission/turn-coordinator.ts' 'tests/admission-production-dispatch.test.ts' 'docs/design/receipts/S3-T12'
+   exit=0
+4. git ls-files --others --exclude-standard -- 'tests/admission-production-dispatch.test.ts' 'docs/design/receipts/S3-T12'
+   exit=0
+
+Key output:
+- GitNexus detect_changes: Changes: 13 files, 7 symbols; Affected processes: 0; Risk level: low.
+- GitNexus changed symbols were shared predecessor/sibling tracked test helpers: enqueue, starting, runWorker, waitForLine, dispatch, coordinator, enqueueHolder.
+- `git diff --check` produced no output.
+- S3-T12 tracked production diff paths: `ACP Connector/admission/turn-coordinator.ts`, `ACP Connector/agy/cli.ts`.
+- S3-T12 untracked receipt/test paths include `docs/design/receipts/S3-T12/` and `tests/admission-production-dispatch.test.ts`; GitNexus detect_changes does not include untracked files.
+
+Scope conclusion:
+GitNexus reported LOW/no affected processes for the tracked shared dirty set it
+recognized. The S3-T12 untracked test and receipt files are outside
+detect_changes coverage and were enumerated with git readback. `git diff
+--check` passed.

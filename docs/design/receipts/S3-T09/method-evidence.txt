@@ -1,0 +1,22 @@
+TASK_ID=S3-T09
+phase=method-conformance
+utc=2026-08-16T02:40:37Z
+
+selected_skills:
+- primary=tdd path=/home/tiezbro/.agents/skills/tdd/SKILL.md source=mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df sha256=5e6b9c16b547113e90afbb946489d1c1384be5c2128f0159bd0bee57251ecf08
+- supporting=implement path=/home/tiezbro/.agents/skills/implement/SKILL.md source=mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df sha256=6d3fd9e83b8f36e5213854779db49b256a457a7ebb4a503e53fa7dcff696adc3
+
+skill_steps:
+- tdd read completely: executed.
+- implement read completely: executed.
+- pre-agreed seam: AcpAgent auth entry methods created from composeAcpRuntime enabled composition; disabled AcpAgent legacy path.
+- RED before GREEN: executed, red-1.txt.
+- one minimal GREEN slice: executed, private agent auth guard only.
+- implementation commit instruction from implement skill: inapplicable, overridden by S3-T09 forbidden surfaces (no stage/commit/push).
+- code review instruction from implement skill: inapplicable for leaf Worker; independent review is Controller/Stage 3 responsibility per Prompt.
+
+forbidden_shortcuts:
+- missing-file RED: not used.
+- mutation-as-RED: not used.
+- source-string-only/mock-only acceptance: not used.
+- real Provider/production 6767/network/install/delegation: not used.

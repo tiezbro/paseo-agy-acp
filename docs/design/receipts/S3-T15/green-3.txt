@@ -1,0 +1,27 @@
+TASK_ID: S3-T15
+UTC: 2026-08-16T01:47:11Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Business obligation:
+Steer racing disconnect must not dispatch a replacement turn twice, must not
+leave a permanent turn reservation, and must release the Admission seat.
+
+Method evidence:
+The test drives the public v2 prompt seam with a real TurnScheduler,
+handleCloseSession, AdmissionTurnCoordinator, and AdmissionController. The fake
+agy session mirrors the production dispatch-boundary order
+prepare -> beforePromptWrite -> afterPromptWrite. The race accepts a steer,
+closes the session, observes one backend dispatch and one boundary commit, and
+asserts the active request is cancelled with zero remaining leases.
+
+Command:
+rtk npm test -- tests/admission-race-contract.test.ts
+
+Exit code: 0
+
+Key output:
+> npm run typecheck && npm run build && vitest run tests/admission-race-contract.test.ts
+> tsc -p tsconfig.test.json
+> node scripts/clean-dist.mjs && tsc
+Test Files  1 passed (1)
+Tests  3 passed (3)

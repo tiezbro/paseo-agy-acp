@@ -1,0 +1,44 @@
+TASK_ID=S3-INT-PHASE-DOCS
+PHASE=2
+UTC=2026-08-16T08:22:01Z
+RESULT=PASS_NO_COMMIT
+
+PRE_SELF_STAGED_MANIFEST
+COMMAND=git diff --cached --name-only | awk '<code/docs/receipt classifier>'
+EXIT_CODE=0
+KEY_LINES:
+- code=39
+- docs=4
+- receipts=233
+- unexpected=0
+
+ACCEPTED_DOCUMENTATION_PATHS
+- README.md
+- README.zh-CN.md
+- CHANGELOG.md
+- docs/design/v2.0.0.0-admission-controller.md
+
+ACCEPTED_EVIDENCE_ROOTS
+- docs/design/receipts/S3-INT/
+- docs/design/receipts/S3-INT-CODE/
+- docs/design/receipts/S3-PARALLELISM-REPAIR/
+- docs/design/receipts/S3-REV-SPEC/
+- docs/design/receipts/S3-REV-QUAL/
+- docs/design/receipts/S3-T01/ through docs/design/receipts/S3-T21/
+- docs/design/receipts/S3-T18R/
+
+CONTROL_BINDINGS
+- S3-REV-SPEC/verdict-2.txt=ada5b11ffb75b4cce6294c577ec8ee605a31b948500dbedf6589b1c1275cb333
+- S3-REV-QUAL/verdict-3.txt=0ed1344b1c620f7a0475a28203240b21ab29774751e2212daf5be173f553e20e
+- S3-INT/scheduler-event-4.txt=10fda20278f071baac48405b6b4748c44f034b8721d9fc34c3bf39116131165d
+- S3-INT/acceptance-stage-1.txt through acceptance-stage-6.txt and S3-INT/method-evidence.txt are included.
+- S3-INT-CODE/phase-1.txt is included.
+
+SELF_INCLUSION
+- This additive file is written before the final staged manifest and is staged immediately after creation.
+- Expected final documentation/evidence count after self staging=238 (4 accepted docs plus 234 receipt files).
+- No post-commit receipt exists or is staged.
+
+BOUNDARY
+- The staged documentation/evidence set is limited to accepted Stage 3 docs and receipts; no accepted doc content was edited by this integrator.
+- No commit was created in phase 2.

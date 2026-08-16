@@ -1,0 +1,21 @@
+TASK_ID: S3-T12
+RECEIPT: repair-f1-high-expanded-1
+UTC: 2026-08-16T06:45:54Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Command:
+rtk npm test -- tests/acp-server.test.ts tests/acp-runtime-wiring.test.ts tests/queue-steer.test.ts tests/cli.test.ts
+
+Exit:
+0
+
+Key output:
+> npm run typecheck && npm run build && vitest run tests/acp-server.test.ts tests/acp-runtime-wiring.test.ts tests/queue-steer.test.ts tests/cli.test.ts
+> tsc -p tsconfig.test.json
+> node scripts/clean-dist.mjs && tsc
+Test Files  4 passed (4)
+Tests  168 passed | 1 skipped (169)
+
+Scope:
+HIGH-expanded regressions for the Controller-authorized production dispatch /
+Admission boundary surface passed.

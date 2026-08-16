@@ -1,0 +1,86 @@
+TASK_ID=S3-INT
+ACCEPTANCE_STAGE=6
+TITLE=isolated-paseo-6768-single-canary
+UTC=2026-08-16T08:17:10Z
+RESULT=PASS
+TEMP_HOME=/tmp/paseo-agy-acp-s3-canary-A4rQdS
+PASEO_CLI=/home/tiezbro/.local/bin/paseo
+PASEO_ENV_STRIPPED=PASEO_AGENT_CWD,PASEO_AGENT_ID,PASEO_HOME
+
+PRECONDITIONS
+COMMAND=env | awk -F= '/^PASEO_/{print $1}'
+EXIT_CODE=0
+KEY_LINES:
+- PASEO_AGENT_CWD
+- PASEO_AGENT_ID
+- PASEO_HOME
+- find /tmp ... paseo-agy-acp-s3-canary-* returned no pre-existing directories (exit 0)
+
+START
+COMMAND=env -u PASEO_AGENT_CWD -u PASEO_AGENT_ID -u PASEO_HOME paseo start --home /tmp/paseo-agy-acp-s3-canary-A4rQdS --listen 127.0.0.1:6768 --no-relay --no-web-ui
+EXIT_CODE=0
+KEY_LINES:
+- Daemon starting in background (PID 199941).
+- Logs: /tmp/paseo-agy-acp-s3-canary-A4rQdS/daemon.log
+
+HEALTH_AND_STATE
+COMMAND=env -u PASEO_AGENT_CWD -u PASEO_AGENT_ID -u PASEO_HOME curl -fsS http://127.0.0.1:6768/api/health
+EXIT_CODE=0
+KEY_LINES:
+- {"status":"ok","timestamp":"2026-08-16T08:15:12.735Z"}
+- Only 127.0.0.1:6768 was probed.
+COMMAND=env -u PASEO_AGENT_CWD -u PASEO_AGENT_ID -u PASEO_HOME paseo ls --global --json --host 127.0.0.1:6768
+EXIT_CODE=0
+KEY_LINES:
+- []
+- Isolated global agent count=0.
+COMMAND=env -u PASEO_AGENT_CWD -u PASEO_AGENT_ID -u PASEO_HOME find /tmp/paseo-agy-acp-s3-canary-A4rQdS -maxdepth 1 -mindepth 1 -printf '%f\n'
+EXIT_CODE=0
+KEY_LINES:
+- server-id
+- config.json
+- daemon.log
+- paseo.pid
+
+STOP
+COMMAND=env -u PASEO_AGENT_CWD -u PASEO_AGENT_ID -u PASEO_HOME paseo daemon stop --home /tmp/paseo-agy-acp-s3-canary-A4rQdS --timeout 20 --json
+EXIT_CODE=0
+KEY_LINES:
+- "action": "stopped"
+- "pid": "199941"
+- "forced": false
+- "reason": "lifecycle_shutdown_rpc"
+- "message": "Daemon stopped gracefully"
+FORCE_STOP=inapplicable; the exact 6768 health probe was closed after graceful stop.
+
+CLOSURE_AND_CLEANUP
+COMMAND=env -u PASEO_AGENT_CWD -u PASEO_AGENT_ID -u PASEO_HOME curl -fsS --connect-timeout 2 http://127.0.0.1:6768/api/health
+EXIT_CODE=7_EXPECTED
+KEY_LINES:
+- Failed to connect to 127.0.0.1 port 6768.
+COMMAND=env -u PASEO_AGENT_CWD -u PASEO_AGENT_ID -u PASEO_HOME lsof -nP -iTCP:6768 -sTCP:LISTEN
+EXIT_CODE=1_EXPECTED
+KEY_LINES:
+- no listener output
+COMMAND=case /tmp/paseo-agy-acp-s3-canary-A4rQdS in /tmp/paseo-agy-acp-s3-canary-*) test -d /tmp/paseo-agy-acp-s3-canary-A4rQdS ;; *) exit 1 ;; esac
+EXIT_CODE=0
+KEY_LINES:
+- literal temp path matched the required prefix
+- literal temp path existed before deletion
+COMMAND=find /tmp/paseo-agy-acp-s3-canary-A4rQdS -xdev -depth -delete
+EXIT_CODE=0
+KEY_LINES:
+- exact validated directory removed
+- no symlink following or filesystem crossing used
+ENVIRONMENT_GUARD=An attempted rm -rf command was rejected before execution by the command guard; the exact validated depth-first removal above was used instead.
+POST_CLEANUP= test ! -e /tmp/paseo-agy-acp-s3-canary-A4rQdS -> exit 0; prefix scan -> empty; ps -p 199941 -> exit 1; Vitest/npm process scan -> empty (exit 1).
+
+SKILL_DISPOSITIONS
+- paseo-isolated-testing/SKILL.md was read completely, sha256=1e64d81484efd78ac12d75be44066921c8a65d737dff42a3a9e05e436b35ff4e.
+- references/isolated-daemon-testing.md is missing at /home/tiezbro/.agents/skills/paseo/paseo-isolated-testing/references/isolated-daemon-testing.md; core SKILL.md only was used.
+- The core skill production-home guard is inapplicable under canonical project authority: no ~/.paseo read/hash/write and no production 127.0.0.1:6767 call occurred.
+
+ASSERTIONS
+- No paseo run command and no Provider request were made.
+- No production home, production daemon, installation, switch, push, tag, deploy, or release action was performed.
+- All six acceptance stages are PASS; integration staging may begin.

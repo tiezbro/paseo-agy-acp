@@ -1,0 +1,38 @@
+TASK_ID=S3-INT
+ACCEPTANCE_STAGE=2
+TITLE=sqlite-cross-process-fault-security
+UTC=2026-08-16T08:08:34Z
+RESULT=PASS
+ORDER=focused -> affected -> broad
+
+FOCUSED
+COMMAND=rtk npm test -- tests/admission-policy-consistency.test.ts tests/admission-soft-drain.test.ts tests/admission-owner-crash.test.ts tests/admission-reaper.test.ts tests/admission-sqlite-contention.test.ts tests/admission-schema-v2.test.ts
+EXIT_CODE=0
+KEY_LINES:
+- npm run typecheck && npm run build && vitest run <six focused paths>
+- Test Files 6 passed (6)
+- Tests 16 passed (16)
+- Duration 2.03s
+
+AFFECTED
+COMMAND=rtk npm test -- tests/admission-controller.test.ts tests/admission-startup-recovery.test.ts tests/admission-turn-coordinator.test.ts tests/admission-process-evidence.test.ts tests/admission-runtime.test.ts tests/acp-runtime-wiring.test.ts tests/admission-schema.test.ts tests/admission-fault-security-matrix.test.ts tests/admission-process.test.ts tests/sqlite-session-store.test.ts tests/admission-key-store.test.ts tests/admission-key-derivation.test.ts tests/admission-owner-instance.test.ts tests/acp-server.test.ts
+EXIT_CODE=0
+KEY_LINES:
+- npm run typecheck && npm run build && vitest run <fourteen affected seam paths>
+- Test Files 14 passed (14)
+- Tests 115 passed | 1 skipped (116)
+- Duration 18.27s
+
+BROAD
+COMMAND=rtk npm run validate
+EXIT_CODE=0
+KEY_LINES:
+- Test Files 54 passed (54)
+- Tests 607 passed | 2 skipped (609)
+- architecture boundaries: PASS
+- secret scan: PASS (158 files checked)
+
+ASSERTIONS
+- Commands were run serially; no bounded-worker substitute was used.
+- No Provider request or production 127.0.0.1:6767 contact occurred.
+- Stage 3 is eligible to begin only because all three Stage 2 barriers passed.

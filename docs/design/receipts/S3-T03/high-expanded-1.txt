@@ -1,0 +1,18 @@
+TASK_ID: S3-T03
+PHASE: HIGH impact expanded regression
+UTC: 2026-08-16T03:18:10Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Command:
+rtk npm test -- tests/acp-server.test.ts tests/acp-runtime-wiring.test.ts tests/queue-steer.test.ts tests/cli.test.ts
+
+Exit code: 0
+
+Key output:
+> npm run typecheck && npm run build && vitest run tests/acp-server.test.ts tests/acp-runtime-wiring.test.ts tests/queue-steer.test.ts tests/cli.test.ts
+Test Files  4 passed (4)
+Tests  168 passed | 1 skipped (169)
+Duration  18.20s (transform 1.58s, setup 0ms, import 2.99s, tests 45.32s, environment 0ms)
+
+Interpretation:
+The Stage 3 Prompt §5 HIGH impact expanded regression set stayed green for S3-T03 changes.

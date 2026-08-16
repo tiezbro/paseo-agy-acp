@@ -1,0 +1,25 @@
+TASK_ID: S3-T04
+receipt: green-3
+assertion: queued turns for the same agent are ordered by enqueued_at ASC, then request_id ASC.
+utc: 2026-08-16T01:28:12Z
+branch: main
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+command:
+rtk npm test -- tests/admission-scheduling-contract.test.ts
+
+exit_code: 0
+
+key_output:
+> npm run typecheck && npm run build && vitest run tests/admission-scheduling-contract.test.ts
+Test Files  1 passed (1)
+Tests  3 passed (3)
+Duration  583ms
+
+method_evidence:
+This is green regression evidence; RED is inapplicable by S2-TEST-001 M2 and S3-T04 task contract.
+The test observes orderedQueuedRequests through the public getQueueSnapshot boundary.
+Input shape: same agent, request-z at time 10, request-b and request-a at time 20; expected positions are request-z, request-a, request-b.
+
+impact_evidence:
+GitNexus upstream impact for completeLiveTurn: risk LOW; direct callers 3; affected processes admit and settleFailure; affected module Admission Controller.

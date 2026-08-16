@@ -1,0 +1,28 @@
+TASK_ID=S3-T14
+RECEIPT=red-2
+UTC=2026-08-16T05:11:30Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+COMMAND=rtk npm test -- tests/admission-reaper.test.ts
+EXIT_CODE=1
+
+EXPECTED_RED:
+An active lease has an old heartbeat and injected readers prove the persisted
+connector/child process evidence is still the same live process. The required
+runtime reaper should mark the lease suspect with suspect_reason
+heartbeat_expired while retaining the local seat and not treating timeout as
+death proof.
+
+KEY_OUTPUT:
+> npm run typecheck && npm run build && vitest run tests/admission-reaper.test.ts
+tests/admission-reaper.test.ts (2 tests | 2 failed)
+FAIL tests/admission-reaper.test.ts > S3-T14 heartbeat suspect and runtime reaper > marks heartbeat expiry suspect without releasing when process evidence is still live
+Expected storage.suspectReason: "heartbeat_expired"; Received storage.suspectReason: null
+Expected storage.suspectSince: 10000; Received storage.suspectSince: null
+Expected summary.retained: 1; Received summary.retained: 0
+
+RED_DISPOSITION:
+Behavioral RED confirmed. Heartbeat expiry does not become a retained suspect
+lease in current runtime behavior. This preserves the forbidden boundary: the
+test never releases by time/PID-only proof and never uses Connector restart as
+acceptance.

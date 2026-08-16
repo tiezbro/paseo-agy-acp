@@ -1,0 +1,23 @@
+TASK_ID=S3-T06
+UTC=2026-08-16T04:20:38Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+COMMAND_1=node .gitnexus/run.cjs detect-changes --repo paseo-agy-acp --scope unstaged
+EXIT_1=0
+KEY_OUTPUT_1:
+- Changes: 13 files, 7 symbols
+- Affected processes: 0
+- Risk level: low
+- Changed symbols: enqueue; starting; runWorker; waitForLine; dispatch; coordinator; enqueueHolder
+
+COMMAND_2=git diff --check
+EXIT_2=0
+KEY_OUTPUT_2:
+- no output
+
+SHARED_WORKTREE_SCOPE_NOTE:
+GitNexus detect-changes was run against unstaged shared Stage 3 worktree scope,
+not a task-isolated clean tree. The reported 13 tracked files / 7 symbols match
+the accepted Stage 3 dirty scope; affected processes remain 0 and risk is low.
+`git diff --check` returned clean. This receipt refresh only overwrites the
+authorized S3-T06 detect-changes receipt.

@@ -1,0 +1,18 @@
+TASK_ID=S3-T14
+RECEIPT=high-expanded-1
+UTC=2026-08-16T05:21:25Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+COMMAND=rtk npm test -- tests/acp-server.test.ts tests/acp-runtime-wiring.test.ts tests/queue-steer.test.ts tests/cli.test.ts
+EXIT_CODE=0
+
+KEY_OUTPUT:
+> npm run typecheck && npm run build && vitest run tests/acp-server.test.ts tests/acp-runtime-wiring.test.ts tests/queue-steer.test.ts tests/cli.test.ts
+Test Files  4 passed (4)
+Tests  168 passed | 1 skipped (169)
+Duration  18.18s
+
+DISPOSITION:
+The CRITICAL/HIGH expanded chain required by the accepted impact gate passed.
+No Provider, production 127.0.0.1:6767, install, network, commit, push, tag,
+deploy, or release action was used.

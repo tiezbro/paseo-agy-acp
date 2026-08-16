@@ -1,0 +1,16 @@
+TASK_ID=S3-T09
+phase=GREEN-1-focused
+utc=2026-08-16T02:40:37Z
+command=rtk npm test -- tests/admission-auth-gate.test.ts
+exit_code=0
+
+key_output:
+- npm run typecheck passed.
+- npm run build passed.
+- vitest run tests/admission-auth-gate.test.ts passed.
+- Test Files: 1 passed.
+- Tests: 2 passed.
+
+coverage:
+- enabled authenticate/loginAuth/logout/logoutAuth reject with typed Admission-enabled error.
+- disabled authenticate/loginAuth/logout/logoutAuth preserve legacy behavior.

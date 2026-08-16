@@ -1,0 +1,328 @@
+TASK_ID: S3-PARALLELISM-REPAIR
+RECEIPT: evidence-1
+ROLE: fresh leaf audit Executor for Quality finding F4 only (LOW, S3-REV-QUAL)
+SCOPE: evidence-only; NO implementation, NO tests, NO full validate, NO network,
+      NO Provider, NO install, NO stage/commit/push, NO edit of source/tests/
+      docs/prior receipts/review receipts/git index or refs.
+WRITE_SET: ONLY docs/design/receipts/S3-PARALLELISM-REPAIR/**
+UTC: 2026-08-16T06:44:00Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+PARENT: 78931bff95ecbd9868f9cfa83a281cbbbf1a60d8 (sole parent)
+SOURCE_BRIEF: S3-REV-QUAL verdict-1.txt F4 (lines 62-67), lines 30-38
+             (PARALLELISM_CONFORMANCE) and line 22 (BASELINE_GATE)
+
+
+1. IDENTITY_GATE (injected status tooling; no shell `paseo inspect`, no 127.0.0.1:6767)
+- paseo_get_agent_status(PASEO_AGENT_ID=9ab964e5-77ee-4c17-befb-4cc32777d757) matched the
+  injected environment exactly:
+  - provider=opencode, model=opencode/deepseek-v4-flash-free
+  - thinkingOptionId=max (effective max)
+  - currentModeId=build
+  - pendingPermissions=[]
+  - labels: task-id=S3-PARALLELISM-REPAIR, role=audit-worker, stage=3,
+    controller-id=79ab5347-5101-4eff-89ed-6a7aa550ae2e,
+    paseo.parent-agent-id=79ab5347-5101-4eff-89ed-6a7aa550ae2e
+  - ParentAgentId/controller present and non-empty -> CHILD identity confirmed;
+    no routing selector, no delegation, no orchestration performed.
+- status=running, cwd=/home/tiezbro/projects/paseo-agy-acp. No permission request pending.
+- RESULT: child fresh-leaf identity verified; sole parent controller
+  79ab5347-5101-4eff-89ed-6a7aa550ae2e (same controller that parented the
+  S3-REV-QUAL reviewer and all S3-T01..T21 workers).
+
+2. BASELINE_GATE — fresh git readback (exact commands, exit codes, UTC)
+Readback executed at 2026-08-16T06:43:30Z in cwd /home/tiezbro/projects/paseo-agy-acp:
+
+| command | exit | output (abridged where marked) |
+| --- | --- | --- |
+| git rev-parse --abbrev-ref HEAD | 0 | main |
+| git rev-parse HEAD | 0 | 83fb97257814f9072770c77d1bb0da4cfa2b420e |
+| git rev-parse HEAD^ | 0 | 78931bff95ecbd9868f9cfa83a281cbbbf1a60d8 |
+| git cat-file -p HEAD \| grep -c "^parent " | 0 | 1 (sole parent) |
+| git status --porcelain | 0 | 20 modified tracked + 43 untracked entries; NO staged entries (see below) |
+| git ls-files -u | 0 | (empty) -> unmerged entries = 0 |
+| git diff --cached --name-status | 0 | (empty) -> index/staged set clean |
+| git diff --check | 0 | (empty) -> no whitespace errors |
+| git diff HEAD --name-only | 0 | 20 tracked paths (below) |
+
+- Tracked dirty paths (all unstaged worktree state; none staged):
+  ACP Connector/acp/agent.ts; ACP Connector/acp/session/prompt.ts;
+  ACP Connector/acp/session/setup.ts; ACP Connector/admission/startup-recovery.ts;
+  ACP Connector/admission/turn-coordinator.ts; ACP Connector/agy/cli.ts;
+  Admission Controller/controller.ts; Admission Controller/process-evidence.ts;
+  Admission Controller/schema.ts; CHANGELOG.md; README.md; README.zh-CN.md;
+  docs/design/v2.0.0.0-admission-controller.md; package.json;
+  tests/admission-controller.test.ts; tests/admission-fault-security-matrix.test.ts;
+  tests/admission-process.test.ts; tests/admission-schema.test.ts;
+  tests/admission-startup-recovery.test.ts; tests/admission-turn-coordinator.test.ts
+- Shared dirty ownership check: every one of these 20 paths is attributable to a
+  canonical Stage 3 task write set in the immutable prompt WRITE_SET_MAP
+  (docs/design/v2.0.0.0-stage3-execution-prompt.md:104-144) — controller.ts to the
+  T18->T02->T03->T06->T14 shared-writer chain, agent.ts to T18->T09->T10,
+  cli.ts to T10->T12, turn-coordinator.ts to T18 + T12 (recorded addendum),
+  startup-recovery.ts to T06/T14, schema.ts to T18 (unique writer),
+  process-evidence.ts to T14, prompt.ts to T16 (unique writer), setup.ts to T10,
+  package.json to T20, docs/README/zh/CHANGELOG to T21, and the six modified
+  tests to the T01/T03/T09/T10/T18/T18R/T19 test reservations (their
+  detect-changes/validation receipts reference these exact files as
+  shared sibling state, e.g. S3-T19/detect-changes.txt, S3-T10/detect-2.txt:27,
+  S3-T18/validation-1.txt:31-33). No dirty path falls outside the union of
+  canonical task write sets; nothing is owned by this executor.
+- Untracked entries = 23 receipt directories (S3-REV-QUAL, S3-REV-SPEC,
+  S3-T01..S3-T21) + scripts/verify-no-secrets.mjs + 19 untracked task tests:
+  all attributable to their task ALLOWED_WRITE_SETs. T08 contributes only
+  docs/design/receipts/S3-T08/typed-blocked.txt (no repo implementation write).
+- HEAD unchanged across session; parent count = 1; no merge in progress.
+- RESULT: baseline gate PASS — branch main, pinned HEAD, sole parent, index
+  clean (no staged), unmerged = 0, shared dirty ownership consistent with
+  canonical write maps, receipt write set S3-PARALLELISM-REPAIR/** did not exist
+  before this receipt (sole write).
+
+3. EVIDENCE BASE (immutable authorities read, not modified)
+- docs/design/receipts/S3-REV-QUAL/verdict-1.txt — read fully; F4 at lines 62-67
+  (LOW; dynamic scheduler parallelism evidence incomplete); PARALLELISM_CONFORMANCE
+  block at lines 30-38; baseline/identity at lines 21-22.
+- docs/design/v2.0.0.0-stage3-execution-prompt.md:
+  - §2.2 DEPENDENCY_DAG (lines 69-102): the sole static frontier authority; T08
+    disposition line 91; review/integration nodes lines 93-101; acyclicity line 102.
+  - §2.3 WRITE_SET_MAP (lines 104-144): per-task write surfaces plus the explicit
+    shared-writer serializations (lines 138-144).
+  - §7.1 mutable runtime sets (lines 1084-1095), §7.2 scheduling contract
+    (lines 1097-1104), §7.3 per-unlaunched-task record fields
+    READY_AT/NOT_LAUNCHED_REASON/CONFLICTING_TASK/CONFLICTING_BOUNDARY/
+    NEXT_REEVALUATION_TRIGGER (lines 1106-1115), §7.4 Parallelism Review
+    8-field output contract (lines 1117-1128).
+- Task receipts read for evidence: S3-T08/typed-blocked.txt (all 32 lines),
+  S3-T14/{method-1,impact-1,red-1,red-2,green-1,high-expanded-1}.txt,
+  S3-T19/method-impact.txt + all 11 receipt UTC stamps, S3-T20/{method-1,
+  green-1,red-1,validation-1}.txt, S3-T21/{method-1,green-1,red-1,
+  validation-1}.txt, S3-T10/{method-1,broad-deferred-1,broad-validate-2,
+  detect-2,green-2-official}.txt, S3-T18/validation-1.txt,
+  S3-T18R/repair-before-1.txt, S3-T12/authority-addendum-1.txt.
+
+4. PARALLELISM REVIEW — full eight fields reproduced (prompt §7.4), each tagged
+with its evidence class:
+   [E] = directly evidenced by canonical DAG / task receipts / available timestamps
+   [N] = NOT durably recorded; explicitly unavailable in the repository
+   [O] = safe-overlap evidence (receipt UTC stamps + file mtimes + disjoint write sets)
+
+4.1 PARALLELISM_CONFORMANCE [E static / N dynamic]
+The static dependency/write/resource calculation is conformance-acceptable: the
+computed frontier (4.2) has no static violation, T20/T21 and T14/T19 safe overlap
+is evidenced (4.8), and no concrete unjustified serialization was found (4.6).
+The dynamic half (per-event immediate-release and immediate-recompute across all
+events, prompt §7.2 items 3-4) is NOT durably evidenced: fields required by §7.3
+do not exist in the repository (4.5, 4.7). Because no scheduler event log was
+required by the briefs or retained by the Controller, this executor records the
+evidence gap as the verdict does: LOW, revisions-required only for dynamic
+evidence completeness (F4), consistently with verdict-1.txt:65-67.
+
+4.2 READY_TASKS_OBSERVED [E]
+Static frontier sequence computed from §2.2 edges (incoming-edge closure,
+T08 excluded from the internal frontier per line 91):
+  1. T01 (only root)
+  2. T04/T05/T07/T11/T13/T17 (direct T01 successors; T02 additionally waits on T17)
+  3. T08 typed-stop (external; not a frontier member) plus T15/T18
+     (T15 waits on T04/T05/T11/T13; T18 waits on T17)
+  4. T02/T09 (T02 waits on T01+T17; T09 waits on T01+T18)
+  5. T03/T10 (T03 after T02; T10 after T09)
+  6. T06/T12 (T06 after T03/T05/T13; T12 after T10/T11)
+  7. T14/T19 (T14 after T06/T13; T19 after T12/T13)
+  8. T16 (after T12/T14)
+  9. T20/T21 (after all internal T01..T19, excluding T08 only)
+Review/integration: {T01..T21} -> S3-REV-SPEC + S3-REV-QUAL -> S3-INT-PHASE-CODE
+-> S3-INT-PHASE-DOCS -> S3-INT-FINAL-COMMIT (lines 93-99).
+Identical to verdict-1.txt:31. This is a static calculation, not an
+agent-count or launch-interval judgment.
+
+4.3 TASKS_LAUNCHED [E / N]
+- T01-T07, T09-T21 each own a receipt directory under docs/design/receipts/
+  (T08 has only typed-blocked.txt). S3-REV-SPEC and S3-REV-QUAL exist as
+  independent review nodes with verdict receipts. This is directly evidenced.
+- Receipt UTC stamps prove task activity/completion provenance, NOT scheduler
+  launch intervals: no receipt records when the Controller dispatched a worker
+  or when a worker process started; READY_AT/launch time are not durably
+  recorded (4.5). NOT durably recorded: exact launch order and launch moments.
+
+4.4 TASKS_DEFERRED [E]
+- T08: deferred by its external typed-stop gate (typed-blocked).
+- T20/T21: held behind all internal T01..T19 (exclude T08; prompt line 88/91);
+  no DAG edge lets them start earlier.
+- Shared-write serializations held by canonical seams (§2.3 lines 138-144):
+  controller.ts T18->T02->T03->T06->T14; schema.ts unique T18; agent.ts
+  T18->T09->T10; cli.ts T10->T12; startup-recovery.ts T06->T14;
+  prompt.ts unique T16; docs unique T21; package.json/scripts only T20.
+- Authorization gates recorded in receipts: T14 CRITICAL/HIGH impact acceptance
+  (S3-T14/impact-1.txt UTC 05:12:38Z; high-expanded-1.txt UTC 05:21:25Z line 16
+  "The CRITICAL/HIGH expanded chain required by the accepted impact gate
+  passed"); T12 HIGH addendum for the turn-coordinator bridge
+  (S3-T12/authority-addendum-1.txt UTC 03:56:01Z).
+- Test reservations: parallel tests reference the same shared dirty files
+  (e.g., S3-T18/validation-1.txt:31-36 executed-but-not-edited sibling tests).
+- T10 broad defer: S3-T10/broad-deferred-1.txt UTC 03:17:38Z (DEFER_REASON:
+  active non-S3-T10 controller.ts dirty state blocked typecheck; NEXT_TRIGGER
+  recorded) — later closed by S3-T10/broad-validate-2.txt revalidation
+  (EXIT 0, 47 files/581 tests) + green-2-official.txt/detect-2.txt.
+- T18 interim validation failure: S3-T18/validation-1.txt UTC 02:06:06Z
+  EXIT_CODE=1 (line 33 "FAIL tests/admission-process.test.ts child exited
+  before held after child process hit the same updated API boundary") —
+  later closed by the T18R repair round (repair-before-1.txt UTC 02:13:48Z,
+  error reproduced at line 209) with green-1-focused-affected/green-2/green-3
+  receipts. T18R is test-only with bounded reservation transfer.
+
+4.5 VALID_DEFER_REASONS [E]
+Only the following were accepted as valid (verdict-1.txt:34, all re-verified
+against the receipts above): canonical dependency edges (§2.2); shared write or
+semantic seams (§2.3 lines 138-144); schema/migration ordering (T18 unique
+schema writer; controller chain); test prerequisites (focused/affected/broad
+gates); typed safety blockers (T08 triple); authorized HIGH/CRITICAL gates
+(T12 addendum, T14 impact acceptance); and recorded-and-closed interim
+validation failures (T10 broad defer, T18 validation, each with explicit
+revalidation receipts). No other defer reason appears in any task receipt.
+
+4.6 UNJUSTIFIED_SERIALIZATION [E / N]
+- No concrete unjustified serialization was found. Static check: every
+  serialization in the record maps to a §2.2 edge or a §2.3 shared-seam row or
+  an authorized gate (4.4). Frontier order is DAG-consistent; T04/T05/T07/T11/
+  T13/T17 ran as a sibling batch (receipts T07 UTC 01:26:56Z, T13 UTC 01:27:09Z),
+  T20/T21 overlapped, T14/T19 overlapped (4.8).
+- NOT durably recorded: an exhaustive dynamic claim (every ready task launched
+  immediately at every scheduler event) is unsupported; §7.2 items 3-4 cannot be
+  proven per-event from repository evidence. This is why F4 remains LOW, not a
+  fabricated green claim (verdict-1.txt:66).
+
+4.7 BOUNDARY_RELEASE_LATENCY [N]
+Not independently evidenced. Task receipts carry UTC stamps (activity/completion
+provenance only) but no durable worker-finished-to-resource-release interval and
+no scheduler boundary-event record (no worker-end event, no reservation-release
+event with timestamp). The worker-finished-to-release latency required by §7.2
+item 4 therefore cannot be calculated from the repository. Static overlap
+evidence in 4.8 is the available proxy; it evidences concurrency safety, not
+release promptness. (Matches verdict-1.txt:36.)
+
+4.8 FRONTIER_RECOMPUTE_EVENTS [N, with [O] overlap evidence]
+- No durable per-scheduling-event READY_AT, NOT_LAUNCHED_REASON,
+  CONFLICTING_TASK, CONFLICTING_BOUNDARY, or NEXT_REEVALUATION_TRIGGER record
+  exists for the scheduling lifecycle. The prompt §7.3 record is not persisted
+  anywhere in the repository: no scheduler readback file, no Controller-run log,
+  no daemon artifact under docs/.
+- Closest in-repo analog: S3-T10/broad-deferred-1.txt carries
+  NOT_RUN_COMMAND/DEFER_REASON/EVIDENCE/NEXT_TRIGGER — a worker-authored
+  deferral receipt, not a Controller scheduler-event log; it covers one
+  validation gate, not the launch frontier.
+- [O] Safe-overlap evidence that IS durably recorded (this is the static/overlap
+  evidence class the verdict says exists, verdict-1.txt:35):
+  T20/T21: receipt content UTC stamps S3-T20/method-1.txt:1 = 06:03:35Z and
+  S3-T21/method-1.txt:1 = 06:03:41Z; full per-file stamp sets: T20
+  {red-1 05:57:04Z, method-1 06:03:35Z, green-1 06:03:35Z, validation-1
+  06:03:35Z}, T21 {red-1 05:58:47Z, green-1 06:02:26Z, method-1 06:03:41Z,
+  validation-1 06:03:41Z} — windows [05:57:04Z..06:03:35Z] and
+  [05:58:47Z..06:03:41Z] overlap with interleaved stamps (T21 green 06:02:26Z
+  between T20 red and T20 method/green); filesystem mtimes corroborate the same
+  interleaving (T20 red 05:57:22, T21 red 05:58:56, T21 green 06:02:37, T20
+  method+green 06:04:11, T21 method+validation 06:04:13, T20 validation
+  06:04:56). Write sets are disjoint (T20: package.json/scripts/secret-scan
+  test; T21: README/zh/CHANGELOG/admission-controller doc + closeout test —
+  §2.3 lines 129-130) and no §2.2 edge orders T20 vs T21. Direct corroboration:
+  S3-T20/validation-1.txt:21 "Full validation did not fail because of the
+  concurrent S3-T21 worker"; S3-T21/validation-1.txt:29 concurrent sibling
+  dirty-path scope note. => safe overlap evidenced.
+  T14/T19: receipt content UTC stamps S3-T14 {red-1/red-2 05:11:30Z,
+  impact-1 05:12:38Z, method-1..broad-1.. 05:21:25Z (8 receipts at 05:21:25Z)},
+  S3-T19 {affected/architecture/green-1/2/3/high-expanded/method-impact
+  05:18:25Z, broad-validate/detect-changes/diff-check/git-status 05:25:28Z} —
+  windows [05:11:30Z..05:21:25Z] and [05:18:25Z..05:25:28Z] overlap
+  ([05:18:25Z..05:21:25Z] intersection); mtimes corroborate (T14 red 05:11:50,
+  T14 impact 05:13:04, T19 batch 05:19:34-05:19:47, T14 green batch 05:22:18,
+  T19 validation batch 05:26:17). Write sets disjoint (T14: controller.ts +
+  process-evidence.ts + reaper test; T19: tests/admission-native-process.test.ts
+  only, no production writes — §2.3 lines 123/128; S3-T19/method-impact.txt:28-31).
+  => safe overlap evidenced.
+- NOT durably recorded: any recompute event, READY_AT, or NEXT_REEVALUATION
+  for the launch frontier. (Matches verdict-1.txt:37.)
+
+4.9 Why the historical dynamic fields are unavailable (explicit record)
+- The stage3 prompt (§7.1-7.3) puts READY_FRONTIER/RUNNING_SET/REVIEW_SET/
+  INTEGRATION_SET/BLOCKER_SET and the §7.3 per-unlaunched-task record in the
+  Controller's live session ("本 Prompt 不预填；由 Controller 持续维护",
+  line 1084) and does not itself require persisting those runtime sets; no
+  brief in §6 mandates a scheduler-event receipt; the confirmed Scheme and the
+  eight immutable Stage 2 inputs likewise impose no such artifact.
+- The Controller's scheduling conversation lives in its own session history
+  (Paseo daemon session store, not this repository); this executor cannot and
+  must not read production daemon state (forbidden surface), and the session
+  store is not part of the repo review candidate.
+- The repository therefore contains: the static DAG (§2.2), the write/resource
+  maps (§2.3/§2.4), task receipts with UTC stamps, detect-changes/impact
+  evidence, and git state — but no per-event scheduler log. Historical
+  READY_AT / launch time / release latency / recompute events are:
+  (a) not durably recorded anywhere under docs/, and (b) not recoverable
+  from git history (HEAD is the pinned fixed point; no scheduler artifact is
+  tracked).
+- Consequence: any claim of "every safe ready task launched immediately" or
+  "every completed task triggered prompt recomputation" is not evidencable —
+  exactly what F4 says. This receipt therefore never invents READY_AT, launch
+  time, release latency, or recompute events.
+
+5. FACT vs NOT-DURABLY-RECORDED ledger (distinction required by the brief)
+| Fact | Class | Evidence |
+| --- | --- | --- |
+| Static DAG and frontier order | [E] | prompt §2.2 lines 69-102; computed in 4.2 |
+| Shared-writer serializations are canonical, not ad hoc | [E] | §2.3 lines 138-144 |
+| Task activity/completion provenance | [E] | task receipt UTC stamps, 4.3/4.8 |
+| T20/T21 safe overlap; T14/T19 safe overlap | [O] | receipt UTC stamps + mtimes + disjoint write sets, 4.8 |
+| T10 broad defer and T18 interim validation failure, each closed by explicit revalidation receipts | [E] | 4.4 citations |
+| T08 external typed stop with exact blocker triple | [E] | S3-T08/typed-blocked.txt:13-17 |
+| No concrete unjustified serialization found | [E static] | 4.6 (static check) |
+| Exhaustive per-event immediate-launch/immediate-recompute | [N] | 4.5-4.8; unsupported |
+| READY_AT / launch time / boundary release latency / recompute events | [N] | 4.7/4.8/4.9; never invented |
+
+6. T08 typed stop (recorded for completeness)
+S3-T08/typed-blocked.txt:13-17 exact open blockers: SOURCE_FIELD_GAP,
+REAL_PROVIDER_REQUIRED, SOURCE_IDENTITY_UNKNOWN. T08 has no RED/READY/GREEN by
+contract (typed-blocked.txt:5, 27); excluded from READY_FRONTIER (line 27);
+receipt UTC 01:32:48Z; T20/T21 predecessor set = all internal T01..T19 with T08
+the only exclusion (typed-blocked.txt:27; prompt line 88/91). T08 is NOT an
+internal completion predecessor; T07->T08 edge retained per prompt line 91.
+
+7. DISPOSITION for F4 (for fresh Quality Review)
+- F4 stands as LOW. This evidence receipt closes nothing in source; it is the
+  F4 static/overlap evidence package the verdict foresaw (verdict-1.txt:65-67).
+- Re-verified facts: no concrete unjustified serialization (static), T20/T21
+  and T14/T19 safe overlap supported by durable in-repo stamps, dynamic fields
+  unavailable for the reasons recorded in 4.9 — no invented READY_AT, launch
+  time, release latency, or recompute events.
+- Remaining repair (F4 REPAIR_BOUNDARY, verdict-1.txt:67): the Controller must
+  preserve a durable scheduler event/readback receipt per scheduling boundary
+  (or record why the required dynamic fields are unavailable) BEFORE integration
+  acceptance. That action is outside this executor's evidence-only write set and
+  remains owned by the Controller (S3-INT / controller authority); it cannot be
+  performed here.
+- Fresh Quality Review expectation: PARALLELISM_CONFORMANCE = revisions-required
+  on dynamic evidence completeness only (consistent with verdict-1.txt:38);
+  static/overlap conformance acceptable; no new HIGH/MEDIUM findings introduced
+  by this evidence; findings count for S3-REV-QUAL remains 4 (HIGH=2, MEDIUM=1,
+  LOW=1).
+
+8. COMPLETION AND FORBIDDEN-SURFACE PROOF
+- Files written: ONLY docs/design/receipts/S3-PARALLELISM-REPAIR/evidence-1.txt
+  (newly created directory per allowed write set).
+- No source, test, doc, prior task receipt, or review receipt edited. No git
+  index/refs/HEAD touched (re-verified after write: HEAD unchanged, index
+  staged set still empty, unmerged still 0, git diff --check exit 0 — see below).
+- No implementation, no tests written, no npm run validate, no full build, no
+  network, no Provider invocation, no install, no paseo inspect shell call, no
+  127.0.0.1:6767 access, no delegation, no stage/commit/push.
+
+9. POST-WRITE READBACK (exact commands, exit codes, UTC)
+Executed after writing this file at 2026-08-16T06:44:45Z:
+$ git rev-parse HEAD -> 83fb97257814f9072770c77d1bb0da4cfa2b420e (exit 0)
+$ git ls-files -u -> (empty; unmerged = 0) (exit 0)
+$ git diff --cached --name-status -> (empty; index staged set clean) (exit 0)
+$ git diff --check -> (empty; no whitespace errors) (exit 0)
+$ git status --porcelain -- docs/design/receipts -> prior 23 receipt dirs +
+  exactly one new untracked path docs/design/receipts/S3-PARALLELISM-REPAIR/
+  (exit 0)
+The whole-file SHA-256 of this receipt is intentionally NOT embedded here
+(no self-referential digest per canonical artifact discipline); it is reported
+externally in the executor's closeout message after the final readback.
+</content>

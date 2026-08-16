@@ -1,0 +1,75 @@
+TASK_ID=S3-INT-PHASE-CODE
+PHASE=1
+UTC=2026-08-16T08:19:08Z
+RESULT=PASS_NO_COMMIT
+
+DUAL_REVIEW
+- S3-REV-SPEC/verdict-2.txt=approved sha256=ada5b11ffb75b4cce6294c577ec8ee605a31b948500dbedf6589b1c1275cb333
+- S3-REV-QUAL/verdict-3.txt=approved sha256=0ed1344b1c620f7a0475a28203240b21ab29774751e2212daf5be173f553e20e
+
+PRE_STAGE_SCOPE
+COMMAND=node .gitnexus/run.cjs detect-changes --repo paseo-agy-acp --scope unstaged
+EXIT_CODE=0
+KEY_LINES:
+- Changes: 21 files, 17 symbols
+- Affected processes: 0
+- Risk level: low
+- Untracked classifier: tests=21, scripts=1, receipts=231, unexpected=0
+
+STAGED_CODE_MANIFEST=39
+- ACP Connector/acp/agent.ts
+- ACP Connector/acp/session/prompt.ts
+- ACP Connector/acp/session/setup.ts
+- ACP Connector/admission/runtime.ts
+- ACP Connector/admission/startup-recovery.ts
+- ACP Connector/admission/turn-coordinator.ts
+- ACP Connector/agy/cli.ts
+- Admission Controller/controller.ts
+- Admission Controller/process-evidence.ts
+- Admission Controller/schema.ts
+- package.json
+- scripts/verify-no-secrets.mjs
+- tests/admission-503-classifier.test.ts
+- tests/admission-auth-gate.test.ts
+- tests/admission-controller.test.ts
+- tests/admission-dispatch-faultpoints.test.ts
+- tests/admission-fault-security-matrix.test.ts
+- tests/admission-native-process.test.ts
+- tests/admission-owner-crash.test.ts
+- tests/admission-permission.test.ts
+- tests/admission-policy-consistency.test.ts
+- tests/admission-process-evidence-contract.test.ts
+- tests/admission-process.test.ts
+- tests/admission-production-dispatch.test.ts
+- tests/admission-race-contract.test.ts
+- tests/admission-reaper.test.ts
+- tests/admission-scheduling-contract.test.ts
+- tests/admission-schema-contract.test.ts
+- tests/admission-schema-v2.test.ts
+- tests/admission-schema.test.ts
+- tests/admission-seats-contract.test.ts
+- tests/admission-soft-drain.test.ts
+- tests/admission-sqlite-contention.test.ts
+- tests/admission-startup-recovery.test.ts
+- tests/admission-timeout-contract.test.ts
+- tests/admission-turn-coordinator.test.ts
+- tests/admission-typed-terminal.test.ts
+- tests/closeout-docs-contract.test.ts
+- tests/secret-scan.test.ts
+
+VERIFICATION
+COMMAND=git diff --cached --name-only | wc -l
+EXIT_CODE=0
+KEY_LINES:
+- 39
+COMMAND=rtk git diff --cached --check
+EXIT_CODE=0
+KEY_LINES:
+- no output
+- no whitespace errors
+- staged set contains no README, CHANGELOG, design document, or receipt path.
+
+BOUNDARY
+- The staged set is the accepted application/config/script/test candidate, including the accepted T18R tracked test repairs and the accepted runtime repair bridge.
+- Documentation and all evidence, including this receipt, remain unstaged for phase 2.
+- No commit was created in phase 1.

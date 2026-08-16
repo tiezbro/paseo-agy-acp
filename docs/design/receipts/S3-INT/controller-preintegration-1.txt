@@ -1,0 +1,125 @@
+TASK_ID=S3-INT-CONTROLLER-PRECONDITION
+STAGE=3
+PHASE=pre-integration-quality-disposition
+UTC=2026-08-16T07:29:34Z
+ROLE=Stage 3 top-level Controller
+CONTROLLER_ID=79ab5347-5101-4eff-89ed-6a7aa550ae2e
+CONTROLLER_RUNTIME=codex/gpt-5.6-sol; thinking=xhigh; mode=full-access; pendingPermissions=[]
+WORKSPACE_ID=wks_6a4f9f2754cfa540
+CWD=/home/tiezbro/projects/paseo-agy-acp
+BRANCH=main
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+SOLE_PARENT=78931bff95ecbd9868f9cfa83a281cbbbf1a60d8
+INDEX_STAGED_PATHS=0
+UNMERGED_ENTRIES=0
+TRACKED_DIRTY_PATHS=21
+UNTRACKED_TOP_LEVEL_ENTRIES=47
+
+PURPOSE
+This Controller-owned receipt satisfies the pre-integration disposition required
+by S3-REV-SPEC round 2 conditions 1-4 and S3-REV-QUAL round 2 F4. It records the
+historical evidence boundary without inventing scheduler events or timestamps.
+It does not approve the Quality axis, stage files, modify implementation, or
+authorize integration before a fresh independent Quality verdict is approved.
+
+BOUND_AUTHORITY
+- docs/design/v2.0.0.0-stage3-execution-prompt.md sections 7.1-7.4 and 8.1-8.3.
+- docs/design/receipts/S3-REV-QUAL/verdict-2.txt
+  sha256=213d15391eeada57d13997e79fe715cf7f4671b2d5aff6b61eaec6db81ebf2c0
+- docs/design/receipts/S3-REV-QUAL/method-evidence-2.txt
+  sha256=cef093d27e0fcbb481ff0620dab20b9f2234ba985f4d0828e0100154f6daa8dc
+- docs/design/receipts/S3-REV-SPEC/verdict-2.txt
+  sha256=ada5b11ffb75b4cce6294c577ec8ee605a31b948500dbedf6589b1c1275cb333
+- docs/design/receipts/S3-REV-SPEC/method-evidence-2.txt
+  sha256=f838c4aa628471606f64dc0d8aad8c662cffe46ce436bcf74bc0de05831aaa51
+- docs/design/receipts/S3-PARALLELISM-REPAIR/evidence-1.txt
+  sha256=3298c116eb09530416f395e6690fdffe84015d52c31a09e7f363a2a6a533d535
+
+F4_CONTROLLER_DISPOSITION
+DISPOSITION=HISTORICAL_DYNAMIC_FIELDS_UNAVAILABLE_ACCEPTED_AS_RECORDED_LIMITATION
+QUALITY_FINDING=F4 LOW
+
+The Controller accepts the following evidence boundary as factual:
+1. The static dependency frontier, canonical shared-writer serializations, task
+   completion provenance, and the demonstrated T20/T21 and T14/T19 safe overlaps
+   are durably evidenced in S3-PARALLELISM-REPAIR/evidence-1.txt.
+2. Historical per-scheduling-event READY_AT, exact launch time, boundary release
+   latency, and frontier recompute timestamps were not persisted as structured
+   repository evidence while the events occurred.
+3. Task receipt timestamps and filesystem mtimes prove activity and overlap, but
+   cannot prove exact readiness, launch latency, release latency, or every
+   recompute event. Agent createdAt/finished snapshots have the same limitation.
+4. Reconstructing those fields now would require inference and would create false
+   precision. No historical value will be synthesized, backfilled, or presented
+   as observed fact.
+5. The canonical Stage 3 prompt placed runtime sets in the Controller live session
+   but did not define a repository scheduler-event artifact. No task brief retained
+   the exact per-boundary event data. Direct reads of the production daemon session
+   store are outside this Development Closeout boundary.
+
+The missing historical fields are therefore unavailable for exact recovery. This
+is the approved unavailability reason allowed by the Quality F4 repair boundary.
+It closes the Controller action requested by that boundary; a fresh independent
+Quality reviewer remains responsible for accepting or rejecting the Quality axis.
+
+CURRENT_SCHEDULING_EVENT_READBACK
+EVENT_AT=2026-08-16T07:29:34Z
+EVENT=quality-round-2-terminal-and-preintegration-disposition
+READY_FRONTIER=[]
+RUNNING_SET=[]
+REVIEW_SET=[S3-REV-QUAL-R3-pending-launch]
+INTEGRATION_SET=[]
+BLOCKER_SET=[S3-REV-QUAL-round-2-revisions-required:F4-LOW,T08:SOURCE_FIELD_GAP+REAL_PROVIDER_REQUIRED+SOURCE_IDENTITY_UNKNOWN]
+TASKS_LAUNCHED=[]
+TASKS_DEFERRED=[S3-INT-PHASE-CODE]
+DEFER_RECORD_TASK_ID=S3-INT-PHASE-CODE
+READY_AT=not-ready
+NOT_LAUNCHED_REASON=S3-REV-QUAL is not approved
+CONFLICTING_TASK=S3-REV-QUAL-R3
+CONFLICTING_BOUNDARY=dual-review accepted dependency
+NEXT_REEVALUATION_TRIGGER=fresh S3-REV-QUAL-R3 terminal verdict
+
+T03_DEVIATION_ACKNOWLEDGMENT
+SOURCE=docs/design/receipts/S3-T03/method-1.txt
+SOURCE_SHA256=f08b8a1b96c2e352897e5117ff07aafca326cb794d98bdcb4eafb2b51ae03888
+DISPOSITION=ACKNOWLEDGED_NON_MUTATING_METHOD_DEVIATION
+The Controller acknowledges that S3-T03 ran one read-only shell
+`paseo inspect` against 127.0.0.1:6767 contrary to its task constraint. The
+receipt records that it returned status, did not request permissions, and did
+not mutate repository or daemon state. No task rework is required; the deviation
+remains visible and is not converted into installation, Provider, production, or
+release evidence. No recurrence was accepted.
+
+T16_SKILL_OBJECT_NOTE
+SOURCE=docs/design/receipts/S3-T16/method-1.txt
+SOURCE_SHA256=7a56a843c570520df78e73e232a54180bb06c18336bbbe5e8f8b5e1e405f3c61
+DISPOSITION=ACCEPTED_INFORMATIONAL
+The exact local git object for the requested pinned skill source was unavailable.
+The installed skill file hashes matched the accepted inventory and no network
+fetch or install was performed. This is retained as an informational provenance
+gap and does not assert source-object verification that did not occur.
+
+PARENT_ID_NEGATIVE_PATH_NOTE
+DISPOSITION=ACCEPTED_INTENTIONAL_RUNTIME_REJECTION_SURFACE
+EnqueueRequest retains optional parentId only so the v2 negative contract can
+construct and reject legacy input. requestAgentId throws when parentId is
+present; tests/admission-schema-v2.test.ts asserts rejection. It is not an alias,
+not a dual-name terminal, and not accepted request metadata.
+
+INTEGRATION_GATE
+S3_REV_SPEC=approved at round 2
+S3_REV_QUAL=revisions-required at round 2; fresh round 3 required
+PARALLELISM_REVIEW=not accepted until fresh Quality review accepts this disposition
+S3_INT_PHASE_CODE=blocked until dual review is approved
+S3_INT_PHASE_DOCS=blocked behind S3-INT-PHASE-CODE
+S3_INT_FINAL_COMMIT=blocked behind both integration phases
+T08=external typed stop by design; excluded from internal acceptance stages
+
+SCOPE_AND_NON_CLAIMS
+- Changed only this Controller-owned receipt.
+- No production source, test, task receipt, prior review receipt, git index, or
+  git ref was modified by this action.
+- No push, tag, deploy, release, install, real Provider request, or direct shell
+  access to production 127.0.0.1:6767 was performed.
+- This receipt is not a Quality approval, integration receipt, acceptance pass,
+  installation proof, production proof, or release authorization.

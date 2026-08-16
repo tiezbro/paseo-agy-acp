@@ -1,0 +1,20 @@
+TASK_ID: S3-T17
+UTC: 2026-08-16T01:28:57Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+RISK: CRITICAL blast radius authorized by Controller; production source unchanged.
+
+Command:
+rtk npm test -- tests/admission-schema-contract.test.ts tests/admission-sqlite-contention.test.ts
+
+Exit code: 0
+
+Key output:
+> npm run typecheck && npm run build && vitest run tests/admission-schema-contract.test.ts tests/admission-sqlite-contention.test.ts
+> tsc -p tsconfig.test.json
+> node scripts/clean-dist.mjs && tsc
+Test Files  2 passed (2)
+Tests  6 passed (6)
+
+Method evidence:
+- Focused S3-T17 command covered both new files together.
+- No production source file was changed for focused green.

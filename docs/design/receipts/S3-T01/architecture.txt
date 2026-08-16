@@ -1,0 +1,14 @@
+TASK_ID: S3-T01
+EVIDENCE: architecture validation
+UTC: 2026-08-16T01:16:16Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Command:
+npm run validate:architecture
+
+Exit code: 0
+
+Key output:
+> paseo-agy-acp@1.0.0.4 validate:architecture
+> node scripts/verify-import-boundaries.mjs
+architecture boundaries: PASS

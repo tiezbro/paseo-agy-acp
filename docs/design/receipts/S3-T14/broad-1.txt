@@ -1,0 +1,17 @@
+TASK_ID=S3-T14
+RECEIPT=broad-1
+UTC=2026-08-16T05:21:25Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+COMMAND=rtk npm run validate
+EXIT_CODE=0
+
+KEY_OUTPUT:
+> npm test && npm run validate:architecture
+Test Files  51 passed (51)
+Tests  592 passed | 2 skipped (594)
+architecture boundaries: PASS
+
+DISPOSITION:
+Broad validation passed with the active S3-T19 untracked native-process test
+present. No broad blocker remained for this S3-T14 run.

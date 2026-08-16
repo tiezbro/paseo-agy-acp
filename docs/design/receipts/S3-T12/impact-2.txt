@@ -1,0 +1,36 @@
+TASK_ID: S3-T12
+RECEIPT: impact-2
+UTC: 2026-08-16T04:01:06Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Scope:
+Post-authority-addendum, pre-production-edit upstream GitNexus impact for the
+expanded S3-T12 write set. The HIGH target below is explicitly authorized by
+Controller addendum after audit `4ffd2e35-0729-4176-8a57-438ff14920b2`.
+
+Commands and exits:
+1. node .gitnexus/run.cjs impact --repo paseo-agy-acp --direction upstream --summary-only --depth 3 --file 'ACP Connector/agy/cli.ts' --kind Interface AgyAdmissionDispatchBoundary
+   exit=0
+2. node .gitnexus/run.cjs impact --repo paseo-agy-acp --direction upstream --summary-only --depth 3 --file 'ACP Connector/admission/turn-coordinator.ts' --kind Class TurnDispatchBoundary
+   exit=0
+3. node .gitnexus/run.cjs impact --repo paseo-agy-acp --direction upstream --summary-only --depth 3 --file 'Admission Controller/controller.ts' --kind Method markDispatchAmbiguous
+   exit=0
+4. node .gitnexus/run.cjs impact --repo paseo-agy-acp --direction upstream --summary-only --depth 3 --file 'ACP Connector/agy/cli.ts' --kind Method runPromptCommand
+   exit=0
+5. node .gitnexus/run.cjs impact --repo paseo-agy-acp --direction upstream --summary-only --depth 3 --file 'ACP Connector/agy/dispatch-boundary.ts' --kind Class AgyPromptFreeDispatchBoundary
+   exit=0
+6. node .gitnexus/run.cjs impact --repo paseo-agy-acp --direction upstream --summary-only --depth 3 --file 'ACP Connector/agy/prompt-free-process.ts' --kind Function startAgyPromptFreeProcess
+   exit=0
+
+Key output:
+- AgyAdmissionDispatchBoundary: risk=HIGH; direct=18; processes_affected=1; affected_process=admit; modules_affected=1 Admission Controller.
+- TurnDispatchBoundary: risk=LOW; direct=3; processes_affected=1; affected_process=admit; modules_affected=1 Admission Controller.
+- AdmissionController.markDispatchAmbiguous: risk=LOW; direct=0; processes_affected=0; modules_affected=0.
+- runPromptCommand: risk=LOW; direct=1; processes_affected=0; modules_affected=1 Agy.
+- AgyPromptFreeDispatchBoundary: risk=LOW; direct=2; processes_affected=0; byDepthCounts={1:2,2:17,3:9}.
+- startAgyPromptFreeProcess: risk=LOW; direct=1; processes_affected=1; affected_process=startPromptFreeProcessInternal; modules_affected=1 Agy.
+
+Risk conclusion:
+The only HIGH/CRITICAL result is the Controller-authorized
+`AgyAdmissionDispatchBoundary` target. No additional unauthorized HIGH or
+CRITICAL target appeared before GREEN edits.

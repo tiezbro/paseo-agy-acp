@@ -1,0 +1,48 @@
+TASK_ID=S3-T14
+RECEIPT=repair-f2-f3-method-1
+UTC=2026-08-16T06:50:02Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+PARENT=78931bff95ecbd9868f9cfa83a281cbbbf1a60d8
+AGENT_ID=cc392729-f873-41db-87c9-c182d7e8da59
+PARENT_CONTROLLER=79ab5347-5101-4eff-89ed-6a7aa550ae2e
+RUNTIME_READBACK_UTC=2026-08-16T06:52:15.490Z
+RUNTIME_READBACK=child Worker; provider=codex; model=gpt-5.5; thinking=xhigh; mode=full-access; PendingPermissions=[]; ParentAgentId=79ab5347-5101-4eff-89ed-6a7aa550ae2e
+
+CONTROLLER_AUTHORIZATION:
+S3-T14 QUALITY REPAIR F2+F3 authorization covered the recorded CRITICAL/HIGH T14
+surface plus the minimal ACP Connector/admission/runtime.ts production lifecycle
+connection required by F2.
+
+SKILLS:
+/home/tiezbro/.agents/skills/tdd/SKILL.md
+sha256=5e6b9c16b547113e90afbb946489d1c1384be5c2128f0159bd0bee57251ecf08
+Executed: behavioral RED before production repair, focused GREEN, affected and
+expanded regression validation. Inapplicable: commit/stage/delegation actions.
+
+/home/tiezbro/.agents/skills/implement/SKILL.md
+sha256=6d3fd9e83b8f36e5213854779db49b256a457a7ebb4a503e53fa7dcff696adc3
+Executed: minimal scoped implementation inside authorized write set. Inapplicable:
+code review delegation, staging, commit, push, release, provider probe.
+
+IMPACT_COVERAGE:
+reapSuspects UNKNOWN in stale GitNexus index; AdmissionController HIGH; createAdmissionRuntime LOW;
+AdmissionRuntime HIGH; AdmissionRuntime.close LOW; makeExpiredActiveLease UNKNOWN test helper.
+No new HIGH/CRITICAL target outside the explicit repair boundary was required.
+
+IMPLEMENTATION_SUMMARY:
+Admission Controller/controller.ts now uses an exact heartbeat stale predicate:
+now - heartbeat_at > 4000 ms. Heartbeat expiry only records retained suspect
+state with reason heartbeat_expired.
+
+ACP Connector/admission/runtime.ts now starts a bounded runtime reaper through
+createAdmissionRuntime, defaults to native startup recovery readers, prevents
+overlapping reap runs, fails closed on evidence errors, unrefs the interval, and
+clears it on close.
+
+tests/admission-reaper.test.ts now proves production runtime no-restart recovery
+and below/equal/above 4000 ms heartbeat boundary behavior.
+
+CONSTRAINTS:
+No stage, commit, push, install, network, Provider probe, production 127.0.0.1:6767,
+delegation, schema edit, startup-recovery edit, turn-coordinator edit, T19 edit,
+or sibling receipt edit was performed during this repair closeout.

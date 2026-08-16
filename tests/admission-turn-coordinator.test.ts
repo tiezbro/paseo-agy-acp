@@ -41,11 +41,11 @@ function controller(policy: Partial<AdmissionPolicy> = {}): AdmissionController 
 
 function coordinator(
   admission: AdmissionController,
-  options: Partial<Omit<AdmissionTurnCoordinatorOptions, "controller" | "parentId">> = {}
+  options: Partial<Omit<AdmissionTurnCoordinatorOptions, "controller" | "agentId" | "parentId">> = {}
 ): AdmissionTurnCoordinator {
   return new AdmissionTurnCoordinator({
     controller: admission,
-    parentId: "parent-test",
+    agentId: "agent-test",
     connectorPid: process.pid,
     ...options
   });
@@ -55,7 +55,7 @@ function enqueueHolder(admission: AdmissionController, now: number): void {
   admission.enqueueWithPayload({
     requestId: "holder",
     sessionId: "holder-session",
-    parentId: "holder-parent",
+    agentId: "holder-agent",
     fingerprint: "holder",
     provider: "antigravity",
     model: "model-test",

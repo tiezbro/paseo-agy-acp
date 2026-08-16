@@ -1,0 +1,18 @@
+TASK_ID=S3-T02
+RECEIPT=broad-validate
+UTC=2026-08-16T02:47:43Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+COMMAND=rtk npm run validate
+EXIT_CODE=0
+
+KEY_OUTPUT:
+> npm test && npm run validate:architecture
+Test Files  45 passed (45)
+Tests  578 passed | 2 skipped (580)
+> node scripts/verify-import-boundaries.mjs
+architecture boundaries: PASS
+
+EXTERNAL_RESERVATION_NOTE:
+External S3-T09 test/receipt reservation is present and was not edited by S3-T02.
+Broad validate still passed in the current mixed accepted/reservation worktree.

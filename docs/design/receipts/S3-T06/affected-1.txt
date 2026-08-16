@@ -1,0 +1,15 @@
+TASK_ID=S3-T06
+UTC=2026-08-16T03:59:16Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+COMMAND=rtk npm test -- tests/admission-controller.test.ts tests/admission-startup-recovery.test.ts tests/admission-turn-coordinator.test.ts
+EXIT=0
+
+KEY_OUTPUT:
+- tsc -p tsconfig.test.json
+- node scripts/clean-dist.mjs && tsc
+- Test Files  3 passed (3)
+- Tests  12 passed (12)
+
+DISPOSITION:
+Affected controller/startup-recovery/turn-coordinator seam tests passed after
+the queued-owner GREEN.

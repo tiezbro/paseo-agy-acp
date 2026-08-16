@@ -1,0 +1,16 @@
+TASK_ID: S3-T16
+PHASE: affected validation
+UTC: 2026-08-16T05:48:41Z
+GIT_HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+COMMAND: rtk npm test -- tests/queue-steer.test.ts tests/acp-server.test.ts tests/admission-turn-coordinator.test.ts tests/cli.test.ts
+EXIT_CODE: 0
+
+Key output:
+- npm run typecheck passed.
+- npm run build passed.
+- Test Files 4 passed (4).
+- Tests 171 passed | 1 skipped (172).
+- Duration 17.74s.
+
+Directly affected existing prompt/session coverage:
+Included tests/cli.test.ts in addition to the required queue-steer, acp-server, and admission-turn-coordinator files.

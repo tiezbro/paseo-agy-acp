@@ -1,0 +1,24 @@
+TASK_ID: S3-T05
+EVIDENCE: affected regression set
+UTC: 2026-08-16T01:24:36Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Command:
+rtk npm test -- tests/admission-timeout-contract.test.ts tests/admission-controller.test.ts tests/admission-startup-recovery.test.ts tests/admission-turn-coordinator.test.ts
+
+Exit code: 0
+
+Key output:
+> npm run typecheck && npm run build && vitest run tests/admission-timeout-contract.test.ts tests/admission-controller.test.ts tests/admission-startup-recovery.test.ts tests/admission-turn-coordinator.test.ts
+> tsc -p tsconfig.test.json
+> node scripts/clean-dist.mjs && tsc
+Test Files  4 passed (4)
+Tests  14 passed (14)
+
+Impact before write:
+- expireQueued upstream impact: LOW; direct callers admitNext, admitRequest, getQueueSnapshot; affected processes admit and waitForLease.
+- selectEligibleRequest upstream impact: LOW; direct callers admitNext and admitRequest; affected processes admit and waitForLease.
+
+Method evidence:
+- tdd executed for the pre-agreed expireQueued/selectEligibleRequest seam.
+- implement executed for the allowed test/receipt write set only; commit/code-review inapplicable under the S3-T05 leaf-worker constraints.

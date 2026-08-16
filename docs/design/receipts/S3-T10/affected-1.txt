@@ -1,0 +1,19 @@
+TASK_ID=S3-T10
+PHASE=AFFECTED_BEHAVIOR_VALIDATION
+UTC=2026-08-16T03:17:38Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+COMMAND
+rtk vitest run tests/auth.test.ts tests/acp-server.test.ts tests/acp-runtime-wiring.test.ts tests/cli.test.ts tests/queue-steer.test.ts tests/admission-permission.test.ts
+
+EXIT
+0
+
+KEY_OUTPUT
+PASS (177) FAIL (0) skipped (1)
+
+REQUEST_PERMISSION_SCOPE
+tests/cli.test.ts contains direct requestPermissionV1/requestPermissionV2 coverage. tests/acp-server.test.ts contains session.requestPermission routing coverage. Both were included in the affected direct Vitest command above.
+
+LIMITATION
+The npm test wrapper for affected tests would hit the same external Admission Controller/controller.ts typecheck blocker recorded in green-1.txt before reaching Vitest.

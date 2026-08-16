@@ -64,7 +64,22 @@
 
 → [完整技术细节](./docs/PASEO_LOCAL_CHANGES.md)
 
-## Admission Controller 开发状态
+## Admission Controller Stage 3 状态
+
+当前 authority 是 confirmed Scheme 与已接受的 Stage 2 artifacts：
+
+- [confirmed Scheme](/home/tiezbro/projects/MAACS/docs/maacs-paseo-agy-acp-confirmed-scheme.md)
+- [Stage 2 handoff](docs/design/v2.0.0.0-stage2-handoff.md)
+- [503 feasibility](docs/design/v2.0.0.0-stage2-503-feasibility.md)
+- [ACP source map](docs/design/v2.0.0.0-stage2-acp-source-map.md)
+- [Admission source map](docs/design/v2.0.0.0-stage2-admission-source-map.md)
+- [Architecture](docs/design/v2.0.0.0-stage2-architecture.md)
+- [Domain model](docs/design/v2.0.0.0-stage2-domain-model.md)
+- [Test contracts](docs/design/v2.0.0.0-stage2-test-contracts.md)
+- [Specification](docs/design/v2.0.0.0-stage2-spec.md)
+
+旧 Admission design 文件只作为 historical input 保留，并已逐条款标注 disposition；
+它不是第二份 authority。
 
 仓库严格只有两个源码功能区：
 
@@ -75,14 +90,14 @@ paseo-agy-acp/
 ```
 
 `ACP Connector/` 负责 Paseo/ACP 协议、session/conversation 映射、
-Antigravity 进程、stream-json 与 SQLite 转换、权限、取消、恢复协调和 provider
-错误分类。`Admission Controller/` 只负责共享 Antigravity 席位、持久队列、启动
-限速、lease、heartbeat、进程证据、capacity cooldown 和排队观察。package 入口仍在
+Antigravity 进程、stream-json 与 SQLite 转换、权限、取消、恢复协调、auth/login/logout
+门禁、typed terminal 报告和 provider 错误分类。`Admission Controller/` 只负责共享
+Antigravity 席位、持久队列、policy state、soft drain、启动限速、lease、heartbeat、
+进程证据、runtime reaper、capacity cooldown 和排队观察。package 入口仍在
 `ACP Connector/` 内。
 
 只有同时设置 `AGY_ACP_ADMISSION_ENABLED=true`、绝对路径
 `AGY_ACP_STATE_DIR` 和 `PASEO_AGENT_ID` 时才启用 Admission；默认保持关闭。
-已确认的源码默认值如下：
 
 | 规则 | 默认值 |
 |---|---:|
@@ -97,9 +112,16 @@ Antigravity 进程、stream-json 与 SQLite 转换、权限、取消、恢复协
 oldest-eligible 调度并带 agent fairness。cooldown 会跳过受影响的 provider/model，
 但不会堵住其他可运行请求。排队超时会在同一事务中取消请求并删除加密 prompt。
 
+Stage 3 本地实现使用 `shared-admission-queue` schema v2：`turn_requests` 使用
+`agent_id`，`policy_state` 保存带 `policy_fingerprint` 与 drain state 的持久 singleton
+policy，queued owner 记录在 `queued_owner_instances`，lease 带 suspect metadata 供
+runtime reaper 使用，`schema_migrations` 记录 v1 到 v2 的迁移。额外 delivery
+authority 表仍然 fail closed。
+
 空闲 session 和空闲 ACP 连接不占 turn 席位，也不保留常驻 turn 进程。获得席位的
-turn 继续使用原有一次性 stdin 进程；prompt EOF 会关闭输入，provider 明确终态后
-立即释放席位。关闭 session 会取消尚未开始的排队请求，已经运行的 turn 继续走原有
+turn 在一次性 stdin 写入前先经过 production dispatch boundary；无法证明的 ambiguous
+或 blocked 写入会进入持久 terminal state，不做隐藏重试。provider 明确终态后立即
+释放席位。关闭 session 会取消尚未开始的排队请求，已经运行的 turn 继续走原有
 connector 取消路径。
 
 获得席位后的 turn 继续走原有 `AgyCliSession.prompt`、conversation SQLite、
@@ -108,20 +130,8 @@ connector 取消路径。
 request identity 或手工 requeue API。官方 `session/load` 与 `session/resume`
 历史回放继续由 ACP Connector 负责。
 
-provider 明确终态和席位释放在一个 controller 事务中完成。可信的 Antigravity
-`503` 容量失败会启动对应 provider/model cooldown。如果业务 prompt 可能已经写出，
-但无法证明执行已经结束，请求会进入 `recovery_required`；prompt 会被删除且绝不
-自动重放。启动恢复只有在 connector、child 和 process group 均已证明退出后，才释放
-该本地席位。
-
-schema 为 `shared-admission-queue` v1：`turn_requests`、`leases`、
-`cooldowns`、`turn_payloads`、`lease_process_identities`、
-`start_history`、`sessions`、`events`，另加 `schema_migrations`。
-任何旧 outbox 或 recovery-claim 额外表都会触发完整性检查失败。
-
 本次源码工作没有安装或切换 connector，没有运行真实 Antigravity provider，没有
-触碰生产 Paseo daemon，也没有 push、tag 或发布。设计和剩余验收门禁见
-[`docs/design/v2.0.0.0-admission-controller.md`](docs/design/v2.0.0.0-admission-controller.md)。
+触碰生产 Paseo daemon，也没有 push、tag 或发布。
 
 ## 🔧 解决的问题
 

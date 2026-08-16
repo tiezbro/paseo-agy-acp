@@ -1,0 +1,55 @@
+TASK_ID=S3-T14
+RECEIPT=impact-1
+UTC=2026-08-16T05:12:38Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+MODE=GitNexus upstream impact, read-only, before production edits
+
+COMMANDS:
+1. node .gitnexus/run.cjs impact heartbeat --repo paseo-agy-acp --direction upstream --file 'Admission Controller/controller.ts' --kind Method --depth 3 --include-tests --limit 40
+   EXIT=0
+   RESULT=risk LOW; direct=0; processes_affected=0; modules_affected=0
+   DIRECT_CALLERS=none reported
+   AFFECTED_PROCESSES=none reported
+   KEY_OUTPUT={"risk":"LOW","impactedCount":0,"summary":{"direct":0,"processes_affected":0,"modules_affected":0}}
+
+2. node .gitnexus/run.cjs impact listRecoverableDispatches --repo paseo-agy-acp --direction upstream --file 'Admission Controller/controller.ts' --kind Method --depth 3 --include-tests --limit 40
+   EXIT=0
+   RESULT=risk HIGH; direct=3; processes_affected=3; modules_affected=2
+   DIRECT_CALLERS=recoverExitedAdmissionSeats; tests/admission-turn-coordinator.test.ts; tests/admission-startup-recovery.test.ts
+   AFFECTED_PROCESSES=recoverExitedAdmissionSeats; createAdmissionRuntime; composeAcpRuntime
+   KEY_OUTPUT={"risk":"HIGH","impactedCount":6,"summary":{"direct":3,"processes_affected":3,"modules_affected":2}}
+
+3. node .gitnexus/run.cjs impact markExecutionRecoveryRequired --repo paseo-agy-acp --direction upstream --file 'Admission Controller/controller.ts' --kind Method --depth 3 --include-tests --limit 40
+   EXIT=0
+   RESULT=risk CRITICAL; direct=3; processes_affected=5; modules_affected=3
+   DIRECT_CALLERS=recoverExitedAdmissionSeats; AdmissionTurnCoordinator.admit; AdmissionTurnCoordinator.settleFailure
+   AFFECTED_PROCESSES=recoverExitedAdmissionSeats; admit; settleFailure; createAdmissionRuntime; composeAcpRuntime
+   KEY_OUTPUT={"risk":"CRITICAL","impactedCount":8,"summary":{"direct":3,"processes_affected":5,"modules_affected":3}}
+
+4. node .gitnexus/run.cjs impact releaseExitedRecoverySeat --repo paseo-agy-acp --direction upstream --file 'Admission Controller/controller.ts' --kind Method --depth 3 --include-tests --limit 40
+   EXIT=0
+   RESULT=risk HIGH; direct=1; processes_affected=3; modules_affected=2
+   DIRECT_CALLERS=recoverExitedAdmissionSeats
+   AFFECTED_PROCESSES=recoverExitedAdmissionSeats; createAdmissionRuntime; composeAcpRuntime
+   KEY_OUTPUT={"risk":"HIGH","impactedCount":5,"summary":{"direct":1,"processes_affected":3,"modules_affected":2}}
+
+5. node .gitnexus/run.cjs impact observeLinuxProcessIdentity --repo paseo-agy-acp --direction upstream --file 'Admission Controller/process-evidence.ts' --kind Function --depth 3 --include-tests --limit 40
+   EXIT=0
+   RESULT=risk HIGH; direct=3; processes_affected=3; modules_affected=2
+   DIRECT_CALLERS=observePersistedLinuxConnectorOwnerIdentity; recoverExitedAdmissionSeats; tests/admission-process-evidence.test.ts
+   AFFECTED_PROCESSES=recoverExitedAdmissionSeats; createAdmissionRuntime; composeAcpRuntime
+   KEY_OUTPUT={"risk":"HIGH","impactedCount":9,"summary":{"direct":3,"processes_affected":3,"modules_affected":2}}
+
+6. node .gitnexus/run.cjs impact AdmissionController --repo paseo-agy-acp --direction upstream --file 'Admission Controller/controller.ts' --kind Class --depth 3 --include-tests --limit 60
+   EXIT=0
+   RESULT=risk HIGH; direct=17; processes_affected=2; modules_affected=3
+   DIRECT_CALLERS_OR_IMPORTERS=createAdmissionRuntime; Admission Controller/runtime-config.ts; ACP Connector/admission/turn-coordinator.ts; ACP Connector/admission/startup-recovery.ts; ACP Connector/admission/runtime.ts; tests/sqlite-session-store.test.ts; tests/admission-turn-coordinator.test.ts; tests/admission-startup-recovery.test.ts; tests/admission-schema.test.ts; tests/admission-fault-security-matrix.test.ts; tests/admission-controller.test.ts
+   AFFECTED_PROCESSES=createAdmissionRuntime; composeAcpRuntime
+   KEY_OUTPUT={"risk":"HIGH","impactedCount":28,"summary":{"direct":17,"processes_affected":2,"modules_affected":3}}
+
+HIGH_CRITICAL_DISPOSITION:
+HIGH/CRITICAL impact is present. Per Stage 3 Prompt §5 and S3-T14
+REVIEW_ASSIGNMENT_CONSTRAINT, this worker must report the blast radius to the
+Controller and pause before any production write. No GREEN implementation,
+source edit, staging, commit, push, Provider probe, network action, or
+production 127.0.0.1:6767 action was performed after this gate.

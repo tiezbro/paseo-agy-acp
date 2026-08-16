@@ -1,0 +1,21 @@
+TASK_ID: S3-T01
+EVIDENCE: expanded affected regression for accepted HIGH impact
+UTC: 2026-08-16T01:16:16Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Command:
+rtk npm test -- tests/admission-runtime-config.test.ts tests/acp-server.test.ts tests/acp-runtime-wiring.test.ts tests/queue-steer.test.ts tests/cli.test.ts
+
+Exit code: 0
+
+Key output:
+> npm run typecheck && npm run build && vitest run tests/admission-runtime-config.test.ts tests/acp-server.test.ts tests/acp-runtime-wiring.test.ts tests/queue-steer.test.ts tests/cli.test.ts
+ Test Files  5 passed (5)
+      Tests  176 passed | 1 skipped (177)
+   Duration  17.69s (transform 1.79s, setup 0ms, import 3.08s, tests 44.95s, environment 1ms)
+
+HIGH risk coverage:
+- tests/admission-runtime-config.test.ts covers parseAdmissionRuntimeConfig directly.
+- tests/acp-runtime-wiring.test.ts covers runtime wiring from ACP into Admission runtime config.
+- tests/acp-server.test.ts, tests/queue-steer.test.ts, and tests/cli.test.ts cover required ACP/queue/CLI regression breadth from the Controller risk ruling.
+- Result: accepted HIGH risk was covered by the required expanded affected regression without production source changes.

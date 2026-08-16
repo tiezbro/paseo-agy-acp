@@ -1,0 +1,16 @@
+TASK_ID=S3-T18R
+RECEIPT=green-3-high-expanded
+UTC=2026-08-16T02:17:58Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+COMMAND=rtk npm test -- tests/acp-server.test.ts tests/acp-runtime-wiring.test.ts tests/queue-steer.test.ts tests/cli.test.ts
+> npm run typecheck && npm run build && vitest run tests/acp-server.test.ts tests/acp-runtime-wiring.test.ts tests/queue-steer.test.ts tests/cli.test.ts
+> tsc -p tsconfig.test.json
+> node scripts/clean-dist.mjs && tsc
+ RUN  v4.1.10 /home/tiezbro/projects/paseo-agy-acp
+ Test Files  4 passed (4)
+      Tests  168 passed | 1 skipped (169)
+   Start at  02:17:59
+   Duration  18.05s (transform 1.63s, setup 0ms, import 2.95s, tests 45.35s, environment 0ms)
+
+EXIT_CODE=0

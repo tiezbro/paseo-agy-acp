@@ -1,0 +1,29 @@
+TASK_ID: S3-T12
+RECEIPT: repair-f1-detect-1
+UTC: 2026-08-16T06:45:54Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Commands and exits:
+1. node .gitnexus/run.cjs detect-changes --repo paseo-agy-acp --scope unstaged
+   exit=0
+2. git diff --check
+   exit=0
+3. git diff --name-only -- 'ACP Connector/agy/cli.ts' 'ACP Connector/admission/turn-coordinator.ts' 'tests/admission-production-dispatch.test.ts' 'docs/design/receipts/S3-T12'
+   exit=0
+4. git ls-files --others --exclude-standard -- 'tests/admission-production-dispatch.test.ts' 'docs/design/receipts/S3-T12'
+   exit=0
+
+Key output:
+- GitNexus detect_changes: Changes: 20 files, 17 symbols; Affected processes: 0; Risk level: low.
+- Changed symbols reported by GitNexus are shared tracked docs/tests from the
+  broader dirty worktree; GitNexus still does not include untracked S3-T12 test
+  and receipt files.
+- `git diff --check` produced no output.
+- S3-T12 readback paths include `ACP Connector/admission/turn-coordinator.ts`,
+  `ACP Connector/agy/cli.ts`, `tests/admission-production-dispatch.test.ts`,
+  and additive receipts under `docs/design/receipts/S3-T12/`.
+
+Scope conclusion:
+Detect/diff checks passed. The F1 source repair is in
+`ACP Connector/admission/turn-coordinator.ts`; `ACP Connector/agy/cli.ts` remains
+part of the existing S3-T12 tracked diff and allowed write set.

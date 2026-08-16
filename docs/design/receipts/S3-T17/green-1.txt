@@ -1,0 +1,23 @@
+TASK_ID: S3-T17
+UTC: 2026-08-16T01:30:19Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+RISK: CRITICAL blast radius authorized by Controller; production source unchanged.
+
+Command:
+rtk npm test -- tests/admission-schema-contract.test.ts
+
+Exit code: 0
+
+Key output:
+> npm run typecheck && npm run build && vitest run tests/admission-schema-contract.test.ts
+> tsc -p tsconfig.test.json
+> node scripts/clean-dist.mjs && tsc
+Test Files  1 passed (1)
+Tests  4 passed (4)
+
+Method evidence:
+- Real v1 AdmissionController database opened with the production schema guard.
+- Legal v1 DB passes assertAdmissionSchemaIntegrity and reports ADMISSION_SCHEMA_VERSION.
+- Unexpected table outbox fails closed with SchemaIntegrityError.
+- Deleted turn_requests.model column fails closed with SchemaIntegrityError.
+- PRAGMA foreign_keys=OFF fails closed with SchemaIntegrityError.

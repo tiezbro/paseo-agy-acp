@@ -1,0 +1,27 @@
+TASK_ID=S3-T14
+RECEIPT=red-1
+UTC=2026-08-16T05:11:30Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+COMMAND=rtk npm test -- tests/admission-reaper.test.ts
+EXIT_CODE=1
+
+EXPECTED_RED:
+Three existing requests are placed in visible recovery_required with payloads
+deleted, then the injected process readers prove connector/child gone and an
+empty process group without restarting the Connector. The required runtime
+reaper should release all three local seats, preserve recovery_required, keep
+payload rows deleted, and allow a fourth queued request to admit.
+
+KEY_OUTPUT:
+> npm run typecheck && npm run build && vitest run tests/admission-reaper.test.ts
+tests/admission-reaper.test.ts (2 tests | 2 failed)
+FAIL tests/admission-reaper.test.ts > S3-T14 heartbeat suspect and runtime reaper > releases verified exited recovery seats without replay or connector restart
+Expected admittedAfterReap: "after-recovery"; Received admittedAfterReap: null
+Expected recoveryLeaseRows: [0, 0, 0]; Received recoveryLeaseRows: [1, 1, 1]
+Expected summary.released: 3; Received summary.released: 0
+
+RED_DISPOSITION:
+Behavioral RED confirmed. Runtime seats remain burned after verified exited
+recovery_required leases, so admitNext stays null. This is not a missing-file,
+mutation, source-string, health-check, Provider, network, or restart RED.

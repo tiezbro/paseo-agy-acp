@@ -1,0 +1,19 @@
+TASK_ID=S3-T14
+RECEIPT=detect-1
+UTC=2026-08-16T05:21:25Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+COMMAND=node .gitnexus/run.cjs detect-changes --repo paseo-agy-acp --scope unstaged
+EXIT_CODE=0
+
+KEY_OUTPUT:
+Changes: 14 files, 7 symbols
+Affected processes: 0
+Risk level: low
+Changed symbols: enqueue; starting; runWorker; waitForLine; dispatch; coordinator; enqueueHolder
+
+DISPOSITION:
+GitNexus detect-changes reported only unstaged tracked sibling symbols and no
+affected processes. The S3-T14 new test and receipts are untracked and not
+listed by this GitNexus unstaged scope; this command was still executed exactly
+as required by the S3-T14 validation contract.

@@ -1,0 +1,21 @@
+TASK_ID: S3-T16
+PHASE: TYPED_BLOCKED
+UTC: 2026-08-16T05:37:53Z
+GIT_HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+BLOCKER: CONTROLLER_AUTHORIZATION_REQUIRED
+
+Reason:
+After valid RED receipts and before editing ACP Connector/acp/session/prompt.ts, GitNexus upstream impact returned HIGH for completeTurn.
+
+Contract boundary:
+The S3-T16 brief requires notifying the Controller and stopping before production writes when any required impact target is HIGH or CRITICAL. This worker did not edit production source and did not self-authorize GREEN.
+
+Files written before stop:
+- tests/admission-typed-terminal.test.ts
+- docs/design/receipts/S3-T16/red-1.txt
+- docs/design/receipts/S3-T16/red-2.txt
+- docs/design/receipts/S3-T16/impact-1.txt
+- docs/design/receipts/S3-T16/typed-blocked.txt
+
+Closed-by:
+docs/design/receipts/S3-T16/authority-1.txt records Controller 79ab5347-5101-4eff-89ed-6a7aa550ae2e authorization to continue minimal GREEN for the reported completeTurn HIGH blast radius.

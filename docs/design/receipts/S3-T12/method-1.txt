@@ -1,0 +1,26 @@
+TASK_ID: S3-T12
+RECEIPT: method-1
+UTC: 2026-08-16T04:11:11Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Implementation notes:
+- Production print-mode admission dispatch now enters `AgyPromptFreeDispatchBoundary.run` from `AgyCliSession.prompt` / `runPromptCommand`.
+- The synchronous dispatch call order is `spawnPromptFree -> persistProcessIdentity -> recheckCancellation -> commitDispatchIntent -> writeInitialPrompt` as owned by `AgyPromptFreeDispatchBoundary.run`.
+- Existing Admission semantics persist identity and dispatch intent atomically in `TurnDispatchBoundary.prepare()` via `AdmissionController.recordProcessIdentity`; the dispatch boundary `commitDispatchIntent` dependency is a synchronous confirmation of that already-durable intent, preserving the existing single `AgyAdmissionDispatchBoundary` seam without adding a second Admission interface.
+- `accepted` maps to existing `afterPromptWrite()` and durable `markActive`; `blocked` / `dispatch_ambiguous` map through the production ambiguous bridge to `TurnDispatchBoundary.markDispatchAmbiguous()`.
+- `TurnDispatchBoundary.markDispatchAmbiguous()` marks `promptWriteIssued` before calling `controller.markDispatchAmbiguous`, so failure settlement cannot misclassify an uncertain dispatch as pre-prompt abandonment.
+- `AdmissionTurnCoordinator.settleFailure()` now treats an already durable `dispatch_ambiguous` request as settled, preserving that bridge rather than overwriting it with recovery in the same catch block.
+- Business write attempts are capped by `AgyPromptFreeDispatchBoundary` and the prompt-free process once-only capability; no retry or second output path was added.
+- T10 interactive permission fencing was preserved. PTY business writes still use the existing `AgyAdmissionDispatchBoundary` prepare/before/write/after fence; permission-key writes remain outside business dispatch.
+- T12 asserts SIGINT cleanup on the ambiguous production child. The full EOF/signal/descendant matrix remains bound to downstream T19 and is not overclaimed here.
+
+Files intentionally changed:
+- `ACP Connector/agy/cli.ts`
+- `ACP Connector/admission/turn-coordinator.ts`
+- `tests/admission-production-dispatch.test.ts`
+- `docs/design/receipts/S3-T12/`
+
+Files intentionally not changed:
+- `ACP Connector/agy/prompt-free-process.ts`
+- `ACP Connector/agy/dispatch-boundary.ts`
+- `docs/design/v2.0.0.0-stage3-execution-prompt.md`

@@ -1,0 +1,32 @@
+TASK_ID: S3-T12
+RECEIPT: impact-1
+UTC: 2026-08-16T03:36:46Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Scope:
+Pre-GREEN upstream GitNexus impact for production Pipe dispatch wiring. This is a read-only blast-radius check before any production source write.
+
+Commands and exits:
+1. node .gitnexus/run.cjs impact --repo paseo-agy-acp --direction upstream --summary-only --depth 3 --file 'ACP Connector/agy/cli.ts' --kind Method prompt
+   exit=0
+2. node .gitnexus/run.cjs impact --repo paseo-agy-acp --direction upstream --summary-only --depth 3 --file 'ACP Connector/agy/cli.ts' --kind Method runPromptCommand
+   exit=0
+3. node .gitnexus/run.cjs impact --repo paseo-agy-acp --direction upstream --summary-only --depth 3 --file 'ACP Connector/agy/dispatch-boundary.ts' --kind Class AgyPromptFreeDispatchBoundary
+   exit=0
+4. node .gitnexus/run.cjs impact --repo paseo-agy-acp --direction upstream --summary-only --depth 3 --file 'ACP Connector/agy/prompt-free-process.ts' --kind Function startAgyPromptFreeProcess
+   exit=0
+5. node .gitnexus/run.cjs impact --repo paseo-agy-acp --direction upstream --summary-only --depth 3 --file 'ACP Connector/agy/prompt-free-process.ts' --kind Interface AgyPromptFreeProcess
+   exit=0
+6. node .gitnexus/run.cjs impact --repo paseo-agy-acp --direction upstream --summary-only --depth 3 --file 'ACP Connector/agy/dispatch-boundary.ts' --kind Interface AgyDispatchProcess
+   exit=0
+
+Key output:
+- AgyCliSession.prompt: risk=LOW; direct=0; processes_affected=0; modules_affected=0.
+- runPromptCommand: risk=LOW; direct=1; processes_affected=0; modules_affected=1 (Agy direct).
+- AgyPromptFreeDispatchBoundary: risk=LOW; direct=2; processes_affected=0; byDepthCounts={1:2,2:17,3:9}.
+- startAgyPromptFreeProcess: risk=LOW; direct=1; processes_affected=1; affected_process=startPromptFreeProcessInternal; modules_affected=1 (Agy direct).
+- AgyPromptFreeProcess: risk=LOW; direct=1; processes_affected=0; byDepthCounts={1:1,2:17,3:9}.
+- AgyDispatchProcess: risk=LOW; direct=2; processes_affected=0; byDepthCounts={1:2,2:17,3:9}.
+
+Risk conclusion:
+No HIGH or CRITICAL impact was returned by live GitNexus for the required upstream targets. Per S3-T12 Controller instruction, work stops after impact even though risk is LOW; no production source GREEN has been written.

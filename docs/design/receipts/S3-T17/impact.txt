@@ -1,0 +1,26 @@
+TASK_ID: S3-T17
+UTC: 2026-08-16T01:30:28Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+STATUS: CONTROLLER_AUTHORIZED_AFTER_CRITICAL_IMPACT
+
+Startup gate summary:
+- PASEO_AGENT_ID=a89e4879-24da-4368-955d-6504eaeda4dc; ParentAgentId=79ab5347-5101-4eff-89ed-6a7aa550ae2e.
+- Provider=codex; Model=gpt-5.5; Thinking=xhigh; Mode=full-access; PendingPermissions=[].
+- branch=main; sole parent=78931bff95ecbd9868f9cfa83a281cbbbf1a60d8; index clean before writes.
+- Authority hashes matched: Scheme d3b712ee5dd01029c66b0372a482f248a6f1ecbcf81572eb74d7b4ba5d98a98d; Stage2 Controller Prompt 9f946e36e717547e5982eefcc37c188d236e48b3be495541bd12129f84207993; AGENTS.md 9bbd1e7b1bb7938cc3fd5922a1dcf9a036fa8639267d38789213f4fe9fc3198d; handoff c88be84fa4c86c4c63921aaccd08f5f9c765dc896f1c35592f6cb0ee16fafc48.
+
+GitNexus upstream impact before writes:
+- assertAdmissionSchemaIntegrity: LOW; direct callers=2; affected processes=1; affected modules=1. Direct callers: AdmissionController.migrate; tests/admission-schema.test.ts.
+- transaction: CRITICAL; direct callers=18; affected processes=9; affected modules=4. Affected processes: admit; runPromptCommand; recoverExitedAdmissionSeats; settleFailure; waitForLease; constructor; createAdmissionRuntime; persistPayload; releaseExitedRecoverySeat.
+- recheckDispatchIdentityAfterContention: LOW; direct callers=1; affected processes=1. Direct caller: persistProcessIdentityAndDispatchIntent; affected process: runPromptCommand.
+
+Controller authorization:
+- Controller reviewed S3-T17 CRITICAL impact and authorized bounded continuation for the same Worker.
+- Risk level remains CRITICAL and is recorded here.
+- Production write set remained empty; transaction and all production symbols were not modified.
+
+Method evidence:
+- tdd SKILL.md executed; RED step inapplicable because task is green regression/test-evidence.
+- implement SKILL.md executed; commit/code-review inapplicable because task contract forbids stage/commit/delegation.
+- S2-ARCH-001 section 11.4 and S2-TEST-001 M10 were read before implementation.
+- Test seams used: assertAdmissionSchemaIntegrity; recordProcessIdentity/transaction behavior via public AdmissionController methods; recheckDispatchIdentityAfterContention via SQLite contention; faultInjection.

@@ -1,0 +1,38 @@
+TASK_ID=S3-INT
+ACCEPTANCE_STAGE=3
+TITLE=native-helper-process-evidence
+UTC=2026-08-16T08:09:56Z
+RESULT=PASS
+ORDER=focused -> affected -> broad
+
+FOCUSED
+COMMAND=rtk npm test -- tests/admission-process-evidence-contract.test.ts tests/admission-native-process.test.ts
+EXIT_CODE=0
+KEY_LINES:
+- npm run typecheck && npm run build && vitest run <two focused paths>
+- Test Files 2 passed (2)
+- Tests 6 passed (6)
+- Duration 1.79s
+
+AFFECTED
+COMMAND=rtk npm test -- tests/admission-process-evidence.test.ts tests/admission-startup-recovery.test.ts tests/admission-process.test.ts tests/acp-runtime-wiring.test.ts tests/acp-server.test.ts tests/queue-steer.test.ts tests/cli.test.ts tests/prompt-free-process.test.ts tests/prompt-free-canary.test.ts tests/agy-dispatch-boundary.test.ts tests/admission-production-dispatch.test.ts tests/admission-turn-coordinator.test.ts tests/admission-owner-instance.test.ts
+EXIT_CODE=0
+KEY_LINES:
+- npm run typecheck && npm run build && vitest run <thirteen affected seam paths>
+- Test Files 13 passed (13)
+- Tests 219 passed | 1 skipped (220)
+- Duration 18.35s
+
+BROAD
+COMMAND=rtk npm run validate
+EXIT_CODE=0
+KEY_LINES:
+- Test Files 54 passed (54)
+- Tests 607 passed | 2 skipped (609)
+- architecture boundaries: PASS
+- secret scan: PASS (158 files checked)
+
+ASSERTIONS
+- Commands were run serially; no bounded-worker substitute was used.
+- Fake/native process coverage ran without a real Provider or production 127.0.0.1:6767.
+- Stage 4 is eligible to begin only because all three Stage 3 barriers passed.

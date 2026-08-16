@@ -1,0 +1,13 @@
+UTC: 2026-08-16T05:57:04Z
+Task: S3-T20 secret scan / validation
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+Command: npm run validate:secrets
+Exit code: 1
+
+Key output:
+npm error Missing script: "validate:secrets"
+npm error
+npm error To see a list of scripts, run:
+npm error   npm run
+
+RED result: expected RED confirmed before GREEN; the public validate:secrets seam was absent on live HEAD.

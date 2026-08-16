@@ -1,0 +1,15 @@
+TASK_ID: S3-T16
+PHASE: GitNexus detect changes
+UTC: 2026-08-16T05:48:41Z
+GIT_HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+COMMAND: node .gitnexus/run.cjs detect-changes --repo paseo-agy-acp --scope unstaged
+EXIT_CODE: 0
+
+Key output:
+- Changes: 15 files, 7 symbols.
+- Affected processes: 0.
+- Risk level: low.
+- Changed symbols listed by the CLI are from existing shared unstaged sibling test files: enqueue, starting, runWorker, waitForLine, dispatch, coordinator, enqueueHolder.
+
+Scope note:
+The command was run exactly as required with unstaged scope. The shared Stage 3 dirty worktree means the CLI also saw sibling-owned unstaged files outside S3-T16.

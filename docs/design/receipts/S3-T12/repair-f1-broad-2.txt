@@ -1,0 +1,23 @@
+TASK_ID: S3-T12
+RECEIPT: repair-f1-broad-2
+UTC: 2026-08-16T06:55:38Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Command:
+rtk npm run validate
+
+Exit:
+0
+
+Key output:
+> npm test && npm run validate:architecture && npm run validate:secrets
+> npm run typecheck && npm run build && vitest run
+> tsc -p tsconfig.test.json
+> node scripts/clean-dist.mjs && tsc
+Test Files  54 passed (54)
+Tests  607 passed | 2 skipped (609)
+architecture boundaries: PASS
+secret scan: PASS (158 files checked)
+
+Closeout conclusion:
+S3-T12 F1 broad validation is green after sibling S3-T14 F2/F3 GREEN.

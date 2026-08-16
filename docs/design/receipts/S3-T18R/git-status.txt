@@ -1,0 +1,41 @@
+TASK_ID=S3-T18R
+RECEIPT=git-status
+UTC=2026-08-16T02:21:22Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+BRANCH=main
+PARENT=78931bff95ecbd9868f9cfa83a281cbbbf1a60d8
+
+COMMAND=git status --porcelain=v1
+ M "ACP Connector/acp/agent.ts"
+ M "ACP Connector/admission/turn-coordinator.ts"
+ M "Admission Controller/controller.ts"
+ M "Admission Controller/schema.ts"
+ M tests/admission-controller.test.ts
+ M tests/admission-fault-security-matrix.test.ts
+ M tests/admission-process.test.ts
+ M tests/admission-schema.test.ts
+ M tests/admission-startup-recovery.test.ts
+ M tests/admission-turn-coordinator.test.ts
+?? docs/design/receipts/S3-T01/
+?? docs/design/receipts/S3-T04/
+?? docs/design/receipts/S3-T05/
+?? docs/design/receipts/S3-T07/
+?? docs/design/receipts/S3-T08/
+?? docs/design/receipts/S3-T11/
+?? docs/design/receipts/S3-T13/
+?? docs/design/receipts/S3-T15/
+?? docs/design/receipts/S3-T17/
+?? docs/design/receipts/S3-T18/
+?? docs/design/receipts/S3-T18R/
+?? tests/admission-503-classifier.test.ts
+?? tests/admission-dispatch-faultpoints.test.ts
+?? tests/admission-process-evidence-contract.test.ts
+?? tests/admission-race-contract.test.ts
+?? tests/admission-scheduling-contract.test.ts
+?? tests/admission-schema-contract.test.ts
+?? tests/admission-schema-v2.test.ts
+?? tests/admission-seats-contract.test.ts
+?? tests/admission-sqlite-contention.test.ts
+?? tests/admission-timeout-contract.test.ts
+
+COMMAND=git diff --cached --name-only

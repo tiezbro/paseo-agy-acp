@@ -1,0 +1,574 @@
+TASK_ID=S3-T18R
+RECEIPT=repair-before-1
+UTC=2026-08-16T02:13:48Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+COMMAND=rtk npm test -- tests/admission-schema.test.ts tests/admission-controller.test.ts tests/admission-fault-security-matrix.test.ts tests/admission-sqlite-contention.test.ts tests/admission-startup-recovery.test.ts tests/admission-turn-coordinator.test.ts tests/admission-503-classifier.test.ts tests/admission-dispatch-faultpoints.test.ts tests/admission-process-evidence-contract.test.ts tests/admission-race-contract.test.ts tests/admission-scheduling-contract.test.ts tests/admission-seats-contract.test.ts tests/admission-timeout-contract.test.ts tests/admission-process.test.ts
+> npm run typecheck && npm run build && vitest run tests/admission-schema.test.ts tests/admission-controller.test.ts tests/admission-fault-security-matrix.test.ts tests/admission-sqlite-contention.test.ts tests/admission-startup-recovery.test.ts tests/admission-turn-coordinator.test.ts tests/admission-503-classifier.test.ts tests/admission-dispatch-faultpoints.test.ts tests/admission-process-evidence-contract.test.ts tests/admission-race-contract.test.ts tests/admission-scheduling-contract.test.ts tests/admission-seats-contract.test.ts tests/admission-timeout-contract.test.ts tests/admission-process.test.ts
+> tsc -p tsconfig.test.json
+> node scripts/clean-dist.mjs && tsc
+ RUN  v4.1.10 /home/tiezbro/projects/paseo-agy-acp
+ ❯ tests/admission-fault-security-matrix.test.ts (2 tests | 1 failed) 203ms
+     × commits process identity and dispatch intent atomically 200ms
+ ❯ tests/admission-seats-contract.test.ts (3 tests | 1 failed) 208ms
+     × keeps the fourth request queued while three turns are active 201ms
+ ❯ tests/admission-process-evidence-contract.test.ts (2 tests | 1 failed) 203ms
+     × releases a startup recovery seat only after connector gone, child gone, and empty process group 198ms
+ ❯ tests/admission-sqlite-contention.test.ts (2 tests | 2 failed) 340ms
+     × rechecks a committed dispatch identity after a child process holds the SQLite writer lock 215ms
+     × rolls back identity, lease phase, and request state after an injected transaction fault 124ms
+ ❯ tests/admission-controller.test.ts (3 tests | 2 failed) 342ms
+     × never allocates more than three global Antigravity seats 217ms
+     × prefers an idle agent without violating FIFO inside each agent 121ms
+ ❯ tests/admission-timeout-contract.test.ts (2 tests | 2 failed) 340ms
+     × times out a queued request after thirty minutes and deletes its payload 215ms
+     × skips cooldown, cancelled, and timed-out queued requests while admitting later eligible work 123ms
+ ❯ tests/admission-process.test.ts (1 test | 1 failed) 487ms
+     × enforces one active lease across independent connector processes 159ms
+ ❯ tests/admission-schema.test.ts (2 tests | 1 failed) 400ms
+     × contains only the shared queue tables and the migration ledger 211ms
+ ❯ tests/admission-scheduling-contract.test.ts (3 tests | 3 failed) 462ms
+     × rejects a second start less than two seconds after the previous start 190ms
+     × admits an idle agent before another queued turn for an active agent 143ms
+     × orders queued turns for the same agent by enqueue time then request id 127ms
+ ❯ tests/admission-startup-recovery.test.ts (3 tests | 3 failed) 448ms
+     × releases a proven exited local process tree but keeps the request recovery-required 201ms
+     × retains the seat when the old connector is gone but the child process group remains 126ms
+     × fails closed without mutating the lease when process inventory is unavailable 120ms
+ ❯ tests/admission-dispatch-faultpoints.test.ts (3 tests | 3 failed) 297ms
+     × rolls back identity and intent when a transaction fault follows identity persistence 141ms
+     × throws at a stale TurnDispatchBoundary beforePromptWrite without issuing a prompt 92ms
+     × deletes payload on afterPromptWrite and keeps prompt-free dispatch once-only 61ms
+ ❯ tests/admission-race-contract.test.ts (3 tests | 3 failed) 235ms
+     × marks execution recovery when a fenced heartbeat fails before provider terminal 98ms
+     × settles queued cancel racing admission with one terminal and no queued payload 67ms
+     × does not duplicate dispatch or retain a seat when steer and disconnect race 68ms
+ ❯ tests/admission-turn-coordinator.test.ts (6 tests | 6 failed) 519ms
+     × uses available seats while allowing only one new start every two seconds 129ms
+     × reports durable queue progress and removes a cancelled queued payload 100ms
+     × times out a queued turn at its deadline and deletes the encrypted prompt 78ms
+     × heartbeats an active turn and releases its seat immediately at success 76ms
+     × classifies a confirmed 503 capacity failure, starts cooldown, and releases the seat 67ms
+     × retains an uncertain post-write failure as recovery debt without a replayable prompt 68ms
+ ❯ tests/admission-503-classifier.test.ts (20 tests | 8 failed) 822ms
+     × '503 QUOTA_EXHAUSTED is not capacity' does not write a capacity cooldown 204ms
+     × '429 without quota code is not capacity' does not write a capacity cooldown 111ms
+     × '429 QUOTA_EXHAUSTED quota' does not write a capacity cooldown 122ms
+     × '401 auth' does not write a capacity cooldown 98ms
+     × '403 permission' does not write a capacity cooldown 75ms
+     × 'local timeout' does not write a capacity cooldown 68ms
+     × '502 transport' does not write a capacity cooldown 67ms
+     × 'empty structured outcome unknown' does not write a capacity cooldown 69ms
+ Test Files  14 failed (14)
+      Tests  37 failed | 18 passed (55)
+   Start at  02:13:50
+   Duration  1.19s (transform 2.31s, setup 0ms, import 3.48s, tests 5.31s, environment 2ms)
+⎯⎯⎯⎯⎯⎯ Failed Tests 37 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  tests/admission-503-classifier.test.ts > S3-T07 structured provider failure classifier > '503 QUOTA_EXHAUSTED is not capacity' does not write a capacity cooldown
+ FAIL  tests/admission-503-classifier.test.ts > S3-T07 structured provider failure classifier > '429 without quota code is not capacity' does not write a capacity cooldown
+ FAIL  tests/admission-503-classifier.test.ts > S3-T07 structured provider failure classifier > '429 QUOTA_EXHAUSTED quota' does not write a capacity cooldown
+ FAIL  tests/admission-503-classifier.test.ts > S3-T07 structured provider failure classifier > '401 auth' does not write a capacity cooldown
+ FAIL  tests/admission-503-classifier.test.ts > S3-T07 structured provider failure classifier > '403 permission' does not write a capacity cooldown
+ FAIL  tests/admission-503-classifier.test.ts > S3-T07 structured provider failure classifier > 'local timeout' does not write a capacity cooldown
+ FAIL  tests/admission-503-classifier.test.ts > S3-T07 structured provider failure classifier > '502 transport' does not write a capacity cooldown
+ FAIL  tests/admission-503-classifier.test.ts > S3-T07 structured provider failure classifier > 'empty structured outcome unknown' does not write a capacity cooldown
+Error: request metadata parentId is not accepted
+ ❯ requestAgentId Admission Controller/controller.ts:1719:11
+    1717|   const record = input as { agentId?: unknown; parentId?: unknown };
+    1718|   if (record.parentId !== undefined) {
+    1719|     throw new Error("request metadata parentId is not accepted");
+       |           ^
+    1720|   }
+    1721|   if (typeof record.agentId === "string") {
+ ❯ validateEnqueueRequest Admission Controller/controller.ts:1710:22
+ ❯ AdmissionController.enqueueRequest Admission Controller/controller.ts:1469:5
+ ❯ Admission Controller/controller.ts:439:27
+ ❯ sqliteTransaction node_modules/.pnpm/better-sqlite3@13.0.3/node_modules/better-sqlite3/lib/methods/transaction.js:65:24
+ ❯ AdmissionController.transaction Admission Controller/controller.ts:1071:36
+ ❯ AdmissionController.enqueueWithPayload Admission Controller/controller.ts:438:17
+ ❯ enqueue tests/admission-503-classifier.test.ts:122:13
+ ❯ tests/admission-503-classifier.test.ts:174:5
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/37]⎯
+ FAIL  tests/admission-controller.test.ts > AdmissionController final shared-queue policy > never allocates more than three global Antigravity seats
+Error: request metadata parentId is not accepted
+ ❯ requestAgentId Admission Controller/controller.ts:1719:11
+    1717|   const record = input as { agentId?: unknown; parentId?: unknown };
+    1718|   if (record.parentId !== undefined) {
+    1719|     throw new Error("request metadata parentId is not accepted");
+       |           ^
+    1720|   }
+    1721|   if (typeof record.agentId === "string") {
+ ❯ validateEnqueueRequest Admission Controller/controller.ts:1710:22
+ ❯ AdmissionController.enqueueRequest Admission Controller/controller.ts:1469:5
+ ❯ Admission Controller/controller.ts:439:27
+ ❯ sqliteTransaction node_modules/.pnpm/better-sqlite3@13.0.3/node_modules/better-sqlite3/lib/methods/transaction.js:65:24
+ ❯ AdmissionController.transaction Admission Controller/controller.ts:1071:36
+ ❯ AdmissionController.enqueueWithPayload Admission Controller/controller.ts:438:17
+ ❯ enqueue tests/admission-controller.test.ts:36:13
+ ❯ tests/admission-controller.test.ts:64:5
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/37]⎯
+ FAIL  tests/admission-controller.test.ts > AdmissionController final shared-queue policy > prefers an idle agent without violating FIFO inside each agent
+Error: request metadata parentId is not accepted
+ ❯ requestAgentId Admission Controller/controller.ts:1719:11
+    1717|   const record = input as { agentId?: unknown; parentId?: unknown };
+    1718|   if (record.parentId !== undefined) {
+    1719|     throw new Error("request metadata parentId is not accepted");
+       |           ^
+    1720|   }
+    1721|   if (typeof record.agentId === "string") {
+ ❯ validateEnqueueRequest Admission Controller/controller.ts:1710:22
+ ❯ AdmissionController.enqueueRequest Admission Controller/controller.ts:1469:5
+ ❯ Admission Controller/controller.ts:439:27
+ ❯ sqliteTransaction node_modules/.pnpm/better-sqlite3@13.0.3/node_modules/better-sqlite3/lib/methods/transaction.js:65:24
+ ❯ AdmissionController.transaction Admission Controller/controller.ts:1071:36
+ ❯ AdmissionController.enqueueWithPayload Admission Controller/controller.ts:438:17
+ ❯ enqueue tests/admission-controller.test.ts:36:13
+ ❯ tests/admission-controller.test.ts:91:5
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/37]⎯
+ FAIL  tests/admission-dispatch-faultpoints.test.ts > Admission dispatch fault-point regression > rolls back identity and intent when a transaction fault follows identity persistence
+Error: request metadata parentId is not accepted
+ ❯ requestAgentId Admission Controller/controller.ts:1719:11
+    1717|   const record = input as { agentId?: unknown; parentId?: unknown };
+    1718|   if (record.parentId !== undefined) {
+    1719|     throw new Error("request metadata parentId is not accepted");
+       |           ^
+    1720|   }
+    1721|   if (typeof record.agentId === "string") {
+ ❯ validateEnqueueRequest Admission Controller/controller.ts:1710:22
+ ❯ AdmissionController.enqueueRequest Admission Controller/controller.ts:1469:5
+ ❯ Admission Controller/controller.ts:439:27
+ ❯ sqliteTransaction node_modules/.pnpm/better-sqlite3@13.0.3/node_modules/better-sqlite3/lib/methods/transaction.js:65:24
+ ❯ AdmissionController.transaction Admission Controller/controller.ts:1071:36
+ ❯ AdmissionController.enqueueWithPayload Admission Controller/controller.ts:438:17
+ ❯ starting tests/admission-dispatch-faultpoints.test.ts:49:13
+ ❯ tests/admission-dispatch-faultpoints.test.ts:182:19
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/37]⎯
+ FAIL  tests/admission-dispatch-faultpoints.test.ts > Admission dispatch fault-point regression > throws at a stale TurnDispatchBoundary beforePromptWrite without issuing a prompt
+Error: admission parentId is not accepted
+ ❯ optionAgentId ACP Connector/admission/turn-coordinator.ts:394:11
+    392| function optionAgentId(options: AdmissionTurnCoordinatorOptions): stri…
+    393|   if (options.parentId !== undefined) {
+    394|     throw new Error("admission parentId is not accepted");
+       |           ^
+    395|   }
+    396|   if (options.agentId !== undefined) {
+ ❯ new AdmissionTurnCoordinator ACP Connector/admission/turn-coordinator.ts:95:21
+ ❯ coordinator tests/admission-dispatch-faultpoints.test.ts:155:10
+ ❯ tests/admission-dispatch-faultpoints.test.ts:202:21
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/37]⎯
+ FAIL  tests/admission-dispatch-faultpoints.test.ts > Admission dispatch fault-point regression > deletes payload on afterPromptWrite and keeps prompt-free dispatch once-only
+Error: admission parentId is not accepted
+ ❯ optionAgentId ACP Connector/admission/turn-coordinator.ts:394:11
+    392| function optionAgentId(options: AdmissionTurnCoordinatorOptions): stri…
+    393|   if (options.parentId !== undefined) {
+    394|     throw new Error("admission parentId is not accepted");
+       |           ^
+    395|   }
+    396|   if (options.agentId !== undefined) {
+ ❯ new AdmissionTurnCoordinator ACP Connector/admission/turn-coordinator.ts:95:21
+ ❯ coordinator tests/admission-dispatch-faultpoints.test.ts:155:10
+ ❯ tests/admission-dispatch-faultpoints.test.ts:235:21
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/37]⎯
+ FAIL  tests/admission-fault-security-matrix.test.ts > Admission dispatch fault boundaries > commits process identity and dispatch intent atomically
+Error: request metadata parentId is not accepted
+ ❯ requestAgentId Admission Controller/controller.ts:1719:11
+    1717|   const record = input as { agentId?: unknown; parentId?: unknown };
+    1718|   if (record.parentId !== undefined) {
+    1719|     throw new Error("request metadata parentId is not accepted");
+       |           ^
+    1720|   }
+    1721|   if (typeof record.agentId === "string") {
+ ❯ validateEnqueueRequest Admission Controller/controller.ts:1710:22
+ ❯ AdmissionController.enqueueRequest Admission Controller/controller.ts:1469:5
+ ❯ Admission Controller/controller.ts:439:27
+ ❯ sqliteTransaction node_modules/.pnpm/better-sqlite3@13.0.3/node_modules/better-sqlite3/lib/methods/transaction.js:65:24
+ ❯ AdmissionController.transaction Admission Controller/controller.ts:1071:36
+ ❯ AdmissionController.enqueueWithPayload Admission Controller/controller.ts:438:17
+ ❯ starting tests/admission-fault-security-matrix.test.ts:47:13
+ ❯ tests/admission-fault-security-matrix.test.ts:106:19
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/37]⎯
+ FAIL  tests/admission-process-evidence-contract.test.ts > S3-T13 process evidence contract > releases a startup recovery seat only after connector gone, child gone, and empty process group
+Error: request metadata parentId is not accepted
+ ❯ requestAgentId Admission Controller/controller.ts:1719:11
+    1717|   const record = input as { agentId?: unknown; parentId?: unknown };
+    1718|   if (record.parentId !== undefined) {
+    1719|     throw new Error("request metadata parentId is not accepted");
+       |           ^
+    1720|   }
+    1721|   if (typeof record.agentId === "string") {
+ ❯ validateEnqueueRequest Admission Controller/controller.ts:1710:22
+ ❯ AdmissionController.enqueueRequest Admission Controller/controller.ts:1469:5
+ ❯ Admission Controller/controller.ts:439:27
+ ❯ sqliteTransaction node_modules/.pnpm/better-sqlite3@13.0.3/node_modules/better-sqlite3/lib/methods/transaction.js:65:24
+ ❯ AdmissionController.transaction Admission Controller/controller.ts:1071:36
+ ❯ AdmissionController.enqueueWithPayload Admission Controller/controller.ts:438:17
+ ❯ dispatch tests/admission-process-evidence-contract.test.ts:72:13
+ ❯ tests/admission-process-evidence-contract.test.ts:206:5
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/37]⎯
+ FAIL  tests/admission-process.test.ts > AdmissionController process boundary > enforces one active lease across independent connector processes
+Error: admission child exited before held: 1
+ ❯ ChildProcess.<anonymous> tests/admission-process.test.ts:64:41
+     62|     });
+     63|     child.once("error", reject);
+     64|     child.once("exit", (code) => reject(new Error(`admission child exi…
+       |                                         ^
+     65|   });
+     66| }
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/37]⎯
+ FAIL  tests/admission-race-contract.test.ts > S3-T15 admission race contract > marks execution recovery when a fenced heartbeat fails before provider terminal
+Error: admission parentId is not accepted
+ ❯ optionAgentId ACP Connector/admission/turn-coordinator.ts:394:11
+    392| function optionAgentId(options: AdmissionTurnCoordinatorOptions): stri…
+    393|   if (options.parentId !== undefined) {
+    394|     throw new Error("admission parentId is not accepted");
+       |           ^
+    395|   }
+    396|   if (options.agentId !== undefined) {
+ ❯ new AdmissionTurnCoordinator ACP Connector/admission/turn-coordinator.ts:95:21
+ ❯ coordinator tests/admission-race-contract.test.ts:56:10
+ ❯ tests/admission-race-contract.test.ts:131:21
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[10/37]⎯
+ FAIL  tests/admission-race-contract.test.ts > S3-T15 admission race contract > settles queued cancel racing admission with one terminal and no queued payload
+Error: request metadata parentId is not accepted
+ ❯ requestAgentId Admission Controller/controller.ts:1719:11
+    1717|   const record = input as { agentId?: unknown; parentId?: unknown };
+    1718|   if (record.parentId !== undefined) {
+    1719|     throw new Error("request metadata parentId is not accepted");
+       |           ^
+    1720|   }
+    1721|   if (typeof record.agentId === "string") {
+ ❯ validateEnqueueRequest Admission Controller/controller.ts:1710:22
+ ❯ AdmissionController.enqueueRequest Admission Controller/controller.ts:1469:5
+ ❯ Admission Controller/controller.ts:439:27
+ ❯ sqliteTransaction node_modules/.pnpm/better-sqlite3@13.0.3/node_modules/better-sqlite3/lib/methods/transaction.js:65:24
+ ❯ AdmissionController.transaction Admission Controller/controller.ts:1071:36
+ ❯ AdmissionController.enqueueWithPayload Admission Controller/controller.ts:438:17
+ ❯ enqueue tests/admission-race-contract.test.ts:67:13
+ ❯ tests/admission-race-contract.test.ts:176:5
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[11/37]⎯
+ FAIL  tests/admission-race-contract.test.ts > S3-T15 admission race contract > does not duplicate dispatch or retain a seat when steer and disconnect race
+Error: admission parentId is not accepted
+ ❯ optionAgentId ACP Connector/admission/turn-coordinator.ts:394:11
+    392| function optionAgentId(options: AdmissionTurnCoordinatorOptions): stri…
+    393|   if (options.parentId !== undefined) {
+    394|     throw new Error("admission parentId is not accepted");
+       |           ^
+    395|   }
+    396|   if (options.agentId !== undefined) {
+ ❯ new AdmissionTurnCoordinator ACP Connector/admission/turn-coordinator.ts:95:21
+ ❯ coordinator tests/admission-race-contract.test.ts:56:10
+ ❯ tests/admission-race-contract.test.ts:200:21
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[12/37]⎯
+ FAIL  tests/admission-scheduling-contract.test.ts > S3-T04 admission scheduling contract > rejects a second start less than two seconds after the previous start
+Error: request metadata parentId is not accepted
+ ❯ requestAgentId Admission Controller/controller.ts:1719:11
+    1717|   const record = input as { agentId?: unknown; parentId?: unknown };
+    1718|   if (record.parentId !== undefined) {
+    1719|     throw new Error("request metadata parentId is not accepted");
+       |           ^
+    1720|   }
+    1721|   if (typeof record.agentId === "string") {
+ ❯ validateEnqueueRequest Admission Controller/controller.ts:1710:22
+ ❯ AdmissionController.enqueueRequest Admission Controller/controller.ts:1469:5
+ ❯ Admission Controller/controller.ts:439:27
+ ❯ sqliteTransaction node_modules/.pnpm/better-sqlite3@13.0.3/node_modules/better-sqlite3/lib/methods/transaction.js:65:24
+ ❯ AdmissionController.transaction Admission Controller/controller.ts:1071:36
+ ❯ AdmissionController.enqueueWithPayload Admission Controller/controller.ts:438:17
+ ❯ enqueue tests/admission-scheduling-contract.test.ts:46:13
+ ❯ tests/admission-scheduling-contract.test.ts:81:5
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[13/37]⎯
+ FAIL  tests/admission-scheduling-contract.test.ts > S3-T04 admission scheduling contract > admits an idle agent before another queued turn for an active agent
+Error: request metadata parentId is not accepted
+ ❯ requestAgentId Admission Controller/controller.ts:1719:11
+    1717|   const record = input as { agentId?: unknown; parentId?: unknown };
+    1718|   if (record.parentId !== undefined) {
+    1719|     throw new Error("request metadata parentId is not accepted");
+       |           ^
+    1720|   }
+    1721|   if (typeof record.agentId === "string") {
+ ❯ validateEnqueueRequest Admission Controller/controller.ts:1710:22
+ ❯ AdmissionController.enqueueRequest Admission Controller/controller.ts:1469:5
+ ❯ Admission Controller/controller.ts:439:27
+ ❯ sqliteTransaction node_modules/.pnpm/better-sqlite3@13.0.3/node_modules/better-sqlite3/lib/methods/transaction.js:65:24
+ ❯ AdmissionController.transaction Admission Controller/controller.ts:1071:36
+ ❯ AdmissionController.enqueueWithPayload Admission Controller/controller.ts:438:17
+ ❯ enqueue tests/admission-scheduling-contract.test.ts:46:13
+ ❯ tests/admission-scheduling-contract.test.ts:100:5
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[14/37]⎯
+ FAIL  tests/admission-scheduling-contract.test.ts > S3-T04 admission scheduling contract > orders queued turns for the same agent by enqueue time then request id
+Error: request metadata parentId is not accepted
+ ❯ requestAgentId Admission Controller/controller.ts:1719:11
+    1717|   const record = input as { agentId?: unknown; parentId?: unknown };
+    1718|   if (record.parentId !== undefined) {
+    1719|     throw new Error("request metadata parentId is not accepted");
+       |           ^
+    1720|   }
+    1721|   if (typeof record.agentId === "string") {
+ ❯ validateEnqueueRequest Admission Controller/controller.ts:1710:22
+ ❯ AdmissionController.enqueueRequest Admission Controller/controller.ts:1469:5
+ ❯ Admission Controller/controller.ts:439:27
+ ❯ sqliteTransaction node_modules/.pnpm/better-sqlite3@13.0.3/node_modules/better-sqlite3/lib/methods/transaction.js:65:24
+ ❯ AdmissionController.transaction Admission Controller/controller.ts:1071:36
+ ❯ AdmissionController.enqueueWithPayload Admission Controller/controller.ts:438:17
+ ❯ enqueue tests/admission-scheduling-contract.test.ts:46:13
+ ❯ tests/admission-scheduling-contract.test.ts:114:5
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[15/37]⎯
+ FAIL  tests/admission-schema.test.ts > AdmissionController schema v1 > contains only the shared queue tables and the migration ledger
+AssertionError: expected [ 'cooldowns', 'events', …(9) ] to deeply equal [ 'cooldowns', 'events', …(7) ]
+- Expected
++ Received
+@@ -1,10 +1,12 @@
+  [
+    "cooldowns",
+    "events",
+    "lease_process_identities",
+    "leases",
++   "policy_state",
++   "queued_owner_instances",
+    "schema_migrations",
+    "sessions",
+    "start_history",
+    "turn_payloads",
+    "turn_requests",
+ ❯ tests/admission-schema.test.ts:50:22
+     48|         .prepare("SELECT name FROM sqlite_schema WHERE type = 'table' …
+     49|         .all() as Array<{ name: string }>).map((row) => row.name);
+     50|       expect(tables).toEqual([
+       |                      ^
+     51|         "cooldowns",
+     52|         "events",
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[16/37]⎯
+ FAIL  tests/admission-seats-contract.test.ts > S3-T01 admission seat contract > keeps the fourth request queued while three turns are active
+Error: request metadata parentId is not accepted
+ ❯ requestAgentId Admission Controller/controller.ts:1719:11
+    1717|   const record = input as { agentId?: unknown; parentId?: unknown };
+    1718|   if (record.parentId !== undefined) {
+    1719|     throw new Error("request metadata parentId is not accepted");
+       |           ^
+    1720|   }
+    1721|   if (typeof record.agentId === "string") {
+ ❯ validateEnqueueRequest Admission Controller/controller.ts:1710:22
+ ❯ AdmissionController.enqueueRequest Admission Controller/controller.ts:1469:5
+ ❯ Admission Controller/controller.ts:439:27
+ ❯ sqliteTransaction node_modules/.pnpm/better-sqlite3@13.0.3/node_modules/better-sqlite3/lib/methods/transaction.js:65:24
+ ❯ AdmissionController.transaction Admission Controller/controller.ts:1071:36
+ ❯ AdmissionController.enqueueWithPayload Admission Controller/controller.ts:438:17
+ ❯ enqueue tests/admission-seats-contract.test.ts:51:13
+ ❯ tests/admission-seats-contract.test.ts:110:5
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[17/37]⎯
+ FAIL  tests/admission-sqlite-contention.test.ts > Admission SQLite contention and rollback contract > rechecks a committed dispatch identity after a child process holds the SQLite writer lock
+Error: request metadata parentId is not accepted
+ ❯ requestAgentId Admission Controller/controller.ts:1719:11
+    1717|   const record = input as { agentId?: unknown; parentId?: unknown };
+    1718|   if (record.parentId !== undefined) {
+    1719|     throw new Error("request metadata parentId is not accepted");
+       |           ^
+    1720|   }
+    1721|   if (typeof record.agentId === "string") {
+ ❯ validateEnqueueRequest Admission Controller/controller.ts:1710:22
+ ❯ AdmissionController.enqueueRequest Admission Controller/controller.ts:1469:5
+ ❯ Admission Controller/controller.ts:439:27
+ ❯ sqliteTransaction node_modules/.pnpm/better-sqlite3@13.0.3/node_modules/better-sqlite3/lib/methods/transaction.js:65:24
+ ❯ AdmissionController.transaction Admission Controller/controller.ts:1071:36
+ ❯ AdmissionController.enqueueWithPayload Admission Controller/controller.ts:438:17
+ ❯ starting tests/admission-sqlite-contention.test.ts:93:13
+ ❯ tests/admission-sqlite-contention.test.ts:176:19
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[18/37]⎯
+ FAIL  tests/admission-sqlite-contention.test.ts > Admission SQLite contention and rollback contract > rolls back identity, lease phase, and request state after an injected transaction fault
+Error: request metadata parentId is not accepted
+ ❯ requestAgentId Admission Controller/controller.ts:1719:11
+    1717|   const record = input as { agentId?: unknown; parentId?: unknown };
+    1718|   if (record.parentId !== undefined) {
+    1719|     throw new Error("request metadata parentId is not accepted");
+       |           ^
+    1720|   }
+    1721|   if (typeof record.agentId === "string") {
+ ❯ validateEnqueueRequest Admission Controller/controller.ts:1710:22
+ ❯ AdmissionController.enqueueRequest Admission Controller/controller.ts:1469:5
+ ❯ Admission Controller/controller.ts:439:27
+ ❯ sqliteTransaction node_modules/.pnpm/better-sqlite3@13.0.3/node_modules/better-sqlite3/lib/methods/transaction.js:65:24
+ ❯ AdmissionController.transaction Admission Controller/controller.ts:1071:36
+ ❯ AdmissionController.enqueueWithPayload Admission Controller/controller.ts:438:17
+ ❯ starting tests/admission-sqlite-contention.test.ts:93:13
+ ❯ tests/admission-sqlite-contention.test.ts:209:19
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[19/37]⎯
+ FAIL  tests/admission-startup-recovery.test.ts > admission startup recovery > releases a proven exited local process tree but keeps the request recovery-required
+Error: request metadata parentId is not accepted
+ ❯ requestAgentId Admission Controller/controller.ts:1719:11
+    1717|   const record = input as { agentId?: unknown; parentId?: unknown };
+    1718|   if (record.parentId !== undefined) {
+    1719|     throw new Error("request metadata parentId is not accepted");
+       |           ^
+    1720|   }
+    1721|   if (typeof record.agentId === "string") {
+ ❯ validateEnqueueRequest Admission Controller/controller.ts:1710:22
+ ❯ AdmissionController.enqueueRequest Admission Controller/controller.ts:1469:5
+ ❯ Admission Controller/controller.ts:439:27
+ ❯ sqliteTransaction node_modules/.pnpm/better-sqlite3@13.0.3/node_modules/better-sqlite3/lib/methods/transaction.js:65:24
+ ❯ AdmissionController.transaction Admission Controller/controller.ts:1071:36
+ ❯ AdmissionController.enqueueWithPayload Admission Controller/controller.ts:438:17
+ ❯ dispatch tests/admission-startup-recovery.test.ts:65:13
+ ❯ tests/admission-startup-recovery.test.ts:157:5
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[20/37]⎯
+ FAIL  tests/admission-startup-recovery.test.ts > admission startup recovery > retains the seat when the old connector is gone but the child process group remains
+Error: request metadata parentId is not accepted
+ ❯ requestAgentId Admission Controller/controller.ts:1719:11
+    1717|   const record = input as { agentId?: unknown; parentId?: unknown };
+    1718|   if (record.parentId !== undefined) {
+    1719|     throw new Error("request metadata parentId is not accepted");
+       |           ^
+    1720|   }
+    1721|   if (typeof record.agentId === "string") {
+ ❯ validateEnqueueRequest Admission Controller/controller.ts:1710:22
+ ❯ AdmissionController.enqueueRequest Admission Controller/controller.ts:1469:5
+ ❯ Admission Controller/controller.ts:439:27
+ ❯ sqliteTransaction node_modules/.pnpm/better-sqlite3@13.0.3/node_modules/better-sqlite3/lib/methods/transaction.js:65:24
+ ❯ AdmissionController.transaction Admission Controller/controller.ts:1071:36
+ ❯ AdmissionController.enqueueWithPayload Admission Controller/controller.ts:438:17
+ ❯ dispatch tests/admission-startup-recovery.test.ts:65:13
+ ❯ tests/admission-startup-recovery.test.ts:175:5
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[21/37]⎯
+ FAIL  tests/admission-startup-recovery.test.ts > admission startup recovery > fails closed without mutating the lease when process inventory is unavailable
+Error: request metadata parentId is not accepted
+ ❯ requestAgentId Admission Controller/controller.ts:1719:11
+    1717|   const record = input as { agentId?: unknown; parentId?: unknown };
+    1718|   if (record.parentId !== undefined) {
+    1719|     throw new Error("request metadata parentId is not accepted");
+       |           ^
+    1720|   }
+    1721|   if (typeof record.agentId === "string") {
+ ❯ validateEnqueueRequest Admission Controller/controller.ts:1710:22
+ ❯ AdmissionController.enqueueRequest Admission Controller/controller.ts:1469:5
+ ❯ Admission Controller/controller.ts:439:27
+ ❯ sqliteTransaction node_modules/.pnpm/better-sqlite3@13.0.3/node_modules/better-sqlite3/lib/methods/transaction.js:65:24
+ ❯ AdmissionController.transaction Admission Controller/controller.ts:1071:36
+ ❯ AdmissionController.enqueueWithPayload Admission Controller/controller.ts:438:17
+ ❯ dispatch tests/admission-startup-recovery.test.ts:65:13
+ ❯ tests/admission-startup-recovery.test.ts:189:5
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[22/37]⎯
+ FAIL  tests/admission-timeout-contract.test.ts > S3-T05 admission timeout contract > times out a queued request after thirty minutes and deletes its payload
+Error: request metadata parentId is not accepted
+ ❯ requestAgentId Admission Controller/controller.ts:1719:11
+    1717|   const record = input as { agentId?: unknown; parentId?: unknown };
+    1718|   if (record.parentId !== undefined) {
+    1719|     throw new Error("request metadata parentId is not accepted");
+       |           ^
+    1720|   }
+    1721|   if (typeof record.agentId === "string") {
+ ❯ validateEnqueueRequest Admission Controller/controller.ts:1710:22
+ ❯ AdmissionController.enqueueRequest Admission Controller/controller.ts:1469:5
+ ❯ Admission Controller/controller.ts:439:27
+ ❯ sqliteTransaction node_modules/.pnpm/better-sqlite3@13.0.3/node_modules/better-sqlite3/lib/methods/transaction.js:65:24
+ ❯ AdmissionController.transaction Admission Controller/controller.ts:1071:36
+ ❯ AdmissionController.enqueueWithPayload Admission Controller/controller.ts:438:17
+ ❯ enqueue tests/admission-timeout-contract.test.ts:45:13
+ ❯ tests/admission-timeout-contract.test.ts:86:5
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[23/37]⎯
+ FAIL  tests/admission-timeout-contract.test.ts > S3-T05 admission timeout contract > skips cooldown, cancelled, and timed-out queued requests while admitting later eligible work
+Error: request metadata parentId is not accepted
+ ❯ requestAgentId Admission Controller/controller.ts:1719:11
+    1717|   const record = input as { agentId?: unknown; parentId?: unknown };
+    1718|   if (record.parentId !== undefined) {
+    1719|     throw new Error("request metadata parentId is not accepted");
+       |           ^
+    1720|   }
+    1721|   if (typeof record.agentId === "string") {
+ ❯ validateEnqueueRequest Admission Controller/controller.ts:1710:22
+ ❯ AdmissionController.enqueueRequest Admission Controller/controller.ts:1469:5
+ ❯ Admission Controller/controller.ts:439:27
+ ❯ sqliteTransaction node_modules/.pnpm/better-sqlite3@13.0.3/node_modules/better-sqlite3/lib/methods/transaction.js:65:24
+ ❯ AdmissionController.transaction Admission Controller/controller.ts:1071:36
+ ❯ AdmissionController.enqueueWithPayload Admission Controller/controller.ts:438:17
+ ❯ enqueue tests/admission-timeout-contract.test.ts:45:13
+ ❯ tests/admission-timeout-contract.test.ts:98:5
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[24/37]⎯
+ FAIL  tests/admission-turn-coordinator.test.ts > AdmissionTurnCoordinator > uses available seats while allowing only one new start every two seconds
+Error: admission parentId is not accepted
+ ❯ optionAgentId ACP Connector/admission/turn-coordinator.ts:394:11
+    392| function optionAgentId(options: AdmissionTurnCoordinatorOptions): stri…
+    393|   if (options.parentId !== undefined) {
+    394|     throw new Error("admission parentId is not accepted");
+       |           ^
+    395|   }
+    396|   if (options.agentId !== undefined) {
+ ❯ new AdmissionTurnCoordinator ACP Connector/admission/turn-coordinator.ts:95:21
+ ❯ coordinator tests/admission-turn-coordinator.test.ts:46:10
+ ❯ tests/admission-turn-coordinator.test.ts:88:21
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[25/37]⎯
+ FAIL  tests/admission-turn-coordinator.test.ts > AdmissionTurnCoordinator > reports durable queue progress and removes a cancelled queued payload
+Error: request metadata parentId is not accepted
+ ❯ requestAgentId Admission Controller/controller.ts:1719:11
+    1717|   const record = input as { agentId?: unknown; parentId?: unknown };
+    1718|   if (record.parentId !== undefined) {
+    1719|     throw new Error("request metadata parentId is not accepted");
+       |           ^
+    1720|   }
+    1721|   if (typeof record.agentId === "string") {
+ ❯ validateEnqueueRequest Admission Controller/controller.ts:1710:22
+ ❯ AdmissionController.enqueueRequest Admission Controller/controller.ts:1469:5
+ ❯ Admission Controller/controller.ts:439:27
+ ❯ sqliteTransaction node_modules/.pnpm/better-sqlite3@13.0.3/node_modules/better-sqlite3/lib/methods/transaction.js:65:24
+ ❯ AdmissionController.transaction Admission Controller/controller.ts:1071:36
+ ❯ AdmissionController.enqueueWithPayload Admission Controller/controller.ts:438:17
+ ❯ enqueueHolder tests/admission-turn-coordinator.test.ts:55:13
+ ❯ tests/admission-turn-coordinator.test.ts:150:5
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[26/37]⎯
+ FAIL  tests/admission-turn-coordinator.test.ts > AdmissionTurnCoordinator > times out a queued turn at its deadline and deletes the encrypted prompt
+Error: request metadata parentId is not accepted
+ ❯ requestAgentId Admission Controller/controller.ts:1719:11
+    1717|   const record = input as { agentId?: unknown; parentId?: unknown };
+    1718|   if (record.parentId !== undefined) {
+    1719|     throw new Error("request metadata parentId is not accepted");
+       |           ^
+    1720|   }
+    1721|   if (typeof record.agentId === "string") {
+ ❯ validateEnqueueRequest Admission Controller/controller.ts:1710:22
+ ❯ AdmissionController.enqueueRequest Admission Controller/controller.ts:1469:5
+ ❯ Admission Controller/controller.ts:439:27
+ ❯ sqliteTransaction node_modules/.pnpm/better-sqlite3@13.0.3/node_modules/better-sqlite3/lib/methods/transaction.js:65:24
+ ❯ AdmissionController.transaction Admission Controller/controller.ts:1071:36
+ ❯ AdmissionController.enqueueWithPayload Admission Controller/controller.ts:438:17
+ ❯ enqueueHolder tests/admission-turn-coordinator.test.ts:55:13
+ ❯ tests/admission-turn-coordinator.test.ts:190:5
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[27/37]⎯
+ FAIL  tests/admission-turn-coordinator.test.ts > AdmissionTurnCoordinator > heartbeats an active turn and releases its seat immediately at success
+Error: admission parentId is not accepted
+ ❯ optionAgentId ACP Connector/admission/turn-coordinator.ts:394:11
+    392| function optionAgentId(options: AdmissionTurnCoordinatorOptions): stri…
+    393|   if (options.parentId !== undefined) {
+    394|     throw new Error("admission parentId is not accepted");
+       |           ^
+    395|   }
+    396|   if (options.agentId !== undefined) {
+ ❯ new AdmissionTurnCoordinator ACP Connector/admission/turn-coordinator.ts:95:21
+ ❯ coordinator tests/admission-turn-coordinator.test.ts:46:10
+ ❯ tests/admission-turn-coordinator.test.ts:223:21
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[28/37]⎯
+ FAIL  tests/admission-turn-coordinator.test.ts > AdmissionTurnCoordinator > classifies a confirmed 503 capacity failure, starts cooldown, and releases the seat
+Error: admission parentId is not accepted
+ ❯ optionAgentId ACP Connector/admission/turn-coordinator.ts:394:11
+    392| function optionAgentId(options: AdmissionTurnCoordinatorOptions): stri…
+    393|   if (options.parentId !== undefined) {
+    394|     throw new Error("admission parentId is not accepted");
+       |           ^
+    395|   }
+    396|   if (options.agentId !== undefined) {
+ ❯ new AdmissionTurnCoordinator ACP Connector/admission/turn-coordinator.ts:95:21
+ ❯ coordinator tests/admission-turn-coordinator.test.ts:46:10
+ ❯ tests/admission-turn-coordinator.test.ts:263:21
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[29/37]⎯
+ FAIL  tests/admission-turn-coordinator.test.ts > AdmissionTurnCoordinator > retains an uncertain post-write failure as recovery debt without a replayable prompt
+Error: admission parentId is not accepted
+ ❯ optionAgentId ACP Connector/admission/turn-coordinator.ts:394:11
+    392| function optionAgentId(options: AdmissionTurnCoordinatorOptions): stri…
+    393|   if (options.parentId !== undefined) {
+    394|     throw new Error("admission parentId is not accepted");
+       |           ^
+    395|   }
+    396|   if (options.agentId !== undefined) {
+ ❯ new AdmissionTurnCoordinator ACP Connector/admission/turn-coordinator.ts:95:21
+ ❯ coordinator tests/admission-turn-coordinator.test.ts:46:10
+ ❯ tests/admission-turn-coordinator.test.ts:300:21
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[30/37]⎯
+
+EXIT_CODE=1

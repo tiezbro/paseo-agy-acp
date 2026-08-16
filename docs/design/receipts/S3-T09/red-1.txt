@@ -1,0 +1,13 @@
+TASK_ID=S3-T09
+phase=RED-1
+utc=2026-08-16T02:37:46Z
+head=83fb97257814f9072770c77d1bb0da4cfa2b420e
+command=rtk npm test -- tests/admission-auth-gate.test.ts
+exit_code=1
+
+key_output:
+- tests/admission-auth-gate.test.ts (2 tests | 1 failed)
+- fails closed for all v1/v2 auth entry points when Admission is enabled
+- Expected typed rejection with code -32600 and data.code "admission_auth_disabled".
+- Received all four enabled auth calls as resolved: authenticate, loginAuth, logout, logoutAuth.
+- Disabled legacy auth/logout regression in the same file passed.

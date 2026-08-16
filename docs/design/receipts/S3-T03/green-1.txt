@@ -1,0 +1,18 @@
+TASK_ID: S3-T03
+PHASE: GREEN focused
+UTC: 2026-08-16T03:16:41Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Command:
+rtk npm test -- tests/admission-soft-drain.test.ts
+
+Exit code: 0
+
+Key output:
+> npm run typecheck && npm run build && vitest run tests/admission-soft-drain.test.ts
+Test Files  1 passed (1)
+Tests  1 passed (1)
+Duration  481ms (transform 114ms, setup 0ms, import 143ms, tests 199ms, environment 0ms)
+
+GREEN interpretation:
+S3-T03 soft-drain behavior now passes the focused contract: beginSoftDrainTo1 starts durable soft drain, drain period admits no new work, active leases remain untouched, queued requests stay queued, activeLeaseCount() reaching zero completes the durable tuple to steady(max_active_turns=1), policy_drain_completed is journaled, steady(1) is idempotent, and a second opener observes the same durable policy tuple.

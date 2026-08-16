@@ -1,0 +1,21 @@
+TASK_ID: S3-T12
+RECEIPT: repair-f1-detect-2
+UTC: 2026-08-16T06:55:38Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Command:
+node .gitnexus/run.cjs detect-changes --repo paseo-agy-acp --scope unstaged
+
+Exit:
+0
+
+Key output:
+Changes: 21 files, 17 symbols
+Affected processes: 0
+Risk level: low
+Changed symbols include README/README.zh-CN/docs design sections and admission
+test helper symbols from the shared dirty worktree.
+
+Closeout conclusion:
+GitNexus detect_changes is LOW with no affected processes for the current
+unstaged worktree.

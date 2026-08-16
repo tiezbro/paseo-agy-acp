@@ -1,0 +1,30 @@
+TASK_ID: S3-T12
+RECEIPT: repair-f1-red-1
+UTC: 2026-08-16T06:43:34Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Command:
+rtk npm test -- tests/admission-production-dispatch.test.ts
+
+Exit:
+1
+
+Key output:
+> npm run typecheck && npm run build && vitest run tests/admission-production-dispatch.test.ts
+tests/admission-production-dispatch.test.ts (3 tests | 1 failed)
+AssertionError: expected Error: admission prompt boundary is inval... to match object
+Received: Error { "message": "admission prompt boundary is invalid" }
+
+RED interpretation:
+The repaired RED uses the real production `AdmissionTurnCoordinator` /
+`TurnDispatchBoundary` seam with a fake native agy child whose process identity
+is unavailable before any business write. Current live behavior loses the
+required blocked dispatch mapping at the real boundary: `markDispatchAmbiguous`
+rejects because the boundary was not prepared, so the caller sees a generic
+boundary error instead of the blocked dispatch result and no durable recovery
+state is proven.
+
+Behavior still proven during RED:
+- accepted production stdin dispatch and unprovable-write dispatch_ambiguous
+  cases continued to pass.
+- pre-identity blocked path made zero business write attempts.

@@ -1,0 +1,19 @@
+TASK_ID=S3-T10
+PHASE=RED
+UTC=2026-08-16T03:08:28Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+COMMAND
+rtk npm test -- tests/admission-permission.test.ts
+
+EXIT
+1
+
+KEY_OUTPUT
+> npm run typecheck && npm run build && vitest run tests/admission-permission.test.ts
+tests/admission-permission.test.ts (2 tests | 2 failed)
+Error: enabled admission currently requires dangerously-skip-permissions mode
+AgyPromptFreeDispatchError: agy prompt dispatch was blocked: admission_requires_prompt_free_print_mode
+
+RED_ASSERTION
+The new behavior test exercises the S3-T10 public permission path with Admission enabled and a non-skip mode. Live HEAD fails before the permission panel can be accepted: buildSession rejects non-skip mode, and AgyCliSession.prompt rejects interactive permission mode with admission_requires_prompt_free_print_mode.

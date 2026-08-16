@@ -1,0 +1,17 @@
+TASK_ID=S3-T14
+RECEIPT=affected-1
+UTC=2026-08-16T05:21:25Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+COMMAND=rtk npm test -- tests/admission-owner-crash.test.ts tests/admission-process-evidence-contract.test.ts tests/admission-process-evidence.test.ts tests/admission-startup-recovery.test.ts tests/admission-controller.test.ts tests/admission-soft-drain.test.ts tests/admission-turn-coordinator.test.ts
+EXIT_CODE=0
+
+KEY_OUTPUT:
+> npm run typecheck && npm run build && vitest run tests/admission-owner-crash.test.ts tests/admission-process-evidence-contract.test.ts tests/admission-process-evidence.test.ts tests/admission-startup-recovery.test.ts tests/admission-controller.test.ts tests/admission-soft-drain.test.ts tests/admission-turn-coordinator.test.ts
+Test Files  7 passed (7)
+Tests  22 passed (22)
+Duration  1.16s
+
+DISPOSITION:
+Affected admission owner-crash, process evidence, startup recovery,
+controller, soft-drain, and turn-coordinator seams remained green after S3-T14.

@@ -1,0 +1,24 @@
+TASK_ID=S3-T02
+RECEIPT=red-1
+UTC=2026-08-16T02:36:52Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+COMMAND=rtk npm test -- tests/admission-policy-consistency.test.ts
+EXIT_CODE=1
+
+KEY_OUTPUT:
+> npm run typecheck && npm run build && vitest run tests/admission-policy-consistency.test.ts
+Test Files  1 failed (1)
+Tests  1 failed (1)
+AssertionError: expected +0 not to be +0 // Object.is equality
+tests/admission-policy-consistency.test.ts:95:32 expect(openerB.status).not.toBe(0)
+
+RED_SCENARIO:
+A opens the shared runtime.sqlite with policy maxActiveTurns=3 and invokes claimDurablePolicy if the live controller exposes it.
+B is a separate Node process opening the same database with policy maxActiveTurns=1 and invoking assertDurablePolicyMatch if present.
+Expected Stage 3 behavior: B must fail closed with AdmissionRuntimeError on durable policy fingerprint mismatch.
+Observed live behavior before any S3-T02 production edit: B exited 0, so the mismatch was not rejected.
+
+BASELINE_NOTE:
+Current accepted predecessor T18/T18R tracked diffs and task-owned untracked reservations are the allowed baseline.
+Admission Controller/controller.ts was already modified in that baseline; S3-T02 had not edited production code before this RED.

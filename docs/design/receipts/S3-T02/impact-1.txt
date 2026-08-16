@@ -1,0 +1,29 @@
+TASK_ID=S3-T02
+RECEIPT=impact-1
+UTC=2026-08-16T02:37:50Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+COMMANDS:
+node .gitnexus/run.cjs impact AdmissionController --repo paseo-agy-acp --direction upstream --file "Admission Controller/controller.ts" --kind Class --depth 3 --include-tests --summary-only
+node .gitnexus/run.cjs impact parseAdmissionRuntimeConfig --repo paseo-agy-acp --direction upstream --file "Admission Controller/runtime-config.ts" --kind Function --depth 3 --include-tests --summary-only
+node .gitnexus/run.cjs impact constructor --repo paseo-agy-acp --direction upstream --file "Admission Controller/controller.ts" --kind Method --depth 3 --include-tests --summary-only
+node .gitnexus/run.cjs impact --uid "Method:Admission Controller/controller.ts:AdmissionController.constructor#1" --repo paseo-agy-acp --direction upstream --depth 3 --include-tests --summary-only
+node .gitnexus/run.cjs impact validatePolicy --repo paseo-agy-acp --direction upstream --file "Admission Controller/controller.ts" --kind Function --depth 3 --include-tests --summary-only
+node .gitnexus/run.cjs impact AdmissionPolicy --repo paseo-agy-acp --direction upstream --file "Admission Controller/controller.ts" --kind Interface --depth 3 --include-tests --summary-only
+
+RESULTS:
+AdmissionController: risk=HIGH; direct=17; impactedCount=28; affected_processes=createAdmissionRuntime, composeAcpRuntime; modules=Tests,Acp,Admission.
+parseAdmissionRuntimeConfig: risk=HIGH; direct=3; impactedCount=7; affected_processes=createAdmissionRuntime, composeAcpRuntime; modules=Acp,Tests,Admission.
+constructor ambiguous query: status=ambiguous; matching AdmissionController.constructor candidate reported maxRisk=LOW; rerun by uid below.
+AdmissionController.constructor#1: risk=LOW; direct=0; impactedCount=0; affected_processes=none.
+validatePolicy: risk=LOW; direct=1; impactedCount=1; affected_processes=constructor.
+AdmissionPolicy: risk=HIGH; direct=18; impactedCount=37; affected_processes=admit, waitForLease, settleFailure, constructor; modules=Admission Controller,Admission.
+
+PLANNED_CLAIM_ASSERT_SYMBOLS:
+claimDurablePolicy and assertDurablePolicyMatch do not exist in the current index before S3-T02 GREEN.
+Their planned blast radius is bounded by the existing AdmissionController/AdmissionPolicy seam above.
+
+STOP:
+HIGH impact gate is triggered before S3-T02 production source write.
+Per Stage3 Prompt §5/§6.0 and the user order, production edits must pause until Controller authorization.
+Only RED test and S3-T02 receipts were written after RED; Admission Controller/controller.ts has not been modified by S3-T02.

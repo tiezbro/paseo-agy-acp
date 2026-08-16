@@ -1,0 +1,19 @@
+TASK_ID=S3-T18
+RECEIPT=green-1
+UTC=2026-08-16T02:06:06Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+COMMAND=rtk npm test -- tests/admission-schema-v2.test.ts
+EXIT_CODE=0
+
+KEY_OUTPUT:
+> npm run typecheck && npm run build && vitest run tests/admission-schema-v2.test.ts
+Test Files  1 passed (1)
+Tests  4 passed (4)
+
+EVIDENCE:
+v2 shape: ADMISSION_SCHEMA_VERSION=2; migration ledger=[v1,v2]; turn_requests has agent_id and no parent_id; policy_state and queued_owner_instances exist; turn_requests foreignKeys=[].
+sessions layout: tests/admission-schema-v2.test.ts snapshots sessions columns/indexes before v1->v2 migration and asserts equality after migration.
+v1 rejects v2: tests/admission-schema-v2.test.ts simulates supportedVersion=1 and asserts applied=2 throws "newer than this connector supports".
+API no-alias: tests/admission-schema-v2.test.ts asserts EnqueueRequest.agentId is accepted and EnqueueRequest.parentId is rejected without inserting a request.
+rollback: tests/admission-schema-v2.test.ts creates a v1 DB with a conflicting policy_state table, asserts AdmissionMigrationError, and verifies parent_id remains, agent_id/queued_owner/suspect columns are absent, and ledger remains v1 only.

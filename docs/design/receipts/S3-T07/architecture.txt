@@ -1,0 +1,16 @@
+S3-T07 architecture validation
+
+UTC: 2026-08-16T01:26:56Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Command:
+rtk npm run validate:architecture
+
+Exit code: 0
+
+Key output:
+> node scripts/verify-import-boundaries.mjs
+architecture boundaries: PASS
+
+Scope:
+- New test imports remain within allowed test-to-source boundaries.

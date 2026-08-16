@@ -1,0 +1,34 @@
+TASK_ID: S3-T16
+PHASE: GITNEXUS_WRITE_GATE
+UTC: 2026-08-16T05:37:53Z
+GIT_HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+COMMAND: mcp__gitnexus.impact(repo="paseo-agy-acp", direction="upstream", targets=["completeTurn","v2TerminalEmitter","admit"])
+EXIT_CODE: 0
+
+Target: completeTurn
+- file: ACP Connector/acp/session/prompt.ts
+- risk: HIGH
+- direct callers: 4
+- affected processes: 4
+- affected modules: 2
+- direct callers: handlePromptV1; executeQueuedV1Turn; runV2Turn; executeQueuedV2Turn
+- affected processes/modules: createAcpAppForAgent; executeQueuedV2Turn; handlePromptV1; handlePromptV2; modules Session (direct) and Acp (indirect)
+
+Target: v2TerminalEmitter
+- file: ACP Connector/acp/session/prompt.ts
+- risk: LOW
+- direct callers: 2
+- affected processes: 2
+- affected modules: 2
+- direct callers: runV2Turn; executeQueuedV2Turn
+- affected processes/modules: executeQueuedV2Turn; handlePromptV2; modules Session (direct) and Acp (indirect)
+
+Target: AdmissionTurnCoordinator.admit
+- file: ACP Connector/admission/turn-coordinator.ts
+- risk: LOW
+- direct callers: 0
+- affected processes: 0
+- affected modules: 0
+
+Gate decision:
+GitNexus returned HIGH for completeTurn. Per S3-T16 write gate, production source edits are blocked pending Controller authorization.

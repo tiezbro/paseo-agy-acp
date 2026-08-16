@@ -1,0 +1,18 @@
+TASK_ID: S3-T17
+UTC: 2026-08-16T01:29:31Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+RISK: CRITICAL blast radius authorized by Controller; production source unchanged.
+
+Command:
+npm run validate:architecture
+
+Exit code: 0
+
+Key output:
+> paseo-agy-acp@1.0.0.4 validate:architecture
+> node scripts/verify-import-boundaries.mjs
+architecture boundaries: PASS
+
+Method evidence:
+- S3-T17 added tests only.
+- Import-boundary validation remained PASS after the new regression tests.

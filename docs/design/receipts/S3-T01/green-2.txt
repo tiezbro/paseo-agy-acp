@@ -1,0 +1,31 @@
+TASK_ID: S3-T01
+EVIDENCE: green-2 fourth request remains queued at three active seats
+UTC: 2026-08-16T01:16:16Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Command:
+rtk npm test -- tests/admission-seats-contract.test.ts
+
+Exit code: 0
+
+Key output:
+> npm run typecheck && npm run build && vitest run tests/admission-seats-contract.test.ts
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+   Start at  01:14:52
+   Duration  404ms (transform 91ms, setup 0ms, import 123ms, tests 153ms, environment 0ms)
+
+Covered assertions:
+- Four requests are enqueued into one SQLite-backed AdmissionController.
+- The first three requests are admitted through admitNext and moved to active.
+- With three active turns, a fourth admitNext call returns null.
+- The fourth request remains observable through getRequest as state=queued.
+
+Impact evidence:
+- admitNext upstream impact: LOW; direct callers=3; affected processes=0.
+- Direct callers recorded before write: tests/admission-fault-security-matrix.test.ts:starting, tests/admission-startup-recovery.test.ts:dispatch, tests/admission-controller.test.ts.
+- parseAdmissionRuntimeConfig upstream impact was HIGH, accepted by Controller with expanded affected regression required and run separately.
+
+Method evidence:
+- The test uses real AdmissionController, real SQLite state, and the public admitNext/getRequest seam.
+- No production source, Provider, network, production daemon, Git index, refs, commit, or delegation was used for GREEN.

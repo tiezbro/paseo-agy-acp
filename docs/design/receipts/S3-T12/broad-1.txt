@@ -1,0 +1,21 @@
+TASK_ID: S3-T12
+RECEIPT: broad-1
+UTC: 2026-08-16T04:11:11Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Command:
+npm run validate
+
+Exit:
+0
+
+Key output:
+> npm test && npm run validate:architecture
+Test Files  49 passed (49)
+Tests  585 passed | 2 skipped (587)
+architecture boundaries: PASS
+
+Broad decision:
+Broad validation was run because focused and affected typecheck/build/test
+discovery passed first and current live S3-T06 state did not contaminate broad
+discovery. No broad deferral was needed.

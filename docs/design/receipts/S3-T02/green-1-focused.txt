@@ -1,0 +1,17 @@
+TASK_ID=S3-T02
+RECEIPT=green-1-focused
+UTC=2026-08-16T02:44:33Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+COMMAND=rtk npm test -- tests/admission-policy-consistency.test.ts
+EXIT_CODE=0
+
+KEY_OUTPUT:
+> npm run typecheck && npm run build && vitest run tests/admission-policy-consistency.test.ts
+Test Files  1 passed (1)
+Tests  3 passed (3)
+
+EVIDENCE:
+claimDurablePolicy writes the T18 policy_state singleton with max_active_turns=3, full normalized tuple columns, drain_state='steady', updated owner/time, and policy_fingerprint.
+policy_fingerprint is asserted against an independent HMAC over ["paseo-agy-acp","admission-policy",1] + NUL + normalized tuple [3,1,2000,1800000,30000].
+Cross-process opener B with policy maxActiveTurns=1 fails closed with typed AdmissionRuntimeError; same tuple opener succeeds.

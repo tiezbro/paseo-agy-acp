@@ -1,0 +1,25 @@
+TASK_ID: S3-T04
+receipt: green-2
+assertion: an idle agent's queued turn is admitted before another queued turn for an active agent.
+utc: 2026-08-16T01:28:12Z
+branch: main
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+command:
+rtk npm test -- tests/admission-scheduling-contract.test.ts
+
+exit_code: 0
+
+key_output:
+> npm run typecheck && npm run build && vitest run tests/admission-scheduling-contract.test.ts
+Test Files  1 passed (1)
+Tests  3 passed (3)
+Duration  583ms
+
+method_evidence:
+This is green regression evidence; RED is inapplicable by S2-TEST-001 M2 and S3-T04 task contract.
+The test observes selector behavior through the public admitNext boundary.
+Input shape: active agent A, queued A2, queued B; expected result: B admits first and A2 remains queued.
+
+impact_evidence:
+GitNexus upstream impact for AdmissionTurnCoordinator: risk MEDIUM; direct callers/importers 5; affected process composeAcpRuntime; affected modules Admission/Acp in the summary run.

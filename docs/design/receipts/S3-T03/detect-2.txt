@@ -1,0 +1,39 @@
+TASK_ID: S3-T03
+PHASE: final GitNexus detect-changes after broad-2
+UTC: 2026-08-16T03:24:46Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Command:
+node .gitnexus/run.cjs detect-changes --repo paseo-agy-acp
+
+Exit code: 0
+
+Key output:
+Changes: 12 files, 7 symbols
+Affected processes: 0
+Risk level: low
+Changed symbols: enqueue, starting, runWorker, waitForLine, dispatch, coordinator, enqueueHolder
+
+Final dirty-scope limitation:
+The GitNexus result still maps only tracked dirty symbols from the shared worktree and does not include untracked S3-T03 test/receipt files. It also does not map the S3-T03 controller soft-drain hunks to changed symbols. Treat this as the final live detect result plus a documented limitation, not a complete per-task ownership proof.
+
+Final tracked dirty paths:
+- ACP Connector/acp/agent.ts: predecessor/sibling ownership, not edited by S3-T03.
+- ACP Connector/acp/session/setup.ts: S3-T10 sibling ownership, not edited by S3-T03.
+- ACP Connector/admission/turn-coordinator.ts: predecessor ownership, not edited by S3-T03.
+- ACP Connector/agy/cli.ts: S3-T10 sibling ownership, not edited by S3-T03.
+- Admission Controller/controller.ts: includes S3-T03 soft-drain GREEN plus preserved T18/T02 predecessor changes.
+- Admission Controller/schema.ts: T18 predecessor ownership, not edited by S3-T03.
+- tests/admission-controller.test.ts: predecessor ownership, not edited by S3-T03.
+- tests/admission-fault-security-matrix.test.ts: predecessor ownership, not edited by S3-T03.
+- tests/admission-process.test.ts: predecessor ownership, not edited by S3-T03.
+- tests/admission-schema.test.ts: predecessor ownership, not edited by S3-T03.
+- tests/admission-startup-recovery.test.ts: predecessor ownership, not edited by S3-T03.
+- tests/admission-turn-coordinator.test.ts: predecessor ownership, not edited by S3-T03.
+
+Final S3-T03 untracked ownership:
+- tests/admission-soft-drain.test.ts
+- docs/design/receipts/S3-T03/
+
+Index:
+No files were staged by S3-T03.

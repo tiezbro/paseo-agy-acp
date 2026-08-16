@@ -1,0 +1,22 @@
+TASK_ID=S3-T10
+PHASE=BROAD_VALIDATE_DEFERRED
+UTC=2026-08-16T03:17:38Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+NOT_RUN_COMMAND
+npm run validate
+
+DEFER_REASON
+Controller authorization says broad npm run validate should run only if sibling S3-T03 no longer has an expected RED/partial GREEN. The current workspace has active non-S3-T10 Admission Controller/controller.ts dirty state that fails typecheck before focused tests can run.
+
+EVIDENCE
+rtk npm test -- tests/admission-permission.test.ts exited 1 during tsc, before Vitest, with errors in Admission Controller/controller.ts:
+- Property 'requirePolicyStateInTransaction' does not exist on type 'AdmissionController'.
+- Cannot find name 'policyDrainState'.
+- Cannot find name 'policyFromState'.
+
+S3_T03_CONTEXT
+docs/design/receipts/S3-T03/red-1.txt records S3-T03 RED for missing beginSoftDrainTo1. docs/design/receipts/S3-T03/impact-1.txt records HIGH_IMPACT_REQUIRES_CONTROLLER_AUTHORIZATION and a stop before S3-T03 GREEN. Current Admission Controller/controller.ts dirty state is outside S3-T10 and blocks broad validation.
+
+NEXT_TRIGGER
+Controller should coordinate strict broad-only revalidation after S3-T03 and S3-T10 are both GREEN and the shared dirty scope no longer blocks typecheck.

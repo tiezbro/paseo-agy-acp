@@ -1,0 +1,35 @@
+TASK_ID: S3-T15
+UTC: 2026-08-16T01:49:42Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Skill source identity:
+mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df
+
+tdd:
+- installed path: /home/tiezbro/.agents/skills/tdd/SKILL.md
+- sha256: 5e6b9c16b547113e90afbb946489d1c1384be5c2128f0159bd0bee57251ecf08
+- executed: full SKILL.md read before task action; tests written at the
+  pre-agreed public/integration seams from S3-T15.
+- inapplicable: RED-before-green loop. S3-T15 authority is green regression /
+  test-evidence; speculative RED, missing-file RED, mutation-as-RED, and
+  source-string-only/mock-only acceptance are forbidden.
+
+implement:
+- installed path: /home/tiezbro/.agents/skills/implement/SKILL.md
+- sha256: 6d3fd9e83b8f36e5213854779db49b256a457a7ebb4a503e53fa7dcff696adc3
+- executed: implemented the specified regression tests and ran focused,
+  affected, architecture, and broad validation commands as far as authority
+  allowed.
+- inapplicable: commit, code-review delegation, and production implementation
+  steps conflict with the higher S3-T15 authority forbidding commit, delegation,
+  production source edits, and writes outside the exact write set.
+
+Authority/hash gate:
+- Prompt §2.1 hashes matched for Scheme, Stage 2 Controller Prompt, AGENTS.md,
+  and all eight Stage 2 artifacts.
+- Prompt §4.4 skill paths were readable and SHA-256 values were recorded above.
+
+Write-set conformance:
+- Wrote only tests/admission-race-contract.test.ts and docs/design/receipts/S3-T15/.
+- Did not edit production source, other task tests/receipts, git index/refs, or
+  S3-T18 files.

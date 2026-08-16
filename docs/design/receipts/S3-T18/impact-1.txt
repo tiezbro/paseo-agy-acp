@@ -1,0 +1,46 @@
+TASK_ID=S3-T18
+RECEIPT=impact-1
+UTC=2026-08-16T01:45:52Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+COMMANDS:
+node .gitnexus/run.cjs impact AdmissionController --repo paseo-agy-acp --direction upstream --file 'Admission Controller/controller.ts' --kind Class --depth 1 --include-tests --limit 40
+node .gitnexus/run.cjs impact assertAdmissionSchemaIntegrity --repo paseo-agy-acp --direction upstream --file 'Admission Controller/schema.ts' --kind Function --summary-only --include-tests --depth 3
+node .gitnexus/run.cjs impact EnqueueRequest --repo paseo-agy-acp --direction upstream --file 'Admission Controller/controller.ts' --kind Interface --summary-only --include-tests --depth 3
+node .gitnexus/run.cjs impact RequestRow --repo paseo-agy-acp --direction upstream --file 'Admission Controller/controller.ts' --kind Interface --summary-only --include-tests --depth 3
+node .gitnexus/run.cjs impact admit --repo paseo-agy-acp --direction upstream --file 'ACP Connector/admission/turn-coordinator.ts' --kind Method --summary-only --include-tests --depth 3
+node .gitnexus/run.cjs impact AdmissionTurnCoordinatorOptions --repo paseo-agy-acp --direction upstream --file 'ACP Connector/admission/turn-coordinator.ts' --kind Interface --summary-only --include-tests --depth 3
+node .gitnexus/run.cjs impact composeAcpRuntime --repo paseo-agy-acp --direction upstream --file 'ACP Connector/acp/agent.ts' --kind Function --summary-only --include-tests --depth 3
+node .gitnexus/run.cjs impact ADMISSION_SCHEMA_VERSION --repo paseo-agy-acp --direction upstream --file 'Admission Controller/schema.ts' --kind Const --summary-only --include-tests --depth 3
+node .gitnexus/run.cjs impact MIGRATIONS --repo paseo-agy-acp --direction upstream --file 'Admission Controller/schema.ts' --kind Const --summary-only --include-tests --depth 3
+node .gitnexus/run.cjs impact TABLES --repo paseo-agy-acp --direction upstream --file 'Admission Controller/schema.ts' --kind Const --summary-only --include-tests --depth 3
+node .gitnexus/run.cjs impact migrate --repo paseo-agy-acp --direction upstream --file 'Admission Controller/controller.ts' --kind Method --summary-only --include-tests --depth 3
+node .gitnexus/run.cjs impact validateEnqueueRequest --repo paseo-agy-acp --direction upstream --file 'Admission Controller/controller.ts' --kind Function --summary-only --include-tests --depth 3
+node .gitnexus/run.cjs impact enqueueRequest --repo paseo-agy-acp --direction upstream --file 'Admission Controller/controller.ts' --kind Method --summary-only --include-tests --depth 3
+node .gitnexus/run.cjs impact orderedQueuedRequests --repo paseo-agy-acp --direction upstream --file 'Admission Controller/controller.ts' --kind Method --summary-only --include-tests --depth 3
+node .gitnexus/run.cjs impact selectEligibleRequest --repo paseo-agy-acp --direction upstream --file 'Admission Controller/controller.ts' --kind Method --summary-only --include-tests --depth 3
+node .gitnexus/run.cjs impact toStoredRequest --repo paseo-agy-acp --direction upstream --file 'Admission Controller/controller.ts' --kind Function --summary-only --include-tests --depth 3
+node .gitnexus/run.cjs impact StoredRequest --repo paseo-agy-acp --direction upstream --file 'Admission Controller/controller.ts' --kind Interface --summary-only --include-tests --depth 3
+node .gitnexus/run.cjs impact AdmissionTurnCoordinator --repo paseo-agy-acp --direction upstream --file 'ACP Connector/admission/turn-coordinator.ts' --kind Class --summary-only --include-tests --depth 3
+node .gitnexus/run.cjs impact --uid 'Method:ACP Connector/admission/turn-coordinator.ts:AdmissionTurnCoordinator.constructor#1' --repo paseo-agy-acp --direction upstream --depth 3 --include-tests --summary-only
+
+RESULTS:
+AdmissionController: risk=HIGH; direct=17; affected_processes=createAdmissionRuntime, composeAcpRuntime; direct callers/importers include createAdmissionRuntime plus tests/admission-controller.test.ts, tests/admission-fault-security-matrix.test.ts, tests/admission-schema.test.ts, tests/admission-startup-recovery.test.ts, tests/admission-turn-coordinator.test.ts, tests/sqlite-session-store.test.ts, ACP Connector/admission/runtime.ts, ACP Connector/admission/turn-coordinator.ts, ACP Connector/admission/startup-recovery.ts, Admission Controller/runtime-config.ts.
+toStoredRequest: risk=HIGH at depth 3; direct=1 getRequest; affected_processes=admit, runPromptCommand, settleFailure, waitForLease.
+EnqueueRequest: risk=MEDIUM; direct=10; affected_processes=none reported.
+RequestRow: risk=MEDIUM; direct=10; affected_processes=none reported.
+StoredRequest: risk=MEDIUM; direct=10; affected_processes=none reported.
+AdmissionTurnCoordinator: risk=MEDIUM; direct=5; affected_processes=composeAcpRuntime.
+assertAdmissionSchemaIntegrity: risk=LOW; direct=2; affected_processes=constructor.
+admit: risk=LOW; direct=1; affected_processes=none reported.
+AdmissionTurnCoordinatorOptions: risk=LOW; direct=3; affected_processes=none reported.
+composeAcpRuntime: risk=LOW; direct=2; affected_processes=none reported.
+ADMISSION_SCHEMA_VERSION/MIGRATIONS/TABLES: risk=LOW; direct=0.
+migrate: risk=LOW; direct=1; affected_processes=constructor.
+validateEnqueueRequest: risk=LOW; direct=1; affected_processes=admit.
+enqueueRequest: risk=LOW; direct=2; affected_processes=admit.
+orderedQueuedRequests/selectEligibleRequest: risk=LOW; direct=2 each; affected_processes=admit, waitForLease.
+AdmissionTurnCoordinator.constructor: risk=LOW; direct=0.
+
+STOP:
+HIGH impact requires Controller notification and explicit authorization before any production source write. No production source was modified after this impact gate.

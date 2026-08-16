@@ -1,0 +1,34 @@
+TASK_ID=S3-INT-FINAL-COMMIT
+PHASE=precommit-gitnexus
+UTC=2026-08-16T08:25:56Z
+COMMAND=node .gitnexus/run.cjs detect-changes --repo paseo-agy-acp --scope staged
+EXIT_CODE=0
+EXACT_OUTPUT_BEGIN
+Changes: 278 files, 17 symbols
+Affected processes: 0
+Risk level: low
+
+Changed symbols:
+  Symbol  paseo-agy-acp → README.md
+  Symbol Admission Controller Development → README.md
+  Symbol What This Fixes → README.md
+  Symbol  paseo-agy-acp → README.zh-CN.md
+  Symbol Admission Controller 开发状态 → README.zh-CN.md
+  Symbol  解决的问题 → README.zh-CN.md
+  Symbol paseo-agy-acp v2.0.0.0 最终方案 → docs/design/v2.0.0.0-admission-controller.md
+  Symbol 1. 这次迭代只解决什么 → docs/design/v2.0.0.0-admission-controller.md
+  Symbol 2. 仓库只有两个源码功能区 → docs/design/v2.0.0.0-admission-controller.md
+  Symbol 3. 固定业务参数 → docs/design/v2.0.0.0-admission-controller.md
+  Symbol enqueue → tests/admission-controller.test.ts
+  Symbol starting → tests/admission-fault-security-matrix.test.ts
+  Symbol runWorker → tests/admission-process.test.ts
+  Symbol waitForLine → tests/admission-process.test.ts
+  Symbol dispatch → tests/admission-startup-recovery.test.ts
+... and 2 more
+EXACT_OUTPUT_END
+
+RESULT=PASS
+ASSERTIONS
+- The staged scope contains accepted code, docs, and evidence only.
+- No affected process was reported and risk is low.
+- This receipt is added before final staged validation; no commit has been made.

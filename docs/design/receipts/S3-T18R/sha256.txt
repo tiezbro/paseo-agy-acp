@@ -1,0 +1,14 @@
+5e6b9c16b547113e90afbb946489d1c1384be5c2128f0159bd0bee57251ecf08  /home/tiezbro/.agents/skills/tdd/SKILL.md
+6d3fd9e83b8f36e5213854779db49b256a457a7ebb4a503e53fa7dcff696adc3  /home/tiezbro/.agents/skills/implement/SKILL.md
+61dd245d521647208ea776f1f4b7e2b203460f20fa1a2ed311b5eacdbe5b9eee  docs/design/receipts/S3-T18R/architecture.txt
+0bbc5f233eaf128a93c044e03272f87289e2f9c52a2d5b6abcbfbc64862333f2  docs/design/receipts/S3-T18R/broad-validate.txt
+2a431e8408e77a7b0ab2d23daeb56d2dce28cce37e623b357b62945fd11180e7  docs/design/receipts/S3-T18R/detect-changes.txt
+1ca4a13146b2891c0e462123ac0cb848f92e6221f18b870a1b78c232d1956c35  docs/design/receipts/S3-T18R/diff-check.txt
+7384e81fc8b777065760f76c03d6e723ed400dd37a4d2140b376955a9b0f6648  docs/design/receipts/S3-T18R/git-status.txt
+6d5470e3ba2c56d2dab648bf4730aeea28b0a512365265c26c2d90204cb96875  docs/design/receipts/S3-T18R/green-1-focused-affected.txt
+8b9d10aae97e3d0c1f167f65b52240b3af55d4a2774981fe609ce2d1ca40f949  docs/design/receipts/S3-T18R/green-2-t18-focused.txt
+dc3f4c7160ffcbd4263ac3ba649aa1bcb5db64f8350e16bc1e6752dd230085d5  docs/design/receipts/S3-T18R/green-3-high-expanded.txt
+b8b7a88d7e747274cb0c63d8bee37c52d4efaab90769be1ce506073f75a25964  docs/design/receipts/S3-T18R/method-evidence.txt
+d136a4e3da59536637e44fd6abc3db0082d736c3d2976e264c24b76b012f5181  docs/design/receipts/S3-T18R/method-impact.txt
+517421adc45b02c33aba868d09a81388672ab39224e25b79d85ebd1639cc3265  docs/design/receipts/S3-T18R/repair-before-1.txt
+ddc8816cd8292134692a63d36a15e699a1743138ea3f11044278610badf05339  docs/design/receipts/S3-T18R/task-contract.txt

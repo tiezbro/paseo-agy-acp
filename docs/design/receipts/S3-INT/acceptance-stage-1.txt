@@ -1,0 +1,38 @@
+TASK_ID=S3-INT
+ACCEPTANCE_STAGE=1
+TITLE=deterministic-unit-regression
+UTC=2026-08-16T08:07:02Z
+RESULT=PASS
+ORDER=focused -> affected -> broad
+
+FOCUSED
+COMMAND=rtk npm test -- tests/admission-seats-contract.test.ts tests/admission-scheduling-contract.test.ts tests/admission-timeout-contract.test.ts tests/admission-503-classifier.test.ts tests/admission-dispatch-faultpoints.test.ts tests/admission-process-evidence-contract.test.ts tests/admission-race-contract.test.ts tests/admission-schema-contract.test.ts tests/admission-native-process.test.ts
+EXIT_CODE=0
+KEY_LINES:
+- npm run typecheck && npm run build && vitest run <nine focused paths>
+- Test Files 9 passed (9)
+- Tests 44 passed (44)
+- Duration 2.04s
+
+AFFECTED
+COMMAND=rtk npm test -- tests/admission-controller.test.ts tests/admission-turn-coordinator.test.ts tests/admission-runtime-config.test.ts tests/admission-errors.test.ts tests/admission-fault-security-matrix.test.ts tests/agy-dispatch-boundary.test.ts tests/prompt-free-process.test.ts tests/admission-process.test.ts tests/admission-process-evidence.test.ts tests/admission-startup-recovery.test.ts tests/acp-runtime-wiring.test.ts tests/acp-server.test.ts tests/queue-steer.test.ts tests/cli.test.ts tests/admission-schema.test.ts tests/sqlite-session-store.test.ts tests/admission-key-store.test.ts tests/admission-key-derivation.test.ts
+EXIT_CODE=0
+KEY_LINES:
+- npm run typecheck && npm run build && vitest run <eighteen affected seam paths>
+- Test Files 18 passed (18)
+- Tests 262 passed | 2 skipped (264)
+- Duration 18.39s
+
+BROAD
+COMMAND=rtk npm run validate
+EXIT_CODE=0
+KEY_LINES:
+- Test Files 54 passed (54)
+- Tests 607 passed | 2 skipped (609)
+- architecture boundaries: PASS
+- secret scan: PASS (158 files checked)
+
+ASSERTIONS
+- Commands were run serially; no bounded-worker substitute was used.
+- This stage does not contact a Provider or production 127.0.0.1:6767.
+- Stage 2 is eligible to begin only because all three Stage 1 barriers passed.

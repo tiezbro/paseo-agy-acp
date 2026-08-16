@@ -1,0 +1,21 @@
+UTC: 2026-08-16T05:25:28Z
+Task: S3-T19 GitNexus detect-changes final follow-up.
+Command: node .gitnexus/run.cjs detect-changes --repo paseo-agy-acp --scope unstaged
+Exit code: 0
+
+Key output:
+Changes: 14 files, 7 symbols
+Affected processes: 0
+Risk level: low
+Changed symbols:
+  Symbol enqueue -> tests/admission-controller.test.ts
+  Symbol starting -> tests/admission-fault-security-matrix.test.ts
+  Symbol runWorker -> tests/admission-process.test.ts
+  Symbol waitForLine -> tests/admission-process.test.ts
+  Symbol dispatch -> tests/admission-startup-recovery.test.ts
+  Symbol coordinator -> tests/admission-turn-coordinator.test.ts
+  Symbol enqueueHolder -> tests/admission-turn-coordinator.test.ts
+
+Visibility note:
+- The command reported tracked unstaged changes from the shared Stage 3 worktree.
+- It did not list untracked task-owned files such as tests/admission-native-process.test.ts or docs/design/receipts/S3-T19/.

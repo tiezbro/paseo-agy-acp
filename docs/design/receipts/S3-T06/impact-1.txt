@@ -1,0 +1,44 @@
+TASK_ID=S3-T06
+UTC=2026-08-16T03:39:53Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+MODE=GitNexus upstream impact, read-only
+
+COMMANDS:
+1. node .gitnexus/run.cjs impact --repo paseo-agy-acp --direction upstream recoverExitedAdmissionSeats
+   EXIT=0
+   RESULT=risk HIGH; direct=1; processes_affected=2; modules_affected=3
+   DIRECT_CALLERS=createAdmissionRuntime (ACP Connector/admission/runtime.ts)
+   AFFECTED_PROCESSES=createAdmissionRuntime; composeAcpRuntime
+   KEY_OUTPUT={"risk":"HIGH","impactedCount":3,"summary":{"direct":1,"processes_affected":2,"modules_affected":3}}
+
+2. node .gitnexus/run.cjs impact --repo paseo-agy-acp --direction upstream enqueueWithPayload
+   EXIT=0
+   RESULT=risk LOW; direct=1; processes_affected=1; modules_affected=1
+   DIRECT_CALLERS=AdmissionTurnCoordinator.admit (ACP Connector/admission/turn-coordinator.ts)
+   AFFECTED_PROCESSES=admit
+   KEY_OUTPUT={"risk":"LOW","impactedCount":1,"summary":{"direct":1,"processes_affected":1,"modules_affected":1}}
+
+3. node .gitnexus/run.cjs impact --repo paseo-agy-acp --direction upstream AdmissionController
+   EXIT=0
+   RESULT=risk HIGH; direct=5; processes_affected=2; modules_affected=3
+   DIRECT_CALLERS_OR_IMPORTERS=Admission Controller/runtime-config.ts; ACP Connector/admission/turn-coordinator.ts; ACP Connector/admission/startup-recovery.ts; ACP Connector/admission/runtime.ts; createAdmissionRuntime
+   AFFECTED_PROCESSES=createAdmissionRuntime; composeAcpRuntime
+   KEY_OUTPUT={"risk":"HIGH","impactedCount":12,"summary":{"direct":5,"processes_affected":2,"modules_affected":3}}
+
+4. node .gitnexus/run.cjs impact --repo paseo-agy-acp --direction upstream settleQueuedOwnerDeath
+   EXIT=0
+   RESULT=target absent; risk UNKNOWN; impactedCount=0
+   KEY_OUTPUT={"error":"Target 'settleQueuedOwnerDeath' not found","risk":"UNKNOWN","impactedCount":0}
+
+5. node .gitnexus/run.cjs impact --repo paseo-agy-acp --direction upstream inspectProcessGroup
+   EXIT=0
+   RESULT=risk HIGH; direct=1; processes_affected=3; modules_affected=2
+   DIRECT_CALLERS=recoverExitedAdmissionSeats (ACP Connector/admission/startup-recovery.ts)
+   AFFECTED_PROCESSES=recoverExitedAdmissionSeats; createAdmissionRuntime; composeAcpRuntime
+   KEY_OUTPUT={"risk":"HIGH","impactedCount":3,"summary":{"direct":1,"processes_affected":3,"modules_affected":2}}
+
+HIGH_CRITICAL_DISPOSITION:
+HIGH impact is present for recoverExitedAdmissionSeats, AdmissionController, and
+inspectProcessGroup. Per Stage 3 Prompt §5 and the S3-T06 brief, production
+source edits must pause here and wait for explicit Controller GREEN
+authorization plus the coordinated validation window.

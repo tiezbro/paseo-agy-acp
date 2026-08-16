@@ -133,6 +133,8 @@ const packageJson = require("../../package.json") as { version?: string };
 const REPLAY_CACHE_CAPACITY = 32;
 const MODEL_CACHE_TTL_MS = 5 * 60_000;
 const DEFAULT_MAX_ACTIVE_SESSIONS = 64;
+const ADMISSION_AUTH_DISABLED_CODE = "admission_auth_disabled";
+const ADMISSION_AUTH_DISABLED_MESSAGE = "Admission is enabled; ACP authentication endpoints are disabled";
 
 interface ModelCacheFile {
   entries: Record<string, { models: string[]; updatedAt: number }>;
@@ -276,20 +278,34 @@ export class AcpAgent {
    * or succeed immediately when already signed in.
    */
   async authenticate(params: AuthenticateRequest): Promise<AuthenticateResponse> {
+    this.rejectAuthIfAdmissionEnabled("authenticate");
     return handleAuthenticate(params, this.#backend, this.authProbeConfig(), () => this.ensureAgyReady());
   }
 
   async loginAuth(params: LoginAuthRequest): Promise<LoginAuthResponse> {
+    this.rejectAuthIfAdmissionEnabled("loginAuth");
     return handleLoginAuth(params, this.#backend, this.authProbeConfig(), () => this.ensureAgyReady());
   }
 
   /** v1 `logout` / v2 `auth/logout`: best-effort agy TUI `/logout`. */
   async logout(params: LogoutRequest = {}): Promise<LogoutResponse> {
+    this.rejectAuthIfAdmissionEnabled("logout");
     return handleLogout(params, this.#backend, this.authProbeConfig(), () => this.ensureAgyReady());
   }
 
   async logoutAuth(params: LogoutAuthRequest = {}): Promise<LogoutAuthResponse> {
+    this.rejectAuthIfAdmissionEnabled("logoutAuth");
     return handleLogoutAuth(params, this.#backend, this.authProbeConfig(), () => this.ensureAgyReady());
+  }
+
+  private rejectAuthIfAdmissionEnabled(
+    method: "authenticate" | "loginAuth" | "logout" | "logoutAuth"
+  ): void {
+    if (this.#turnAdmission === undefined) return;
+    throw RequestError.invalidRequest(
+      { code: ADMISSION_AUTH_DISABLED_CODE, method },
+      ADMISSION_AUTH_DISABLED_MESSAGE
+    );
   }
 
   /**
@@ -478,15 +494,6 @@ export class AcpAgent {
   }
 
   private applyConfigOption(sessionId: string, configId: string, value: unknown): Promise<void> {
-    if (
-      this.#turnAdmission !== undefined &&
-      configId === MODE_CONFIG_ID &&
-      value !== "dangerously-skip-permissions"
-    ) {
-      throw new AcpRuntimeCompositionError(
-        "enabled admission currently requires dangerously-skip-permissions mode"
-      );
-    }
     return applyConfigOptionHandler(sessionId, configId, value, {
       requireSession: (id) => this.requireSession(id),
       persistSession: (id, session) => this.persistSession(id, session)
@@ -659,7 +666,7 @@ export function composeAcpRuntime(options: AcpAgentOptions = {}): AcpRuntimeComp
       sessionStore = new SQLiteSessionStore(runtimeConfig.databasePath);
       coordinator = new AdmissionTurnCoordinator({
         controller: runtime.controller,
-        parentId: runtimeConfig.agentId
+        agentId: runtimeConfig.agentId
       });
       let closed = false;
       const composedOptions: AcpAgentOptions = {

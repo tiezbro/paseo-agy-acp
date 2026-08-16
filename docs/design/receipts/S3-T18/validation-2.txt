@@ -1,0 +1,48 @@
+TASK_ID=S3-T18
+RECEIPT=validation-2
+UTC=2026-08-16T02:26:15Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+FRESH_READBACK:
+PASEO_AGENT_ID=7284225c-3936-4b25-a719-7ea6dbe34941
+Provider=codex
+Model=gpt-5.5
+Thinking=xhigh
+Mode=full-access
+PendingPermissions=[]
+ParentAgentId=79ab5347-5101-4eff-89ed-6a7aa550ae2e
+branch=main
+parent=78931bff95ecbd9868f9cfa83a281cbbbf1a60d8
+index=clean
+ownership=known T18 production diff + T18 test/receipts + S3-T18R test repairs/receipts + sibling task reservations
+
+COMMAND=rtk npm test -- tests/admission-schema-v2.test.ts tests/admission-schema.test.ts tests/admission-schema-contract.test.ts tests/admission-sqlite-contention.test.ts tests/admission-controller.test.ts tests/admission-turn-coordinator.test.ts tests/admission-fault-security-matrix.test.ts tests/admission-startup-recovery.test.ts tests/sqlite-session-store.test.ts tests/acp-runtime-wiring.test.ts
+EXIT_CODE=0
+KEY_OUTPUT:
+> npm run typecheck && npm run build && vitest run tests/admission-schema-v2.test.ts tests/admission-schema.test.ts tests/admission-schema-contract.test.ts tests/admission-sqlite-contention.test.ts tests/admission-controller.test.ts tests/admission-turn-coordinator.test.ts tests/admission-fault-security-matrix.test.ts tests/admission-startup-recovery.test.ts tests/sqlite-session-store.test.ts tests/acp-runtime-wiring.test.ts
+Test Files  10 passed (10)
+Tests  37 passed (37)
+
+COMMAND=rtk npm test -- tests/acp-server.test.ts tests/acp-runtime-wiring.test.ts tests/queue-steer.test.ts tests/cli.test.ts
+EXIT_CODE=0
+KEY_OUTPUT:
+> npm run typecheck && npm run build && vitest run tests/acp-server.test.ts tests/acp-runtime-wiring.test.ts tests/queue-steer.test.ts tests/cli.test.ts
+Test Files  4 passed (4)
+Tests  168 passed | 1 skipped (169)
+
+COMMAND=npm run validate:architecture
+EXIT_CODE=0
+KEY_OUTPUT:
+> node scripts/verify-import-boundaries.mjs
+architecture boundaries: PASS
+
+COMMAND=npm run validate
+EXIT_CODE=0
+KEY_OUTPUT:
+> npm test && npm run validate:architecture
+Test Files  43 passed (43)
+Tests  573 passed | 2 skipped (575)
+architecture boundaries: PASS
+
+BLOCKERS:
+none

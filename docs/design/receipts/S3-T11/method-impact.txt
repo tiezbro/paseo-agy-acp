@@ -1,0 +1,38 @@
+TASK_ID: S3-T11
+Receipt: method and impact evidence
+UTC: 2026-08-16T01:28:48Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Startup gate:
+- PASEO_AGENT_ID=54a0d60e-9785-4452-a1c9-5ffbcb50b8e4.
+- ParentAgentId=79ab5347-5101-4eff-89ed-6a7aa550ae2e.
+- Provider=codex; Model=gpt-5.5; Thinking=xhigh; Mode=full-access; PendingPermissions=[].
+- cwd=/home/tiezbro/projects/paseo-agy-acp; branch=main; HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e; sole parent=78931bff95ecbd9868f9cfa83a281cbbbf1a60d8; index clean before writes.
+
+Authority hashes:
+- Scheme d3b712ee5dd01029c66b0372a482f248a6f1ecbcf81572eb74d7b4ba5d98a98d.
+- Stage 2 Controller Prompt 9f946e36e717547e5982eefcc37c188d236e48b3be495541bd12129f84207993.
+- AGENTS.md 9bbd1e7b1bb7938cc3fd5922a1dcf9a036fa8639267d38789213f4fe9fc3198d.
+- Stage 2 handoff c88be84fa4c86c4c63921aaccd08f5f9c765dc896f1c35592f6cb0ee16fafc48.
+- S2-SPEC-001 sha256 3d90fe642f9322970c8e40e7a23b22228d62bfb3c52a5faac5a10960a9d03450.
+- S2-TEST-001 sha256 51e8e3bab735919b2d3643d1212fe289c6de281da4404bde033709a8cb22ed2b.
+
+Impact commands:
+- node .gitnexus/run.cjs impact "recordProcessIdentity" --repo paseo-agy-acp
+- node .gitnexus/run.cjs impact --uid "Method:Admission Controller/controller.ts:AdmissionController.commitDispatchIntent#1" --repo paseo-agy-acp
+- node .gitnexus/run.cjs impact --uid "Method:ACP Connector/agy/dispatch-boundary.ts:AgyPromptFreeDispatchBoundary.commitDispatchIntent#1" --repo paseo-agy-acp
+- node .gitnexus/run.cjs impact "TurnDispatchBoundary" --repo paseo-agy-acp
+
+Impact results:
+- recordProcessIdentity: LOW; direct=1; affected_processes=runPromptCommand.
+- AdmissionController.commitDispatchIntent: LOW; direct=1; affected_processes=runPromptCommand.
+- AgyPromptFreeDispatchBoundary.commitDispatchIntent: LOW; direct=1; affected_processes=runOnce.
+- TurnDispatchBoundary: LOW; direct=3; affected_processes=admit.
+
+Skill disposition:
+- tdd: executed; SKILL.md, tests.md, and mocking.md read completely.
+- implement: executed where compatible; SKILL.md read completely; typecheck/build/focused/affected/full validation attempted.
+- implement commit instruction: inapplicable due explicit no stage/commit/push task contract.
+- implement code-review instruction: inapplicable due no delegation and leaf-worker constraints.
+- tdd RED before green: inapplicable for S3-T11 because accepted contract is green regression/test-evidence only.
+- diagnosing loop: executed for unexpected broad validation red.

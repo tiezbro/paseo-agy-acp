@@ -1,0 +1,15 @@
+TASK_ID=S3-T06
+UTC=2026-08-16T03:59:16Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+COMMAND=rtk npm test -- tests/acp-server.test.ts tests/acp-runtime-wiring.test.ts tests/queue-steer.test.ts tests/cli.test.ts
+EXIT=0
+
+KEY_OUTPUT:
+- tsc -p tsconfig.test.json
+- node scripts/clean-dist.mjs && tsc
+- Test Files  4 passed (4)
+- Tests  168 passed | 1 skipped (169)
+
+DISPOSITION:
+HIGH-impact expanded regression set passed: acp-server, runtime wiring,
+queue-steer, and CLI.

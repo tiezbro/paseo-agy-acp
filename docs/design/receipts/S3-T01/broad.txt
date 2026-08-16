@@ -1,0 +1,20 @@
+TASK_ID: S3-T01
+EVIDENCE: full validation
+UTC: 2026-08-16T01:16:16Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Command:
+npm run validate
+
+Exit code: 0
+
+Key output:
+> npm run typecheck && npm run build && vitest run
+ Test Files  34 passed (34)
+      Tests  530 passed | 2 skipped (532)
+> node scripts/verify-import-boundaries.mjs
+architecture boundaries: PASS
+
+Note:
+- The validation command printed two temporary "Cloning into /tmp/agy-acp-reconcile-.../parent/vendor" lines and completed successfully.
+- No production source, Git index, refs, commit, Provider, production daemon, or delegation was used.

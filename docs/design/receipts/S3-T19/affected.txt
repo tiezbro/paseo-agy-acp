@@ -1,0 +1,11 @@
+UTC: 2026-08-16T05:18:25Z
+Task: S3-T19 affected seam regression.
+Command: rtk npm test -- tests/prompt-free-process.test.ts tests/prompt-free-canary.test.ts tests/agy-dispatch-boundary.test.ts tests/admission-process-evidence-contract.test.ts tests/admission-production-dispatch.test.ts tests/admission-turn-coordinator.test.ts tests/cli.test.ts
+Exit code: 0
+
+Key output:
+> npm run typecheck && npm run build && vitest run tests/prompt-free-process.test.ts tests/prompt-free-canary.test.ts tests/agy-dispatch-boundary.test.ts tests/admission-process-evidence-contract.test.ts tests/admission-production-dispatch.test.ts tests/admission-turn-coordinator.test.ts tests/cli.test.ts
+> tsc -p tsconfig.test.json
+> node scripts/clean-dist.mjs && tsc
+Test Files  7 passed (7)
+Tests  105 passed (105)

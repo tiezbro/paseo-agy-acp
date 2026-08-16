@@ -32,11 +32,11 @@ function controller(): AdmissionController {
   return admission;
 }
 
-function enqueue(admission: AdmissionController, requestId: string, parentId: string, now: number): void {
+function enqueue(admission: AdmissionController, requestId: string, agentId: string, now: number): void {
   admission.enqueueWithPayload({
     requestId,
     sessionId: `session-${requestId}`,
-    parentId,
+    agentId,
     fingerprint: `fingerprint-${requestId}`,
     provider: "antigravity",
     model: "model-test",

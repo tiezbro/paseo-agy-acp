@@ -6,54 +6,47 @@ All notable changes to `paseo-agy-acp` are recorded here.
 
 ### Changed
 
-- Converged the repository into exactly two source areas. `ACP Connector/`
-  retains ACP protocol handling, sessions, the existing Antigravity online
-  output path, permissions, cancellation, and error mapping.
-  `Admission Controller/` now contains only the shared queue and seat kernel.
-- Wrapped the existing `AgyCliSession.prompt` path with a disabled-by-default
-  shared Admission coordinator. The source defaults are three active account
-  seats, one concurrent start, a two-second start interval, a 30-minute queue
-  timeout, and a 30-second provider/model capacity cooldown. The only supported
-  seat override is `1`; `2`, `4`, `5`, and every other value fail closed.
-- Made terminal settlement and seat release one controller transaction.
-  Confirmed Antigravity capacity failures start cooldown; uncertain post-write
-  failures retain visible `recovery_required` capacity debt and cannot replay
-  the business prompt.
-- Reset the Admission database contract to `shared-admission-queue` schema v1
-  with eight business tables plus `schema_migrations`. Extra legacy tables
-  fail closed.
+- Closed the final Stage 3 v2 migration for `shared-admission-queue` schema v2:
+  `turn_requests.agent_id`, `policy_state` with `policy_fingerprint`,
+  `queued_owner_instances`, lease suspect metadata, and the v1 to v2 migration
+  ledger are now the local database contract.
+- Made durable policy the single runtime authority. Connectors claim or assert
+  the same `policy_state`, and soft drain moves `3 -> soft_draining_to_1 ->
+  steady(max_active_turns=1)` without killing active turns.
+- Closed owner, recovery, and runtime reaper behavior. Queued owner death is
+  bounded, `recovery_required` remains non-replayable, and suspect leases are
+  released only after process evidence proves the local turn is gone.
+- Wired enabled production dispatch through durable dispatch intent before the
+  prompt write. Ambiguous or blocked writes become durable terminal states.
+- Added the enabled-mode auth gate for v1/v2 login/logout, preserved disabled
+  legacy auth, restored the interactive permission chain, and kept official ACP
+  session history replay in the connector.
+- Mapped `queue_timeout`, `provider_capacity`/provider failure, cancellation,
+  and `recovery_required` through typed terminal behavior instead of treating
+  known failures as successful `end_turn`.
 
 ### Added
 
-- Added durable oldest-eligible queue selection with agent fairness, encrypted
-  queued prompts, queue progress, global start throttling, lease heartbeats,
-  immutable Linux process identity, and proof-gated startup seat recovery.
-- Added focused final-plan tests for cross-process seats, agent fairness,
-  start throttling, timeout payload deletion, capacity cooldown, heartbeat,
-  immediate terminal release, atomic identity plus dispatch intent, and
-  no-replay behavior after an uncertain prompt write.
+- Added Stage 3 closeout documentation that points README.md and
+  README.zh-CN.md at the confirmed Scheme and accepted Stage 2 artifacts.
+- Added a clause-by-clause historical disposition for the legacy admission
+  design file so it cannot act as a second authority.
+- Added `tests/closeout-docs-contract.test.ts` to keep the bilingual
+  documentation, CHANGELOG, and historical design disposition aligned.
 
 ### Removed
 
-- Removed the unapproved second delivery architecture: controller outbox,
-  delivery claims, custom ACK route, terminal reconnect replay, client route
-  fencing, shadow terminal observers, and custom request identity.
-- Removed the unused production graph, alternate dispatcher/prompt seam,
-  manual recovery claims and requeue APIs, startup-permit subsystem, exact
-  terminal binder, legacy migration pipeline, and their dedicated tests.
-- Preserved official ACP `session/load` and `session/resume`, conversation
-  SQLite replay, `StreamPoller`/`Translator` online updates, and the
-  stream-json identity primitive.
+- Removed the old documentation authority claim from the legacy design. It is
+  retained only as historical input with dispositions grounded in the Scheme
+  and accepted Stage 2 artifacts.
 
 ### Verification
 
-- `npm run validate` passed: production/test TypeScript, clean build,
-  33 test files with 527 passed and 2 skipped, and the architecture boundary
-  gate.
-- `rtk tsc -p tsconfig.test.json --noEmit` passed.
-- `rtk git diff --check` passed.
-- No real Antigravity provider, installed connector, production Paseo daemon,
-  push, tag, or release was used.
+- Stage 3 local verification is receipt-bound: `npm test --
+  tests/closeout-docs-contract.test.ts`, `npm run validate:architecture`,
+  `npm run validate`, GitNexus detect-changes, and `git diff --check`.
+- S3-T21 documentation receipts are kept in `docs/design/receipts/S3-T21/`.
+- No install, connector switch, real Provider run, production `127.0.0.1:6767` access, push, tag, or release was performed.
 
 ## 1.0.0.4 - 2026-08-07
 

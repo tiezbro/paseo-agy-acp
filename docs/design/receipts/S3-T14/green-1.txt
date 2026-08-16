@@ -1,0 +1,22 @@
+TASK_ID=S3-T14
+RECEIPT=green-1
+UTC=2026-08-16T05:21:25Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+CONTROLLER_AUTHORIZATION=Controller authorization for S3-T14 minimal GREEN after RED+impact review, bounded to S3-T14 only.
+
+COMMAND=rtk npm test -- tests/admission-reaper.test.ts
+EXIT_CODE=0
+
+KEY_OUTPUT:
+> npm run typecheck && npm run build && vitest run tests/admission-reaper.test.ts
+Test Files  1 passed (1)
+Tests  3 passed (3)
+Duration  627ms
+
+GREEN_DISPOSITION:
+Focused S3-T14 runtime reaper behavior passes. Verified connector/child gone
+plus empty process group releases local recovery seats without Connector
+restart, preserves visible recovery_required requests, leaves payload rows
+deleted, and repeated reaper calls are idempotent. Live same-process and
+unverifiable process evidence both retain the local seat as suspect, with
+suspect_reason bounded to heartbeat_expired or identity_unverifiable.

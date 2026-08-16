@@ -1,0 +1,21 @@
+UTC: 2026-08-16T05:25:28Z
+Task: S3-T19 final dirty ownership readback after strict validation follow-up.
+Command: git status --short -- tests/admission-native-process.test.ts docs/design/receipts/S3-T19
+Exit code: 0
+
+Key output:
+?? docs/design/receipts/S3-T19/
+?? tests/admission-native-process.test.ts
+
+Command: git rev-parse --abbrev-ref HEAD && git rev-parse HEAD && git rev-parse HEAD^ && git diff --cached --name-only
+Exit code: 0
+
+Key output:
+main
+83fb97257814f9072770c77d1bb0da4cfa2b420e
+78931bff95ecbd9868f9cfa83a281cbbbf1a60d8
+<no staged paths>
+
+Ownership note:
+- S3-T19 owns only tests/admission-native-process.test.ts and docs/design/receipts/S3-T19/.
+- Shared accepted Stage 3 dirty ownership is preserved; no reset, stash, clean, stage, commit, or production edits were performed.

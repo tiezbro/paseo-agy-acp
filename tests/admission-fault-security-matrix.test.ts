@@ -47,7 +47,7 @@ function starting(admission: AdmissionController): AdmissionLease {
   admission.enqueueWithPayload({
     requestId: "atomic-request",
     sessionId: "atomic-session",
-    parentId: "atomic-parent",
+    agentId: "atomic-agent",
     fingerprint: "atomic-fingerprint",
     provider: "antigravity",
     model: "model-test",

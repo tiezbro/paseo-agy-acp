@@ -42,9 +42,6 @@ export async function buildSession(
     conversationsDir: deps.conversationsDir
   });
   if (deps.admissionEnabled === true) {
-    if (config.mode !== "dangerously-skip-permissions") {
-      throw new Error("enabled admission currently requires dangerously-skip-permissions mode");
-    }
     config.promptInArgv = false;
   }
   const modelOptions = await deps.getModelOptions(config);

@@ -1,0 +1,29 @@
+TASK_ID: S3-T11
+Receipt: broad validation
+UTC: 2026-08-16T01:37:34Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Command:
+rtk npm run validate
+
+Exit code: 0
+
+Key output:
+RUN  v4.1.10 /home/tiezbro/projects/paseo-agy-acp
+Test Files  41 passed (41)
+Tests  566 passed | 2 skipped (568)
+Duration  18.89s
+architecture boundaries: PASS
+
+Disposition:
+- Broad-only revalidation passed after the external S3-T17 temporary failure was fixed.
+- No test file, production source file, other task path, git index, or git ref was modified.
+- This receipt replaces the previous S3-T11 broad blocker record with the current true broad result.
+
+Detect changes command:
+node .gitnexus/run.cjs detect-changes --repo paseo-agy-acp
+
+Detect changes exit code: 0
+
+Detect changes key output:
+No changes detected.

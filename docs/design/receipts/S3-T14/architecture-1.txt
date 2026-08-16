@@ -1,0 +1,15 @@
+TASK_ID=S3-T14
+RECEIPT=architecture-1
+UTC=2026-08-16T05:21:25Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+COMMAND=rtk npm run validate:architecture
+EXIT_CODE=0
+
+KEY_OUTPUT:
+> node scripts/verify-import-boundaries.mjs
+architecture boundaries: PASS
+
+DISPOSITION:
+Admission Controller still does not import ACP Connector. Runtime reaper
+process evidence stays in the Admission-owned process-evidence seam.

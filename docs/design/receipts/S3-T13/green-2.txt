@@ -1,0 +1,38 @@
+Task: S3-T13 green-2
+UTC: 2026-08-16T01:27:09Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Business obligation:
+S-27 startup release after complete process evidence.
+
+Impact:
+Risk remains HIGH after Controller authorization.
+observeLinuxProcessIdentity upstream impact: direct callers 2
+(observePersistedLinuxConnectorOwnerIdentity, recoverExitedAdmissionSeats);
+affected processes: recoverExitedAdmissionSeats, createAdmissionRuntime,
+composeAcpRuntime.
+releaseExitedRecoverySeat upstream impact: direct caller 1
+(recoverExitedAdmissionSeats); affected processes: recoverExitedAdmissionSeats,
+createAdmissionRuntime, composeAcpRuntime.
+
+Method evidence:
+Test seam: recoverExitedAdmissionSeats invokes releaseExitedRecoverySeat through
+the startup recovery path with injected AdmissionStartupRecoveryReaders.
+Injected evidence is connector gone + child gone + processIds=[] for an empty
+process group. The test checks release summary, request state remains
+recovery_required, the local lease is deleted, payload read fails, and the
+sanitized event is request_recovery_seat_released. This is not a Connector
+restart acceptance path and does not replay the payload.
+No production source was modified.
+
+Command:
+rtk npm test -- tests/admission-process-evidence-contract.test.ts
+
+Exit code: 0
+
+Key output:
+> npm run typecheck && npm run build && vitest run tests/admission-process-evidence-contract.test.ts
+RUN  v4.1.10 /home/tiezbro/projects/paseo-agy-acp
+Test Files  1 passed (1)
+Tests  2 passed (2)
+Duration  361ms

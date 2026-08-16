@@ -1,0 +1,18 @@
+TASK_ID=S3-T06
+UTC=2026-08-16T04:20:38Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+COMMAND=rtk npm run validate
+EXIT=0
+
+KEY_OUTPUT:
+- npm test && npm run validate:architecture
+- Test Files  49 passed (49)
+- Tests  585 passed | 2 skipped (587)
+- node scripts/verify-import-boundaries.mjs
+- architecture boundaries: PASS
+
+SHARED_WORKTREE_SCOPE_NOTE:
+This is final S3-T06 acceptance revalidation in the shared Stage 3 dirty
+worktree after S3-T12 bounded GREEN. The broad validation command covered the
+current combined unstaged Stage 3 scope and returned green. This receipt
+refresh only overwrites the authorized S3-T06 broad receipt.

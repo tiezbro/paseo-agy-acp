@@ -1,0 +1,18 @@
+TASK_ID=S3-T14
+RECEIPT=repair-f2-f3-green-1
+UTC=2026-08-16T06:50:02Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+COMMAND=rtk npm test -- tests/admission-reaper.test.ts
+EXIT_CODE=0
+
+KEY_OUTPUT:
+tests/admission-reaper.test.ts PASS
+Test Files 1 passed
+Tests 5 passed
+Duration completed without failure
+
+GREEN_DISPOSITION:
+F2 production lifecycle connection passed through createAdmissionRuntime with
+bounded reaper scheduling and close cleanup. F3 exact heartbeat stale threshold
+passed for below, equal, and above 4000 ms boundaries.

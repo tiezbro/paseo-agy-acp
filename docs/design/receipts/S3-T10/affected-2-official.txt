@@ -1,0 +1,20 @@
+TASK_ID=S3-T10
+PHASE=AFFECTED_OFFICIAL_REVALIDATION
+UTC=2026-08-16T03:22:54Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+COMMAND
+rtk npm test -- tests/auth.test.ts tests/acp-server.test.ts tests/acp-runtime-wiring.test.ts tests/cli.test.ts tests/queue-steer.test.ts tests/admission-permission.test.ts
+
+EXIT
+0
+
+KEY_OUTPUT
+> npm run typecheck && npm run build && vitest run tests/auth.test.ts tests/acp-server.test.ts tests/acp-runtime-wiring.test.ts tests/cli.test.ts tests/queue-steer.test.ts tests/admission-permission.test.ts
+> tsc -p tsconfig.test.json
+> node scripts/clean-dist.mjs && tsc
+Test Files  6 passed (6)
+Tests  177 passed | 1 skipped (178)
+
+SCOPE
+Includes auth, acp server, runtime wiring, cli, queue steer, and S3-T10 focused permission chain tests.

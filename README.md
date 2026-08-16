@@ -65,7 +65,22 @@ contributors. All credit for the original ACP adapter architecture belongs to th
 
 → [Full technical detail](./docs/PASEO_LOCAL_CHANGES.md)
 
-## Admission Controller Development
+## Admission Controller Stage 3 Status
+
+Current authority is the confirmed Scheme plus accepted Stage 2 artifacts:
+
+- [confirmed Scheme](/home/tiezbro/projects/MAACS/docs/maacs-paseo-agy-acp-confirmed-scheme.md)
+- [Stage 2 handoff](docs/design/v2.0.0.0-stage2-handoff.md)
+- [503 feasibility](docs/design/v2.0.0.0-stage2-503-feasibility.md)
+- [ACP source map](docs/design/v2.0.0.0-stage2-acp-source-map.md)
+- [Admission source map](docs/design/v2.0.0.0-stage2-admission-source-map.md)
+- [Architecture](docs/design/v2.0.0.0-stage2-architecture.md)
+- [Domain model](docs/design/v2.0.0.0-stage2-domain-model.md)
+- [Test contracts](docs/design/v2.0.0.0-stage2-test-contracts.md)
+- [Specification](docs/design/v2.0.0.0-stage2-spec.md)
+
+The legacy admission design file is retained only as historical input with
+clause dispositions. It is not a second authority.
 
 The repository has exactly two source areas:
 
@@ -77,15 +92,15 @@ paseo-agy-acp/
 
 `ACP Connector/` owns the Paseo/ACP protocol, session and conversation
 mapping, the Antigravity process, stream-json and SQLite translation,
-permissions, cancellation, recovery coordination, and provider error
-classification. `Admission Controller/` owns only the shared Antigravity
-seat pool, durable queue, start-rate limits, leases, heartbeats, process
-evidence, capacity cooldown, and queue observations. Package entrypoints stay
-inside `ACP Connector/`.
+permissions, cancellation, recovery coordination, auth/login/logout gating,
+typed terminal reporting, and provider error classification. `Admission
+Controller/` owns only the shared Antigravity seat pool, durable queue,
+policy state, soft drain, start-rate limits, leases, heartbeats, process
+evidence, runtime reaper, capacity cooldown, and queue observations. Package
+entrypoints stay inside `ACP Connector/`.
 
 Admission is disabled unless `AGY_ACP_ADMISSION_ENABLED=true` is set together
-with an absolute `AGY_ACP_STATE_DIR` and `PASEO_AGENT_ID`. The confirmed
-source defaults are:
+with an absolute `AGY_ACP_STATE_DIR` and `PASEO_AGENT_ID`.
 
 | Rule | Default |
 |---|---:|
@@ -98,15 +113,23 @@ source defaults are:
 Every local connector using the same state directory shares those three account
 seats across sessions and models. The only supported override is the
 conservative one-seat mode; `2`, `4`, `5`, and every other value are rejected.
-Requests are selected oldest-eligible with agent fairness. A cooldown skips the affected provider/model without blocking
-other eligible requests. Queue timeout cancels the request and deletes its
-encrypted prompt in the same transaction.
+Requests are selected oldest-eligible with agent fairness. A cooldown skips the
+affected provider/model without blocking other eligible requests. Queue timeout
+cancels the request and deletes its encrypted prompt in the same transaction.
+
+The Stage 3 local implementation uses `shared-admission-queue` schema v2:
+`turn_requests` uses `agent_id`, `policy_state` stores the durable singleton
+policy with `policy_fingerprint` and drain state, queued owners are recorded in
+`queued_owner_instances`, leases carry suspect metadata for the runtime reaper,
+and `schema_migrations` records the v1 to v2 migration. Unexpected delivery
+authority tables still fail closed.
 
 Idle sessions and idle ACP connections consume no turn seat and retain no
-resident turn process. An admitted turn uses the existing one-shot stdin
-process; prompt EOF closes its input, and confirmed terminal settlement
-releases the seat immediately. Closing a session cancels queued work while an
-already running turn follows the existing connector cancellation path.
+resident turn process. An admitted turn uses the production dispatch boundary
+before the one-shot stdin write; ambiguous or blocked writes become durable
+terminal states instead of hidden retries. Confirmed provider terminal
+settlement releases the seat immediately. Closing a session cancels queued work
+while an already running turn follows the existing connector cancellation path.
 
 The admitted turn still uses the existing `AgyCliSession.prompt`,
 conversation SQLite, `StreamPoller`, `Translator`, ACP permission handling,
@@ -115,24 +138,9 @@ path, outbox, ACK protocol, terminal replay, shadow comparison, custom request
 identity, or manual requeue API. Official `session/load` and
 `session/resume` history replay remain ACP Connector responsibilities.
 
-A provider-confirmed terminal outcome and seat release are one controller
-transaction. A trusted Antigravity `503` capacity failure starts the
-provider/model cooldown. If a business prompt may already have been written
-but execution cannot be proven terminal, the request becomes
-`recovery_required`; its prompt is deleted and is never automatically
-replayed. Startup recovery releases that local seat only after connector,
-child, and process-group exit are all proven.
-
-The schema is `shared-admission-queue` v1: `turn_requests`, `leases`,
-`cooldowns`, `turn_payloads`, `lease_process_identities`,
-`start_history`, `sessions`, and `events`, plus
-`schema_migrations`. Any extra legacy outbox or recovery-claim table fails
-the integrity check.
-
 This source work has not installed or switched a connector, run a real
 Antigravity provider, touched the production Paseo daemon, or performed a
-push, tag, or release. The design and remaining acceptance gates are recorded
-in [`docs/design/v2.0.0.0-admission-controller.md`](docs/design/v2.0.0.0-admission-controller.md).
+push, tag, or release.
 
 ## What This Fixes
 

@@ -1,0 +1,26 @@
+TASK_ID=S3-T14
+RECEIPT=repair-f2-f3-red-1
+UTC=2026-08-16T06:46:07Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+COMMAND=rtk npm test -- tests/admission-reaper.test.ts
+EXIT_CODE=1
+
+EXPECTED_RED:
+F2 adds a production AdmissionRuntime lifecycle assertion: createAdmissionRuntime
+must schedule a bounded runtime reaper and clear it on close. F3 adds exact
+heartbeat threshold boundaries: now - heartbeat_at below/equal 4000 ms must
+not mark suspect; above 4000 ms must mark heartbeat_expired.
+
+KEY_OUTPUT:
+tests/admission-reaper.test.ts (5 tests | 2 failed)
+FAIL runs the reaper from the production admission runtime without connector restart
+Expected vi.getTimerCount(): 1; Received: 0
+FAIL marks heartbeat expiry only when heartbeat age is greater than four seconds
+Expected below/equal suspectReason: null; Received: heartbeat_expired
+Expected below/equal suspectSince: null; Received: 10000
+
+RED_DISPOSITION:
+Behavioral RED confirmed on the current shared worktree. This is not a
+missing-file, mutation, source-string, health-check, mock-only, Provider,
+network, or Connector-restart RED.

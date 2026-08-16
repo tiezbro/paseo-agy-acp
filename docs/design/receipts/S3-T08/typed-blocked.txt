@@ -1,0 +1,32 @@
+S3-T08 typed-blocked receipt — trusted-503 external typed dependency gate
+
+TASK_ID: S3-T08
+TASK_TYPE: external typed dependency gate（非实现；无 RED/READY/GREEN；无仓库实现写）
+UTC: 2026-08-16T01:32:48Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e（sole parent 78931bff95ecbd9868f9cfa83a281cbbbf1a60d8；branch main；index clean）
+
+Readback / authority verification（只读命令，exit code 0）:
+- git rev-parse --abbrev-ref HEAD = main；git rev-parse HEAD = 83fb97257814f9072770c77d1bb0da4cfa2b420e；git rev-parse HEAD^ = 78931bff95ecbd9868f9cfa83a281cbbbf1a60d8；git status --porcelain 仅 14 项 untracked = S3-T01/T04/T05/T07/T11/T13/T17 的各自 test + receipt reservations，无其外 drift；本 task 未编辑任何 reservation。
+- Authority live SHA-256 全部一致：Scheme /home/tiezbro/projects/MAACS/docs/maacs-paseo-agy-acp-confirmed-scheme.md = d3b712ee5dd01029c66b0372a482f248a6f1ecbcf81572eb74d7b4ba5d98a98d；Stage 2 Controller Prompt = 9f946e36e717547e5982eefcc37c188d236e48b3be495541bd12129f84207993；AGENTS.md = 9bbd1e7b1bb7938cc3fd5922a1dcf9a036fa8639267d38789213f4fe9fc3198d；handoff docs/design/v2.0.0.0-stage2-handoff.md = c88be84fa4c86c4c63921aaccd08f5f9c765dc896f1c35592f6cb0ee16fafc48；S2-SPIKE-503-001 docs/design/v2.0.0.0-stage2-503-feasibility.md = c742645666b456bd5f42602a407446f70cd55321a0d2be2da044f514cb27de19（与 stage3 prompt §2.1 绑定值一致）。
+- 运行态核验：provider=hermes、model=custom:deepseek-v4-flash、thinking=max、mode=dont_ask、pending permissions=[]（agent context；paseo.parent-agent-id=79ab5347-5101-4eff-89ed-6a7aa550ae2e，CHILD；PASEO_AGENT_ID=2477a75f-693a-4baa-bb19-4555d8e2eab7）；全部匹配 → 无 AGENT_MODE_UNAVAILABLE。
+
+TYPED_BLOCKERS（逐字记录；保持开放，非内部歧义）:
+SOURCE_FIELD_GAP
+REAL_PROVIDER_REQUIRED
+SOURCE_IDENTITY_UNKNOWN
+
+S2-SPIKE-503-001 复核（§5/§6 锁定结论确认）:
+- “provider capacity/503 -> exact phrase -> result.error 或 stderr” 的 end-to-end primary-source chain 未成立；唯一 disposition = 上述三元组；未选定任何 trusted-503 physical contract；依赖门保持关闭，状态不是 READY。
+- 通用 status/error、版本化 CLI 字节串、fake stderr、既有 15/15 prototype 均不能建立 provenance；任何 phrase -> 503/UNAVAILABLE/MODEL_CAPACITY_EXHAUSTED 归一化均未获授权。
+- 已确认未创建 trusted-503 RED / READY / regex / phrase 归一化 / fake-binary truth：tests/ 与 receipts/ 扫描无新增 trusted-503 truth 声称（S3-T07 负分类为结构化合成输入，其 receipt 明示 “No trusted 503/free-text/regex source claim was added”；既有 fake oracle tests/admission-turn-coordinator.test.ts:261-296 保持 fake 标记）。
+
+重开条件（仅 S2-SPIKE-503-001 §6 两项之一；形成可复核 receipt 前不得重开）:
+1. pinned source/commit 或 reproducible binary offset + symbol + call path/disassembly，完整连接 provider capacity/503 条件、exact phrase 与真实 output carrier；或
+2. 用户授权隔离/真实观测：在允许范围内取得版本绑定的真实 CLI 失败输出，记录命令、版本、exit、stdout/stderr、result 字段与 provider 语义；不得由 fake binary、mock-only 或 generic schema 替代。
+
+本 task 排除于 READY_FRONTIER；无 RED、无 GREEN、无实现 ref；T20/T21 前驱 = 全部内部 T01..T19，唯一排除 T08（stage3 prompt §2.2 DAG）；不声称 unresolved blockers=none。
+
+Method conformance evidence:
+- diagnosing-bugs（primary, /home/tiezbro/.agents/skills/diagnosing-bugs/SKILL.md sha256=b9339b09ee3980808d8c5a35c7251b891b8b1e0036ec4ca37812b976ebddf6b6, pinned mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df）：完整读取；Phase 1 red-capable feedback loop 步骤 inapplicable under project authority（无代码可循环、禁止真实 Provider/build/test；§6.8 SKILL_REQUIRED_STEPS 仅复核锁定结论 + 确认无 fake truth 创建 + 写 typed-blocked receipt）；redact 纪律 executed（无 secret 涉及）。
+- triage（supporting, /home/tiezbro/.agents/skills/triage/SKILL.md sha256=91e2817ecb688c4df4e2444eab472d1d79d2a0a57abf9f6726967664c460ff2e, 同 pinned source）：完整读取；issue-tracker 状态机/评论/关闭步骤 inapplicable under project authority；typed-disposition 方法已采用（本 receipt 即唯一 typed disposition）。
+- 未委派；未运行真实 Provider / 网络 / 生产 6767 / build / test / install；未 git index / commit / push；唯一写入 = 本文件。

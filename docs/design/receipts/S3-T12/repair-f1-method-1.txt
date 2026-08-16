@@ -1,0 +1,22 @@
+TASK_ID: S3-T12
+RECEIPT: repair-f1-method-1
+UTC: 2026-08-16T06:45:54Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Method summary:
+- F1 RED was repaired at the real production seam, not with
+  `RecordingAdmissionBoundary`.
+- `TurnDispatchBoundary.markDispatchAmbiguous()` now handles an unprepared
+  pre-identity blocked dispatch by marking the live turn `recovery_required`
+  through the existing AdmissionController recovery path.
+- Prepared dispatch ambiguity still uses durable `markDispatchAmbiguous`.
+- The repair preserves zero replay/retry: the pre-identity fake process has
+  `writeAttempts=0`, while accepted and unprovable-write paths remain covered by
+  the existing once-only tests.
+- Existing T10 permission behavior and CLI prompt-free dispatch wiring were not
+  expanded by this repair.
+
+Residual:
+Full `npm run validate` is deferred on active sibling S3-T14 repair closeout per
+Controller instruction. No S3-T12 focused/affected/HIGH-expanded/architecture
+blocker remains.

@@ -1,0 +1,23 @@
+TASK_ID=S3-T09
+phase=detect-changes
+utc=2026-08-16T02:53:39Z
+command:
+- node .gitnexus/run.cjs detect-changes --repo paseo-agy-acp
+exit_code=0
+
+key_output:
+- Changes: 10 files, 7 symbols.
+- Affected processes: 0.
+- Risk level: low.
+- Changed symbols:
+  enqueue -> tests/admission-controller.test.ts
+  starting -> tests/admission-fault-security-matrix.test.ts
+  runWorker -> tests/admission-process.test.ts
+  waitForLine -> tests/admission-process.test.ts
+  dispatch -> tests/admission-startup-recovery.test.ts
+  coordinator -> tests/admission-turn-coordinator.test.ts
+  enqueueHolder -> tests/admission-turn-coordinator.test.ts
+
+scope_note:
+- Current dirty worktree includes accepted predecessor/parallel task changes plus S3-T09 receipts.
+- This strict final revalidation did not stage, commit, push, delegate, or edit production/tests.

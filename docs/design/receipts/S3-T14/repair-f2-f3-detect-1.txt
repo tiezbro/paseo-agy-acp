@@ -1,0 +1,18 @@
+TASK_ID=S3-T14
+RECEIPT=repair-f2-f3-detect-1
+UTC=2026-08-16T06:51:03Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+COMMAND=node .gitnexus/run.cjs detect-changes --repo paseo-agy-acp --scope unstaged
+EXIT_CODE=0
+
+KEY_OUTPUT:
+Changes: 21 files, 17 symbols
+Affected processes: 0
+Risk level: low
+Changed symbols include README, README.zh-CN, admission design docs, and sibling tests
+
+DETECT_DISPOSITION:
+GitNexus reported low risk for the current unstaged aggregate. The aggregate
+includes accepted sibling Stage 3 dirty worktree changes; S3-T14 repair edits
+remain limited to the authorized files plus additive S3-T14 receipts.

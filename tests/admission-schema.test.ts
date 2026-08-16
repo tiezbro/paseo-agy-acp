@@ -34,13 +34,17 @@ function createController(): AdmissionController {
   return admission;
 }
 
+function columnNames(db: Database.Database, table: string): string[] {
+  return (db.prepare(`PRAGMA table_info(${table})`).all() as Array<{ name: string }>).map((column) => column.name);
+}
+
 afterEach(() => {
   for (const admission of controllers.splice(0)) admission.close();
   for (const stateDir of stateDirs.splice(0)) rmSync(stateDir, { recursive: true, force: true });
 });
 
-describe("AdmissionController schema v1", () => {
-  it("contains only the shared queue tables and the migration ledger", () => {
+describe("AdmissionController schema v2", () => {
+  it("contains the exact v2 shared queue tables and migration ledger", () => {
     const admission = createController();
     const db = new Database(admission.databasePath, { readonly: true });
     try {
@@ -52,11 +56,59 @@ describe("AdmissionController schema v1", () => {
         "events",
         "lease_process_identities",
         "leases",
+        "policy_state",
+        "queued_owner_instances",
         "schema_migrations",
         "sessions",
         "start_history",
         "turn_payloads",
         "turn_requests"
+      ]);
+      expect(columnNames(db, "turn_requests")).toEqual([
+        "request_id",
+        "session_id",
+        "agent_id",
+        "fingerprint",
+        "provider",
+        "model",
+        "state",
+        "enqueued_at",
+        "deadline_at",
+        "lease_generation",
+        "terminal_at",
+        "queued_owner_instance_id",
+        "queued_owner_recorded_at"
+      ]);
+      expect(columnNames(db, "turn_requests")).not.toContain("parent_id");
+      expect(columnNames(db, "leases")).toContain("suspect_since");
+      expect(columnNames(db, "leases")).toContain("suspect_reason");
+      expect(columnNames(db, "policy_state")).toEqual([
+        "id",
+        "max_active_turns",
+        "max_concurrent_starts",
+        "min_start_interval_ms",
+        "queue_timeout_ms",
+        "capacity_cooldown_ms",
+        "drain_state",
+        "policy_fingerprint",
+        "updated_at",
+        "updated_by_owner_instance_id"
+      ]);
+      expect(columnNames(db, "queued_owner_instances")).toEqual([
+        "owner_instance_id",
+        "created_at",
+        "boot_id",
+        "pid",
+        "start_time_ticks",
+        "pid_namespace_inode",
+        "ppid",
+        "pgrp",
+        "session",
+        "recorded_at"
+      ]);
+      expect(db.prepare("SELECT version, name FROM schema_migrations ORDER BY version").all()).toEqual([
+        { version: 1, name: "shared-admission-queue" },
+        { version: 2, name: "shared-admission-queue-v2" }
       ]);
       expect(tables).not.toContain("delivery_outbox");
       expect(tables).not.toContain("delivery_claim_leases");

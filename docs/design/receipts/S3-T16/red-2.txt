@@ -1,0 +1,17 @@
+TASK_ID: S3-T16
+PHASE: RED-2
+UTC: 2026-08-16T05:37:00Z
+GIT_HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+COMMAND: rtk npm test -- tests/admission-typed-terminal.test.ts
+EXIT_CODE: 1
+
+Key output:
+- tests/admission-typed-terminal.test.ts (8 tests | 6 failed); 2 passed.
+- v1 queue_timeout failed with raw AdmissionQueueTimeoutError: admission queue wait timed out.
+- v1 provider_failure failed with raw AgyCliError: provider returned 429 QUOTA_EXHAUSTED.
+- v1 recovery_required failed with raw Error: transport ended without a confirmed provider terminal.
+
+RED validity:
+This is a real behavior RED through handlePromptV1 + AdmissionTurnCoordinator.admit + AdmissionController.
+It is not a missing-file, source-string-only, mock-only, health-check-only, or mutation-as-RED failure.
+Provider failure fixture uses structured 429 QUOTA_EXHAUSTED, not unresolved/trusted 503.

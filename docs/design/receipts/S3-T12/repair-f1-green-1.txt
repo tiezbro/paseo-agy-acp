@@ -1,0 +1,27 @@
+TASK_ID: S3-T12
+RECEIPT: repair-f1-green-1
+UTC: 2026-08-16T06:45:54Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Command:
+rtk npm test -- tests/admission-production-dispatch.test.ts
+
+Exit:
+0
+
+Key output:
+> npm run typecheck && npm run build && vitest run tests/admission-production-dispatch.test.ts
+> tsc -p tsconfig.test.json
+> node scripts/clean-dist.mjs && tsc
+Test Files  1 passed (1)
+Tests  3 passed (3)
+
+F1 GREEN evidence:
+- The pre-identity blocked case now uses real `AdmissionTurnCoordinator` /
+  `TurnDispatchBoundary`, not a recording fake.
+- The fake native process exposes no process identity and performs zero business
+  write attempts.
+- The production request durably enters `recovery_required` with payload deleted,
+  lease retained in `recovery_required`, and identity rows still zero.
+- accepted -> durable active and unprovable write -> durable
+  dispatch_ambiguous still pass in the same focused production-entry suite.

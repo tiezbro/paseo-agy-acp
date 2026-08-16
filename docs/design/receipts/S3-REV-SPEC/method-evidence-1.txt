@@ -1,0 +1,35 @@
+S3-REV-SPEC method evidence — review-side skill conformance and readback
+
+TASK_ID: S3-REV-SPEC
+PHASE: method-conformance
+UTC: 2026-08-16T06:17:00Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+REVIEWER: PASEO_AGENT_ID=0c8f7428-17f9-4f46-befd-f6b8f42b7015; ParentAgentId=79ab5347-5101-4eff-89ed-6a7aa550ae2e; provider=pi; model=MindStackLab-opencode-go/deepseek-v4-flash; thinking=max; mode=default; PendingPermissions=[]
+
+Skills (read completely; hashes):
+- code-review (primary): /home/tiezbro/.agents/skills/code-review/SKILL.md @ 9cf46653dd9c710ea1e6c22423caf31a794c88773bc94bdaa23140277f470442
+- to-spec (supporting): /home/tiezbro/.agents/skills/to-spec/SKILL.md @ 5d26479544b08048d3a8f79d937b39bc613a617f026b3fd083bafc1e99a7b811
+Both installed under the pinned source identity mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df (Stage 3 inventory STAGE3-PROMPT-GEN/skill-inventory.md).
+
+code-review step disposition (per §6.22 SKILL_REQUIRED_STEPS + startup gate):
+1. Pin fixed point — executed, adapted: fixed point = HEAD 83fb97257814f9072770c77d1bb0da4cfa2b420e; candidate = `git diff HEAD` + `git ls-files --others --exclude-standard` + direct file reads, because this project intentionally has no implementation commit yet (git diff HEAD...HEAD empty is expected and not an empty-review failure; §0/§1.2/§6.0 EXACT_GIT_BASELINE).
+2. Identify spec source — executed: spec source = confirmed Scheme (d3b712ee…) + S2-HANDOFF-001 (c88be84f…) + seven Stage 2 siblings; no issue-tracker needed or authorized (§2.6 rejected alternatives).
+3. Standards sources — executed in reduced form: AGENTS.md GitNexus rules (impact-before-edit, detect_changes-before-commit observed in every implementation-task receipt) + Fowler smell baseline applied to the implementation diff; primary axis per brief is Spec conformance.
+4. Spawn two parallel sub-agents — inapplicable under Stage 3 authority: the Controller already creates two fresh independent reviewers (S3-REV-SPEC, S3-REV-QUAL) in parallel; this reviewer must remain a leaf and performed the single canonical axis in-context. Recorded as inapplicable, not executed.
+5. Issue-tracker setup / ticket publishing (code-review + to-spec) — inapplicable: no external tracker authority; publication/ready-for-agent labeling conflicts with canonical authority and the review-only write-set (S2-HANDOFF-001 §2.2, §16).
+6. Aggregate — executed: single-axis verdict (this file set), severity-ordered findings, no cross-axis reranking.
+
+to-spec step disposition:
+- Explore repo / domain glossary — executed (repo-wide reads; domain vocabulary per S2-DOMAIN-001).
+- Sketch/verify test seams — executed as verification lens: every task test uses the pre-agreed seams from S2-TEST-001 §5 and the briefs (spot-verified: parseAdmissionRuntimeConfig/admitNext, classifyProviderFailure, observeLinuxProcessIdentity, completeTurn/v2TerminalEmitter, runPromptCommand/AgyPromptFreeDispatchBoundary, assertAdmissionSchemaIntegrity/transaction, buildSession→AgyCliSession.prompt→runInteractivePrompt).
+- Check seams with the user — inapplicable: no user interview under the review-only write-set; seams already fixed by Stage 2/Controller.
+- Write spec + publish to issue tracker + ready-for-agent label — inapplicable: no spec authoring; the spec source is the accepted Scheme + S2-HANDOFF-001 + siblings; publication conflicts with canonical authority and write-set.
+
+Review activity and write-set:
+- Wrote only docs/design/receipts/S3-REV-SPEC/verdict-1.txt and docs/design/receipts/S3-REV-SPEC/method-evidence-1.txt.
+- No edits to implementation, tests, docs, prior task receipts, git index, or refs; no stage/commit/push/tag/deploy/release/install/network/real Provider.
+- One read-only `paseo inspect "$PASEO_AGENT_ID" --json --host 127.0.0.1:6767` identity check executed as mandated by the startup gate (injected status tool unavailable in this session; the gate explicitly authorizes this fallback). Disclosed for symmetry with finding F1; no permissions requested, no mutation.
+- Fresh read-only `npm run validate` executed once at review time (exit 0; 54 files/605 tests; architecture PASS; secret scan PASS) to reproduce receipt evidence.
+
+Startup gate result: no AGENT_MODE_UNAVAILABLE — PASEO_AGENT_ID non-empty, ParentAgentId=79ab5347-5101-4eff-89ed-6a7aa550ae2e (controller), provider/model/thinking/mode matched brief exactly, PendingPermissions=[].
+Baseline gate: HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e; sole parent=78931bff95ecbd9868f9cfa83a281cbbbf1a60d8; index empty; unmerged=0; Scheme and eight Stage 2 artifact hashes live-verified (see verdict-1.txt).

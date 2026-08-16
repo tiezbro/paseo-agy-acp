@@ -1,0 +1,46 @@
+TASK_ID=S3-T14
+RECEIPT=repair-f2-f3-impact-1
+UTC=2026-08-16T06:42:23Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+PARENT=78931bff95ecbd9868f9cfa83a281cbbbf1a60d8
+CONTROLLER_AUTHORIZATION=S3-T14 QUALITY REPAIR F2+F3; authorized recorded CRITICAL/HIGH T14 surface plus minimal ACP Connector/admission/runtime.ts production lifecycle connection required by F2.
+
+COMMANDS:
+1. node .gitnexus/run.cjs impact reapSuspects --repo paseo-agy-acp --direction upstream --file 'Admission Controller/controller.ts' --kind Method --depth 3 --include-tests --limit 60
+   EXIT=0
+   RESULT=target not found in current index; risk UNKNOWN; impactedCount=0
+   DISPOSITION=No new blast radius discovered. The method exists in the current shared worktree but is absent from the stale GitNexus index.
+
+2. node .gitnexus/run.cjs impact AdmissionController --repo paseo-agy-acp --direction upstream --file 'Admission Controller/controller.ts' --kind Class --depth 3 --include-tests --limit 80
+   EXIT=0
+   RESULT=risk HIGH; direct=17; processes_affected=2; modules_affected=3
+   AFFECTED_PROCESSES=createAdmissionRuntime; composeAcpRuntime
+   KEY_OUTPUT={"risk":"HIGH","impactedCount":28,"summary":{"direct":17,"processes_affected":2,"modules_affected":3}}
+
+3. node .gitnexus/run.cjs impact createAdmissionRuntime --repo paseo-agy-acp --direction upstream --file 'ACP Connector/admission/runtime.ts' --kind Function --depth 3 --include-tests --limit 80
+   EXIT=0
+   RESULT=risk LOW; direct=2; processes_affected=1; modules_affected=2
+   AFFECTED_PROCESSES=composeAcpRuntime
+   KEY_OUTPUT={"risk":"LOW","impactedCount":5,"summary":{"direct":2,"processes_affected":1,"modules_affected":2}}
+
+4. node .gitnexus/run.cjs impact AdmissionRuntime --repo paseo-agy-acp --direction upstream --file 'ACP Connector/admission/runtime.ts' --kind Class --depth 3 --include-tests --limit 80
+   EXIT=0
+   RESULT=risk HIGH; direct=3; processes_affected=2; modules_affected=3
+   AFFECTED_PROCESSES=createAdmissionRuntime; composeAcpRuntime
+   KEY_OUTPUT={"risk":"HIGH","impactedCount":10,"summary":{"direct":3,"processes_affected":2,"modules_affected":3}}
+
+5. node .gitnexus/run.cjs impact close --repo paseo-agy-acp --direction upstream --file 'ACP Connector/admission/runtime.ts' --kind Method --depth 3 --include-tests --limit 80
+   EXIT=0
+   RESULT=risk LOW; direct=3; processes_affected=1; modules_affected=2
+   AFFECTED_PROCESSES=composeAcpRuntime
+   KEY_OUTPUT={"risk":"LOW","impactedCount":6,"summary":{"direct":3,"processes_affected":1,"modules_affected":2}}
+
+6. node .gitnexus/run.cjs impact makeExpiredActiveLease --repo paseo-agy-acp --direction upstream --file 'tests/admission-reaper.test.ts' --kind Function --depth 3 --include-tests --limit 40
+   EXIT=0
+   RESULT=target not found; risk UNKNOWN; impactedCount=0
+   DISPOSITION=Test helper is not indexed as a GitNexus symbol.
+
+STOP_CHECK:
+No new HIGH/CRITICAL target outside the Controller-authorized S3-T14 surface
+and minimal ACP Connector/admission/runtime.ts lifecycle connection was found.
+Proceeding is within the explicit repair authorization.

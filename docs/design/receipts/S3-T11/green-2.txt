@@ -1,0 +1,30 @@
+TASK_ID: S3-T11
+Receipt: green-2
+UTC: 2026-08-16T01:28:48Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Assertions:
+- stale TurnDispatchBoundary.beforePromptWrite throws before any prompt write after a concurrent terminal transition.
+- TurnDispatchBoundary.afterPromptWrite deletes payload, sets request/lease active, and rejects a second afterPromptWrite.
+- AgyPromptFreeDispatchBoundary.run returns the same cached active result on a second call with spawns=1 and writes=1.
+
+Command:
+rtk npm test -- tests/admission-dispatch-faultpoints.test.ts
+
+Exit code: 0
+
+Key output:
+RUN  v4.1.10 /home/tiezbro/projects/paseo-agy-acp
+Test Files  1 passed (1)
+Tests  3 passed (3)
+
+Impact:
+- recordProcessIdentity upstream LOW; direct caller TurnDispatchBoundary.prepare; affected process runPromptCommand.
+- AdmissionController.commitDispatchIntent upstream LOW; direct caller TurnDispatchBoundary.prepare; affected process runPromptCommand.
+- TurnDispatchBoundary upstream LOW; direct caller AdmissionTurnCoordinator.admit; affected process admit.
+- AgyPromptFreeDispatchBoundary.commitDispatchIntent upstream LOW; direct caller runOnce; affected process runOnce.
+
+Method evidence:
+- Tested only the pre-agreed seams recordProcessIdentity, commitDispatchIntent, TurnDispatchBoundary, AgyPromptFreeDispatchBoundary, and faultInjection.
+- Production source write set is empty; only tests/admission-dispatch-faultpoints.test.ts and docs/design/receipts/S3-T11/ were written.
+- RED step inapplicable by accepted S2-TEST-001 M6 / S3-T11 contract.

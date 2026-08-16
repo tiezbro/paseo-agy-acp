@@ -1,0 +1,35 @@
+UTC: 2026-08-16T06:03:41Z
+Task: S3-T21 bilingual documentation / old-authority closeout
+Phase: METHOD
+
+Paseo identity:
+- PASEO_AGENT_ID: c5f02b85-3315-4bb1-854a-256c6218bb8f
+- Parent: 79ab5347-5101-4eff-89ed-6a7aa550ae2e (`paseo.parent-agent-id`)
+- Runtime: codex/gpt-5.5
+- Thinking: xhigh
+- Mode: full-access
+- PendingPermissions: []
+- Leaf worker: no delegation performed.
+
+Authority and baseline readback:
+- Branch: main
+- HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+- Sole parent: 78931bff95ecbd9868f9cfa83a281cbbbf1a60d8
+- Index before write: clean (`git diff --cached --name-status` produced no output)
+- Shared worktree predecessor/sibling dirty paths preserved.
+
+Skill conformance:
+- Selected primary skill: writing-for-agents
+- Installed path: /home/tiezbro/.agents/skills/writing-for-agents/SKILL.md
+- Source identity: mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df
+- Local SHA-256: a842323e664e5af104eac5c97ad22fda929ebeb62d81c501161ac1f6f482db58
+- Required read: completed before task edits.
+- Applied rules: context pointers moved from old design to Scheme/Stage 2 artifacts; information hierarchy demoted the old design to historical input; related authority/disposition details co-located; completion criteria encoded in tests/closeout-docs-contract.test.ts; stale authority prose pruned.
+
+GitNexus impact:
+- No application source symbol was edited.
+- Symbol impact before edit: inapplicable for documentation and a documentation-contract test.
+- Required detect-changes still executed after validation; see validation-1.txt.
+
+Forbidden surfaces:
+- No stage, commit, push, tag, deploy, release, install, real Provider access, production runtime access, cleanup, reset, stash, or sibling repair performed.

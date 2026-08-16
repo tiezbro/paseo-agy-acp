@@ -1,0 +1,47 @@
+TASK_ID: S3-T12
+RECEIPT: typed-blocked-green-1
+UTC: 2026-08-16T03:41:49Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Blocker:
+WRITE_SET_EXPANSION_REQUIRED
+
+Reason:
+The authorized GREEN write-set excludes `ACP Connector/admission/turn-coordinator.ts`.
+Current live source defines the production Admission boundary implementation there:
+`TurnDispatchBoundary implements AgyAdmissionDispatchBoundary`.
+
+The S3-T12 GREEN contract requires production `runPromptCommand` to map:
+- `accepted` -> `markActive`
+- `blocked` / `dispatch_ambiguous` -> `markDispatchAmbiguous`
+
+Within the current allowed files, `ACP Connector/agy/cli.ts` can call
+`AgyPromptFreeDispatchBoundary.run`, and `tests/admission-production-dispatch.test.ts`
+can prove tri-state behavior with a fake boundary. But the real production
+`TurnDispatchBoundary` has only:
+- `prepare(processId)`
+- `beforePromptWrite()`
+- `afterPromptWrite()`
+
+It does not expose a method that can durably call
+`AdmissionController.markDispatchAmbiguous(...)`. Without changing
+`ACP Connector/admission/turn-coordinator.ts`, `blocked` or
+`dispatch_ambiguous` can only throw back into coordinator failure handling, which
+currently settles pre-prompt failures as `failed`/`abandonBeforePrompt`, not as
+`dispatch_ambiguous`.
+
+Live evidence:
+- `ACP Connector/agy/cli.ts`: `AgyAdmissionDispatchBoundary` interface only has
+  `prepare`, `beforePromptWrite`, and `afterPromptWrite`.
+- `ACP Connector/admission/turn-coordinator.ts`: `TurnDispatchBoundary.afterPromptWrite`
+  is the only current `markActive` bridge; no `markDispatchAmbiguous` bridge exists.
+- `Admission Controller/controller.ts` does have `markDispatchAmbiguous`, but that
+  controller is private to `TurnDispatchBoundary` and cannot be reached from the
+  authorized S3-T12 files.
+
+Conclusion:
+No production GREEN was written. To complete the requested true production
+mapping without faking the seam, Controller must either authorize
+`ACP Connector/admission/turn-coordinator.ts` for the minimal boundary method, or
+provide an alternate already-accepted seam that exposes
+`markDispatchAmbiguous` from the production Admission boundary.

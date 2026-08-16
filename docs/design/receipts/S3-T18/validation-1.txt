@@ -1,0 +1,36 @@
+TASK_ID=S3-T18
+RECEIPT=validation-1
+UTC=2026-08-16T02:06:06Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+COMMAND=rtk npm test -- tests/admission-schema-v2.test.ts tests/admission-schema.test.ts tests/admission-schema-contract.test.ts tests/admission-sqlite-contention.test.ts tests/admission-controller.test.ts tests/admission-turn-coordinator.test.ts tests/admission-fault-security-matrix.test.ts tests/admission-startup-recovery.test.ts tests/sqlite-session-store.test.ts tests/acp-runtime-wiring.test.ts
+EXIT_CODE=1
+KEY_OUTPUT:
+Test Files  6 failed | 4 passed (10)
+Tests  15 failed | 22 passed (37)
+FAIL tests/admission-schema.test.ts > AdmissionController schema v1 > contains only the shared queue tables and the migration ledger
+FAIL legacy parentId callers in tests/admission-controller.test.ts, tests/admission-fault-security-matrix.test.ts, tests/admission-sqlite-contention.test.ts, tests/admission-startup-recovery.test.ts, tests/admission-turn-coordinator.test.ts
+Errors are request metadata parentId is not accepted / admission parentId is not accepted.
+
+COMMAND=rtk npm test -- tests/acp-server.test.ts tests/acp-runtime-wiring.test.ts tests/queue-steer.test.ts tests/cli.test.ts
+EXIT_CODE=0
+KEY_OUTPUT:
+Test Files  4 passed (4)
+Tests  168 passed | 1 skipped (169)
+
+COMMAND=npm run validate:architecture
+EXIT_CODE=0
+KEY_OUTPUT:
+architecture boundaries: PASS
+
+COMMAND=npm run validate
+EXIT_CODE=1
+KEY_OUTPUT:
+Test Files  14 failed | 29 passed (43)
+Tests  37 failed | 536 passed | 2 skipped (575)
+FAIL tests/admission-schema.test.ts v1 table-list assertion after v2 tables were added.
+FAIL legacy/parallel tests still passing parentId: admission-503-classifier, admission-controller, admission-dispatch-faultpoints, admission-fault-security-matrix, admission-process-evidence-contract, admission-race-contract, admission-scheduling-contract, admission-seats-contract, admission-sqlite-contention, admission-startup-recovery, admission-timeout-contract, admission-turn-coordinator.
+FAIL tests/admission-process.test.ts child exited before held after child process hit the same updated API boundary.
+
+BLOCKER:
+S3-T18 intentionally rejects parentId as a v2 alias and creates policy_state/queued_owner_instances. The failing tests are outside S3-T18 ALLOWED_WRITE_SET and still assert v1 table/API spellings or belong to parallel reservations. They were executed and recorded but not edited.

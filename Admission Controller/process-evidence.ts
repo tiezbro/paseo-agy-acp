@@ -88,6 +88,7 @@ export interface LinuxPreDispatchTerminationProof extends LinuxPreDispatchProofP
 
 /** A conservative observation of a persisted process identity. */
 export type LinuxProcessIdentityState = "same" | "gone" | "pid_reused" | "unverifiable";
+export type LinuxProcessGroupState = "empty" | "present" | "unverifiable";
 
 export class ProcessEvidenceError extends Error {
   readonly kind: "process_gone" | "unverifiable";
@@ -254,6 +255,48 @@ export function observeLinuxProcessIdentity(
   } catch (error) {
     return error instanceof ProcessEvidenceError && error.kind === "process_gone" ? "gone" : "unverifiable";
   }
+}
+
+/**
+ * Inspect process-group residue without accepting PID existence as identity.
+ * Only a fully enumerable process list with no matching boot/ns/pgrp/session
+ * residue is empty; malformed rows and unreadable procfs fail closed.
+ */
+export function inspectLinuxProcessGroup(
+  expected: unknown,
+  processIds: readonly number[],
+  readers: LinuxProcessEvidenceReaders = nativeLinuxProcessEvidenceReaders
+): LinuxProcessGroupState {
+  const normalizedExpected = normalizeIdentity(expected);
+  if (normalizedExpected === null || !Array.isArray(processIds)) return "unverifiable";
+
+  let unverifiable = false;
+  for (const pid of processIds) {
+    if (!isPositiveSafeInteger(pid) || pid > MAX_PID) {
+      unverifiable = true;
+      continue;
+    }
+
+    let observed: LinuxProcessIdentity;
+    try {
+      observed = captureLinuxProcessIdentity(pid, readers);
+    } catch (error) {
+      if (error instanceof ProcessEvidenceError && error.kind === "process_gone") continue;
+      unverifiable = true;
+      continue;
+    }
+
+    if (
+      observed.bootId === normalizedExpected.bootId &&
+      observed.pidNamespaceInode === normalizedExpected.pidNamespaceInode &&
+      observed.pgrp === normalizedExpected.pgrp &&
+      observed.session === normalizedExpected.session
+    ) {
+      return "present";
+    }
+  }
+
+  return unverifiable ? "unverifiable" : "empty";
 }
 
 /**

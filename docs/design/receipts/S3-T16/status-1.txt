@@ -1,0 +1,37 @@
+TASK_ID: S3-T16
+PHASE: final status readback
+UTC: 2026-08-16T05:48:41Z
+
+Git baseline:
+- branch=main
+- HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+- parent=78931bff95ecbd9868f9cfa83a281cbbbf1a60d8
+- index clean: yes
+
+S3-T16 changed paths:
+- ACP Connector/acp/session/prompt.ts
+- tests/admission-typed-terminal.test.ts
+- docs/design/receipts/S3-T16/
+
+Shared dirty worktree preserved:
+- Existing Stage 3 tracked modifications remain in sibling-owned paths, including agent.ts, setup.ts, startup-recovery.ts, turn-coordinator.ts, cli.ts, Admission Controller files, and existing admission tests.
+- Existing untracked sibling receipt/test directories remain untouched.
+
+Receipt inventory:
+- affected.txt
+- architecture.txt
+- authority-1.txt
+- broad.txt
+- detect.txt
+- diff-check.txt
+- focused.txt
+- green-1.txt
+- green-2.txt
+- green-3.txt
+- high-expanded.txt
+- impact-1.txt
+- method-1.txt
+- red-1.txt
+- red-2.txt
+- status-1.txt
+- typed-blocked.txt

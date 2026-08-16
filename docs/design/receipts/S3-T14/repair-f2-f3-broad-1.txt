@@ -1,0 +1,17 @@
+TASK_ID=S3-T14
+RECEIPT=repair-f2-f3-broad-1
+UTC=2026-08-16T06:50:02Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+COMMAND=rtk npm run validate
+EXIT_CODE=0
+
+KEY_OUTPUT:
+Test Files 54 passed
+Tests 607 passed, 2 skipped
+architecture boundaries: PASS
+secret scan: PASS, 158 files checked
+
+BROAD_DISPOSITION:
+Full validation passed. No external S3-T12 or S3-T19 blocker was observed during
+this broad run.

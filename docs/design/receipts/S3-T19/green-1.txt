@@ -1,0 +1,15 @@
+UTC: 2026-08-16T05:18:25Z
+Task: S3-T19 green-1 Pipe+EOF normal terminal, no hang.
+Command: rtk npm test -- tests/admission-native-process.test.ts
+Exit code: 0
+
+Key output:
+> npm run typecheck && npm run build && vitest run tests/admission-native-process.test.ts
+> tsc -p tsconfig.test.json
+> node scripts/clean-dist.mjs && tsc
+Test Files  1 passed (1)
+Tests  4 passed (4)
+
+Behavior covered:
+- AgyCliSession.prompt drives fake native stdin Pipe+EOF through AdmissionTurnCoordinator.
+- One prompt write, one EOF, normal exit 0, request completed, payload/lease/identity rows released.

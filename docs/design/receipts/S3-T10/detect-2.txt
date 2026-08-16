@@ -1,0 +1,27 @@
+TASK_ID=S3-T10
+PHASE=GITNEXUS_DETECT_CHANGES_REVALIDATION
+UTC=2026-08-16T03:22:54Z
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+COMMAND
+node .gitnexus/run.cjs detect-changes --repo paseo-agy-acp
+
+EXIT
+0
+
+KEY_OUTPUT
+Changes: 12 files, 7 symbols
+Affected processes: 0
+Risk level: low
+
+CHANGED_SYMBOLS_REPORTED
+- enqueue -> tests/admission-controller.test.ts
+- starting -> tests/admission-fault-security-matrix.test.ts
+- runWorker -> tests/admission-process.test.ts
+- waitForLine -> tests/admission-process.test.ts
+- dispatch -> tests/admission-startup-recovery.test.ts
+- coordinator -> tests/admission-turn-coordinator.test.ts
+- enqueueHolder -> tests/admission-turn-coordinator.test.ts
+
+LIMITS
+This is a validation-only revalidation receipt. Earlier detect-1.txt records that GitNexus does not include untracked receipt/test files in this output and that the shared dirty worktree includes non-S3-T10 files from other Stage 3 tasks.

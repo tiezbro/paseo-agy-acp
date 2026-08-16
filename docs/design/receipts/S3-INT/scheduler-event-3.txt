@@ -1,0 +1,87 @@
+TASK_ID=S3-INT-CONTROLLER-SCHEDULER-EVENT
+EVENT_SEQUENCE=3
+STAGE=3
+UTC=2026-08-16T07:43:44Z
+CONTROLLER_ID=79ab5347-5101-4eff-89ed-6a7aa550ae2e
+EVENT=quality-round-3-terminal-dual-review-approved-resource-release
+
+BASELINE
+CWD=/home/tiezbro/projects/paseo-agy-acp
+BRANCH=main
+HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
+SOLE_PARENT=78931bff95ecbd9868f9cfa83a281cbbbf1a60d8
+INDEX_STAGED_PATHS=0
+UNMERGED_ENTRIES=0
+
+QUALITY_TERMINAL
+TASK_ID=S3-REV-QUAL-R3
+AGENT_ID=228c3eea-cb99-436e-b55f-acc8a416bd09
+TERMINAL_UPDATED_AT=2026-08-16T07:42:09.564Z
+CONTROLLER_READBACK_AT=2026-08-16T07:43:44Z
+TERMINAL_TO_READBACK_LATENCY_MS=94436
+ACTUAL_PROVIDER=opencode
+ACTUAL_MODEL=opencode/deepseek-v4-flash-free
+ACTUAL_THINKING=max
+ACTUAL_MODE=build
+PENDING_PERMISSIONS=[]
+VERDICT=approved
+VERDICT_RECEIPT=docs/design/receipts/S3-REV-QUAL/verdict-3.txt
+VERDICT_SHA256=0ed1344b1c620f7a0475a28203240b21ab29774751e2212daf5be173f553e20e
+METHOD_RECEIPT=docs/design/receipts/S3-REV-QUAL/method-evidence-3.txt
+METHOD_SHA256=279e5df36b11adadb01f8da69a4deded0279e0b1cce5185bc4164cd3a1a60fe2
+
+FRONTIER_RECOMPUTE
+READY_FRONTIER=[S3-INT-PHASE-CODE]
+RUNNING_SET=[]
+REVIEW_SET=[]
+INTEGRATION_SET=[S3-INT-PHASE-CODE]
+BLOCKER_SET=[T08:SOURCE_FIELD_GAP+REAL_PROVIDER_REQUIRED+SOURCE_IDENTITY_UNKNOWN]
+TASKS_LAUNCHED=[]
+TASKS_DEFERRED=[S3-INT-PHASE-CODE]
+DEFER_RECORD_TASK_ID=S3-INT-PHASE-CODE
+READY_AT=2026-08-16T07:43:44Z
+NOT_LAUNCHED_REASON=mandatory fresh Single Integrator contract construction, provider health routing gate, and completed-agent resource release
+CONFLICTING_TASK=none
+CONFLICTING_BOUNDARY=role separation plus exclusive npm/Vitest/PID acceptance resource
+NEXT_REEVALUATION_TRIGGER=completed Stage 3 agents archived and fresh Single Integrator created
+
+RESOURCE_RELEASE_SET
+RELEASE_ACTION=soft archive through official Paseo lifecycle; only idle/finished Stage 3 children of this Controller
+RELEASE_COUNT=29
+RELEASE_TARGETS=
+- 228c3eea-cb99-436e-b55f-acc8a416bd09 S3-REV-QUAL-R3
+- e4816ee7-3bed-4200-bd92-66a122c2e51c S3-REV-QUAL-R2
+- 3617f14a-ad47-438e-bb6a-e3d8b6a90dd0 S3-REV-SPEC-R2
+- d4445fd6-01b9-4fe2-bd87-8586541217ec S3-T12
+- 9ab964e5-77ee-4c17-befb-4cc32777d757 S3-PARALLELISM-REPAIR
+- 35200a5f-2742-49c7-908f-18bb4f13517a S3-REV-QUAL
+- 0c8f7428-17f9-4f46-befd-f6b8f42b7015 S3-REV-SPEC
+- d8830e6d-9186-44f6-9c7c-452069ecd36f S3-T20
+- c5f02b85-3315-4bb1-854a-256c6218bb8f S3-T21
+- 8bd1a653-53ca-4037-b3ec-7485e3596c0d S3-T16
+- d1cb23f0-cc0a-4321-bfc6-3670339f0a07 S3-T19
+- 633d5185-025e-4c3b-9acd-4a6133f1ddd0 S3-T06
+- 4ffd2e35-0729-4176-8a57-438ff14920b2 S3-T12-PREFLIGHT
+- 62072420-094a-4ec2-b0dc-18e5c3f19b40 S3-T10
+- dde7cefb-327a-4431-983d-95af96a52973 S3-T03
+- fc0dc85b-6cda-41e2-8bf6-c40a3c2f75c3 S3-T15
+- 7284225c-3936-4b25-a719-7ea6dbe34941 S3-T18
+- 0340ad6b-1096-413b-81c7-d1b067ee3ac4 S3-T18R
+- 54a0d60e-9785-4452-a1c9-5ffbcb50b8e4 S3-T11
+- 3d2c7c08-8296-426f-ab39-0aee60698cf8 S3-T04
+- 2477a75f-693a-4baa-bb19-4555d8e2eab7 S3-T08
+- a89e4879-24da-4368-955d-6504eaeda4dc S3-T17
+- 2b6eeeec-15bc-4fe0-9510-54c87fe1a008 S3-T13
+- 64bf49d5-d8fa-4d5a-ae99-e09aa83313c2 S3-T07
+- d5d49e2f-6545-4e28-b137-72d860f26256 S3-T05
+- e02c5fb5-e22b-4b2b-aec5-64d60439dce7 S3-T01
+- cc392729-f873-41db-87c9-c182d7e8da59 S3-T14
+- 8d26ca6d-2a6d-4f15-80a4-b786d620eee1 S3-T09
+- 56541092-979d-4fd7-9104-33250d05e9cb S3-T02
+
+SCOPE_AND_NON_CLAIMS
+- The release set excludes the Controller and every running/non-Stage-3 agent.
+- Archive is a Paseo lifecycle/resource action, not deletion of repository files
+  or evidence and not an integration/installation/production/release action.
+- S3-INT-PHASE-CODE remains unlaunched until the release readback and integrator
+  route gate complete.

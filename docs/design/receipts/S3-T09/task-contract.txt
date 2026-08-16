@@ -1,0 +1,35 @@
+TASK_ID=S3-T09
+utc=2026-08-16T02:40:37Z
+
+gate_conformance:
+- child identity: PASS; PASEO_AGENT_ID=8d26ca6d-2a6d-4f15-80a4-b786d620eee1; ParentAgentId=79ab5347-5101-4eff-89ed-6a7aa550ae2e.
+- provider/model/thinking/mode/PendingPermissions: PASS; codex/gpt-5.5/xhigh/full-access/PendingPermissions=[].
+- cwd/branch/HEAD/sole parent: PASS; cwd=/home/tiezbro/projects/paseo-agy-acp; branch=main; HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e; parent=78931bff95ecbd9868f9cfa83a281cbbbf1a60d8.
+- index clean: PASS; git diff --cached --name-only empty.
+- tracked worktree clean: NOT APPLICABLE under current Controller/user allowance; accepted predecessor T18/T18R and parallel task reservations are present.
+
+authority_conformance:
+- Prompt sections read: docs/design/v2.0.0.0-stage3-execution-prompt.md sections 1, 2.1-2.5, 4, 5, 6.0, 6.9.
+- S2-RECON-ACP-001 F3 read: docs/design/v2.0.0.0-stage2-acp-source-map.md section 4.5 and F3 closure references.
+- S2-ARCH-001 section 17-8 read: docs/design/v2.0.0.0-stage2-architecture.md.
+- S2-TEST-001 G1/M5 read: docs/design/v2.0.0.0-stage2-test-contracts.md section 5.5.
+- Authority SHA-256 and Stage 2 blob table: PASS, values matched Prompt section 2.1.
+
+changed_paths:
+- ACP Connector/acp/agent.ts
+- tests/admission-auth-gate.test.ts
+- docs/design/receipts/S3-T09/red-1.txt
+- docs/design/receipts/S3-T09/impact-1.txt
+- docs/design/receipts/S3-T09/green-1.txt
+- docs/design/receipts/S3-T09/affected-1.txt
+- docs/design/receipts/S3-T09/architecture.txt
+- docs/design/receipts/S3-T09/broad-validate.txt
+- docs/design/receipts/S3-T09/detect-changes.txt
+- docs/design/receipts/S3-T09/method-evidence.txt
+- docs/design/receipts/S3-T09/task-contract.txt
+
+business_conformance:
+- enabled authenticate/loginAuth/logout/logoutAuth fail closed with typed RequestError invalidRequest code=-32600, data.code=admission_auth_disabled.
+- disabled legacy authenticate/loginAuth/logout/logoutAuth remains successful with logged-in fake backend and logout PTY behavior unchanged.
+- no production files outside S3-T09 write set edited by this Worker.
+- no stage/commit/push/delegation/install/network/real Provider/production 6767 used.

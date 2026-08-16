@@ -1,0 +1,33 @@
+TASK_ID: S3-T01
+EVIDENCE: green-1 policy seat contract
+UTC: 2026-08-16T01:16:16Z
+HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
+
+Command:
+rtk npm test -- tests/admission-seats-contract.test.ts
+
+Exit code: 0
+
+Key output:
+> npm run typecheck && npm run build && vitest run tests/admission-seats-contract.test.ts
+ Test Files  1 passed (1)
+      Tests  3 passed (3)
+   Duration  404ms (transform 91ms, setup 0ms, import 123ms, tests 153ms, environment 0ms)
+
+Covered assertions:
+- parseAdmissionRuntimeConfig defaults shared Antigravity seats to 3.
+- parseAdmissionRuntimeConfig accepts explicit AGY_ACP_ADMISSION_MAX_ACTIVE_TURNS=3.
+- parseAdmissionRuntimeConfig fails closed for env values 2, 4, 5, 0, -1, and 1.5.
+- AdmissionController construction fails closed for direct policy maxActiveTurns values 2, 4, 5, 0, -1, and 1.5.
+
+Impact evidence:
+- parseAdmissionRuntimeConfig upstream impact: HIGH; direct callers=3; affected processes=2.
+- Direct callers recorded before write: composeAcpRuntime, createAdmissionRuntime, tests/admission-runtime-config.test.ts.
+- Affected processes recorded before write: createAdmissionRuntime, composeAcpRuntime.
+- Controller accepted the HIGH impact gate for S3-T01 because this task does not modify the production symbol.
+
+Method evidence:
+- Selected seam: parseAdmissionRuntimeConfig + admitNext.
+- tdd: executed for seam-disciplined public behavior assertions.
+- tdd RED step: inapplicable for S3-T01 green regression/test-evidence.
+- implement: applied only as bounded execution guidance; production implementation and commit steps inapplicable by task contract.
