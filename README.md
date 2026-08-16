@@ -5,7 +5,7 @@
 **Paseo × Antigravity — ACP Adapter**
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](./LICENSE)
-[![Version](https://img.shields.io/badge/version-1.0.0.4-blue?style=flat-square)](./package.json)
+[![Version](https://img.shields.io/badge/version-2.0.0.0-blue?style=flat-square)](./package.json)
 [![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen?style=flat-square)](#)
 [![ACP](https://img.shields.io/badge/ACP-v1%20%2B%20draft%20v2-8A2BE2?style=flat-square)](https://agentclientprotocol.com)
 
@@ -65,7 +65,7 @@ contributors. All credit for the original ACP adapter architecture belongs to th
 
 → [Full technical detail](./docs/PASEO_LOCAL_CHANGES.md)
 
-## Admission Controller Stage 3 Status
+## Admission Controller v2.0.0.0 Status
 
 Current authority is the confirmed Scheme plus accepted Stage 2 artifacts:
 
@@ -130,6 +130,8 @@ before the one-shot stdin write; ambiguous or blocked writes become durable
 terminal states instead of hidden retries. Confirmed provider terminal
 settlement releases the seat immediately. Closing a session cancels queued work
 while an already running turn follows the existing connector cancellation path.
+On a fresh Antigravity PTY, the connector waits for authentication and model
+redraws to settle before performing that single fenced write.
 
 The admitted turn still uses the existing `AgyCliSession.prompt`,
 conversation SQLite, `StreamPoller`, `Translator`, ACP permission handling,
@@ -138,9 +140,13 @@ path, outbox, ACK protocol, terminal replay, shadow comparison, custom request
 identity, or manual requeue API. Official `session/load` and
 `session/resume` history replay remain ACP Connector responsibilities.
 
-This source work has not installed or switched a connector, run a real
-Antigravity provider, touched the production Paseo daemon, or performed a
-push, tag, or release.
+The `2.0.0.0` release candidate was built locally, installed from its tarball in
+a fresh prefix, and exercised against a real Antigravity `gemini-3.1-pro` turn
+on an isolated Paseo daemon at `127.0.0.1:6768`. The canary returned
+`STAGE4_ADMISSION_CANARY_OK`, the durable request completed, and its lease was
+released. Existing production `127.0.0.1:6767` connectivity was separately
+confirmed through Agent `81d15e58-d6e7-46c5-aea4-4061da7adbbb`; the active
+production connector was not switched or modified during this validation.
 
 ## What This Fixes
 

@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import type { SessionUpdate } from "@agentclientprotocol/sdk";
@@ -30,9 +30,60 @@ afterEach(() => {
 });
 
 describe("S3-T10 admission permission chain", () => {
+  it("waits for fresh interactive PTY startup redraws to settle before the admitted prompt write", async () => {
+    const workspace = tempDir("workspace");
+    const conversations = tempDir("conversations");
+    const pty = new ScriptedPty(() => {}, true, 250);
+    pty.onBusinessWrite = () => {
+      const db = createConversationDb(conversations, "fresh-ready");
+      insertStep(db, {
+        idx: 1,
+        stepType: 15,
+        status: 3,
+        stepPayload: encodeStepPayload({ agentText: "ready turn done" })
+      });
+      db.close();
+      queueMicrotask(() => pty.emitData("? for shortcuts"));
+    };
+    const session = new AgyCliSession(
+      {
+        ...defaultConfig(workspace, conversations),
+        interactivePermissions: true
+      },
+      unusedPrintSpawn,
+      ptyFactory(pty)
+    );
+
+    try {
+      const boundary = new RecordingBoundary();
+      const outcome = await session.prompt(
+        "wait for ready",
+        async () => {},
+        async () => {
+          throw new Error("ready-only turn should not request permission");
+        },
+        undefined,
+        undefined,
+        boundary
+      );
+
+      expect(outcome).toEqual({ stopReason: "end_turn" });
+      expect(pty.businessWrites).toEqual(["\x1b[200~wait for ready\x1b[201~\r"]);
+      expect(boundary.events).toEqual([
+        "prepare:12345",
+        "beforePromptWrite",
+        "afterPromptWrite"
+      ]);
+    } finally {
+      await session.close().catch(() => {});
+    }
+  });
+
   it("builds an enabled non-skip session that reaches interactive permissions before dispatch fencing", async () => {
     const workspace = tempDir("workspace");
     const conversations = tempDir("conversations");
+    const agyBinary = path.join(workspace, "agy");
+    writeFileSync(agyBinary, "#!/bin/sh\nprintf '%s\\n' '1.1.13'\n", { mode: 0o700 });
     const pty = new ScriptedPty(() => {
       const db = createConversationDb(conversations, "permission-chain");
       insertStep(db, pendingPermissionStep());
@@ -42,7 +93,7 @@ describe("S3-T10 admission permission chain", () => {
 
     try {
       session = await buildSession(workspace, [], null, {
-        env: { NODE_ENV: "test" },
+        env: { ...process.env, NODE_ENV: "test", AGY_BIN: agyBinary },
         argv: ["--mode", "accept-edits"],
         backend: new AgyCliBackend(unusedPrintSpawn, ptyFactory(pty)),
         getModelOptions: async () => MODEL_LIST,
@@ -50,6 +101,7 @@ describe("S3-T10 admission permission chain", () => {
         admissionEnabled: true
       });
       session.sessionId = "permission-session";
+      session.agy.config.printTimeout = "1s";
       const boundary = new RecordingBoundary();
       let permissionRequests = 0;
 
@@ -237,16 +289,32 @@ class ScriptedPty implements PtyProcess {
   onBusinessWrite: ((data: string) => void) | undefined;
   private readonly dataListeners: Array<(data: string) => void> = [];
   private readonly exitListeners: Array<(event: { exitCode: number }) => void> = [];
+  private ready = false;
 
-  constructor(private readonly onStart: () => void) {}
+  constructor(
+    private readonly onStart: () => void,
+    private readonly ignoreBusinessUntilReady = false,
+    private readonly startupReadyDelayMs = 0
+  ) {}
 
   start(): void {
     this.onStart();
-    queueMicrotask(() => this.emitData("? for shortcuts\nYes, and always allow"));
+    queueMicrotask(() => {
+      if (this.startupReadyDelayMs === 0) this.ready = true;
+      this.emitData("? for shortcuts\nYes, and always allow");
+    });
+    if (this.startupReadyDelayMs > 0) {
+      setTimeout(() => this.emitData("loading model\n? for shortcuts"), 100);
+      setTimeout(() => {
+        this.ready = true;
+        this.emitData("model ready\n? for shortcuts");
+      }, this.startupReadyDelayMs);
+    }
   }
 
   write(data: string): void {
     if (data.startsWith("\x1b[200~")) {
+      if (this.ignoreBusinessUntilReady && !this.ready) return;
       this.businessWrites.push(data);
       this.onBusinessWrite?.(data);
       return;

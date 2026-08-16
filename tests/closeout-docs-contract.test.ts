@@ -30,7 +30,7 @@ function missingTargets(markdown: string, targets: string[]): string[] {
   return targets.filter((target) => !links.includes(target));
 }
 
-describe("Stage 3 closeout documentation contract", () => {
+describe("v2.0.0.0 closeout documentation contract", () => {
   it("moves README authority pointers from the old design to the Scheme and accepted Stage 2 artifacts", () => {
     const failures: string[] = [];
 
@@ -52,7 +52,7 @@ describe("Stage 3 closeout documentation contract", () => {
     expect(failures).toEqual([]);
   });
 
-  it("records the final Stage 3 v2 behavior in CHANGELOG without stale schema/admission claims", () => {
+  it("records the final v2 behavior and Stage 4 release validation without stale claims", () => {
     const changelog = readDoc("CHANGELOG.md");
     const failures: string[] = [];
 
@@ -79,16 +79,19 @@ describe("Stage 3 closeout documentation contract", () => {
       "typed terminal",
       "queue_timeout",
       "provider_capacity",
-      "npm run validate",
-      "docs/design/receipts/S3-T21/"
+      "npm test -- --maxWorkers=1",
+      "docs/design/receipts/S3-T21/",
+      "local `2.0.0.0` tarball",
+      "127.0.0.1:6768",
+      "STAGE4_ADMISSION_CANARY_OK"
     ]) {
       if (!changelog.includes(requiredFact)) {
         failures.push(`CHANGELOG does not record ${requiredFact}`);
       }
     }
 
-    if (!/No install, connector switch, real Provider run, production `127\.0\.0\.1:6767` access, push, tag, or release was performed\./.test(changelog)) {
-      failures.push("CHANGELOG does not preserve the no-install/provider/production/release boundary");
+    if (!/Production `127\.0\.0\.1:6767` was not switched or mutated\./.test(changelog)) {
+      failures.push("CHANGELOG does not preserve the production connector boundary");
     }
 
     expect(failures).toEqual([]);

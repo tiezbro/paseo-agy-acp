@@ -128,7 +128,11 @@ import { AdmissionTurnCoordinator } from "../admission/turn-coordinator.js";
 import { SQLiteSessionStore } from "./session/sqlite-store.js";
 
 const require = createRequire(import.meta.url);
-const packageJson = require("../../package.json") as { version?: string };
+const packageJson = require(
+  fs.existsSync(new URL("../../package.json", import.meta.url))
+    ? "../../package.json"
+    : "../../../package.json"
+) as { version?: string };
 /** Conversation replays cached per conversation id before LRU eviction. */
 const REPLAY_CACHE_CAPACITY = 32;
 const MODEL_CACHE_TTL_MS = 5 * 60_000;
@@ -786,8 +790,49 @@ export function createDualAcpApp(options: AcpAgentOptions = {}): v2.AgentProtoco
     .withV2(createAcpV2AppForAgent(agent));
 }
 
+function createAdmissionDiscoveryApp(options: AcpAgentOptions): v2.AgentProtocolRouter {
+  const sessionStore: SessionStoreBackend = {
+    async restore() {
+      return null;
+    },
+    async list() {
+      return [];
+    },
+    async persist() {},
+    async delete() {
+      return false;
+    }
+  };
+  const agent = new AcpAgent({
+    ...options,
+    sessionStore,
+    modelCacheEnabled: false
+  });
+  const v1App = v1
+    .agent({ name: "agy-acp" })
+    .onRequest(v1.methods.agent.initialize, (ctx) => agent.initializeV1(ctx.params))
+    .onRequest(v1.methods.agent.session.new, (ctx) => agent.newSessionV1(ctx.params, ctx.client));
+  const v2App = v2
+    .agent({ name: "agy-acp" })
+    .onRequest(v2.methods.agent.initialize, (ctx) => agent.initializeV2(ctx.params))
+    .onRequest(v2.methods.agent.session.new, (ctx) => agent.newSessionV2(ctx.params, ctx.client));
+  return v2.agentProtocolRouter().withV1(v1App).withV2(v2App);
+}
+
+function isAdmissionDiscoveryEnvironment(environment: NodeJS.ProcessEnv): boolean {
+  const enabled = environment.AGY_ACP_ADMISSION_ENABLED;
+  const agentId = environment.PASEO_AGENT_ID;
+  return (
+    (enabled === "1" || enabled === "true") &&
+    (agentId === undefined || agentId.length === 0)
+  );
+}
+
 export function runAcp(options: AcpAgentOptions = {}) {
-  const composition = composeAcpRuntime(options);
+  const discoveryOnly = isAdmissionDiscoveryEnvironment(options.env ?? process.env);
+  const composition = discoveryOnly
+    ? { options, sessionStore: undefined, close() {} }
+    : composeAcpRuntime(options);
   const stdout = (composition.options.stdout ?? process.stdout) as Writable;
   const stdin = (composition.options.stdin ?? process.stdin) as Readable;
   // v1 ndJsonStream is sufficient: framing is shared; the router peeks initialize.
@@ -796,7 +841,10 @@ export function runAcp(options: AcpAgentOptions = {}) {
     Readable.toWeb(stdin) as ReadableStream<Uint8Array>
   );
   try {
-    const connection = createDualAcpApp(composition.options).connect(stream);
+    const app = discoveryOnly
+      ? createAdmissionDiscoveryApp(composition.options)
+      : createDualAcpApp(composition.options);
+    const connection = app.connect(stream);
     const closed = connection.closed;
     if (closed !== undefined) {
       void closed.then(() => composition.close()).catch(() => {

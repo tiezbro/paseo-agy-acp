@@ -60,6 +60,7 @@ import type { ClientElicitationCapability } from "../acp/tool-calls/elicitation.
 export const DEFAULT_AGY_MODEL_LIST_TIMEOUT_MS = 15_000;
 export const DEFAULT_CONVERSATIONS_DIR = path.join(os.homedir(), ".gemini", "antigravity-cli", "conversations");
 const POLL_INTERVAL_MS = 200;
+const MAX_INITIAL_PTY_QUIET_MS = 5_000;
 /** Trailing polls after the process exits, to catch rows flushed right around exit. */
 const TRAILING_POLL_ATTEMPTS = 3;
 const TRAILING_POLL_DELAY_MS = 100;
@@ -329,6 +330,7 @@ export class AgyCliSession {
   #pty: PtyProcess | undefined;
   #ptyExit: Promise<{ exitCode: number }> | undefined;
   #ptyOutput = "";
+  #ptyLastDataAt = 0;
   #ptyIdleMarkerCount = 0;
   #ptyIdleMatchTail = "";
   #ptyPermissionMarkerCount = 0;
@@ -402,11 +404,15 @@ export class AgyCliSession {
 
   /** The request-scoped stdin primitive owns no business write at startup. */
   private commandForPromptFreeProcess(): string[] {
-    return [
+    const command = [
       ...this.commandForPromptValue(undefined, false),
       "--output-format",
       "stream-json"
     ];
+    const print = command.indexOf("--print");
+    command.splice(print, 1);
+    command.push("--print");
+    return command;
   }
 
   /**
@@ -633,6 +639,7 @@ export class AgyCliSession {
       freshPty = true;
       this.#ptyConfig = signature;
       this.#ptyOutput = "";
+      this.#ptyLastDataAt = 0;
       this.#ptyIdleMarkerCount = 0;
       this.#ptyIdleMatchTail = "";
       this.#ptyPermissionMarkerCount = 0;
@@ -642,6 +649,7 @@ export class AgyCliSession {
       const activePty = this.#pty;
       activePty.onData((data) => {
         if (this.#pty !== activePty) return;
+        this.#ptyLastDataAt = Date.now();
         const idleMarker = "for shortcuts";
         const searchable = this.#ptyIdleMatchTail + data;
         let offset = 0;
@@ -665,6 +673,46 @@ export class AgyCliSession {
         this.#ptyOutput = (this.#ptyOutput + data).slice(-16_384);
       });
       this.#ptyExit = new Promise((resolve) => this.#pty!.onExit(resolve));
+    }
+    if (freshPty && admissionBoundary !== undefined) {
+      const readyTimeoutMs = parsePrintTimeoutMs(this.config.printTimeout);
+      const readyDeadline = Date.now() + readyTimeoutMs;
+      const quietPeriodMs = Math.min(
+        MAX_INITIAL_PTY_QUIET_MS,
+        Math.max(POLL_INTERVAL_MS, Math.floor(readyTimeoutMs / 20))
+      );
+      while (
+        this.#ptyIdleMarkerCount === 0 ||
+        Date.now() - this.#ptyLastDataAt < quietPeriodMs
+      ) {
+        if (this.#cancelled) {
+          await this.stopPty();
+          return { stopReason: "cancelled" };
+        }
+        if (Date.now() >= readyDeadline) {
+          await this.stopPty();
+          throw new AgyCliError(
+            `agy interactive turn timed out after ${this.config.printTimeout}; stable initial idle marker was not observed`,
+            [this.config.agyPath],
+            null,
+            this.#ptyOutput
+          );
+        }
+        const exited = await Promise.race([
+          this.#ptyExit!.then(() => true),
+          sleep(POLL_INTERVAL_MS).then(() => false)
+        ]);
+        if (exited) {
+          const output = this.#ptyOutput.trim() || "<no output>";
+          await this.stopPty();
+          throw new AgyCliError(
+            `agy interactive PTY exited unexpectedly: ${output}`,
+            [this.config.agyPath],
+            null,
+            this.#ptyOutput
+          );
+        }
+      }
     }
     if (!freshPty || admissionBoundary !== undefined) {
       const writePrompt = () => {
@@ -732,7 +780,8 @@ export class AgyCliSession {
     // A newly spawned TUI first draws its initial idle prompt, then draws
     // another when the submitted turn finishes. A reused TUI only owes the
     // latter marker.
-    let requiredIdleMarkerCount = this.#ptyIdleMarkerCount + (freshPty ? 2 : 1);
+    let requiredIdleMarkerCount = this.#ptyIdleMarkerCount +
+      (freshPty && admissionBoundary === undefined ? 2 : 1);
     let failed = false;
     try {
       while (true) {

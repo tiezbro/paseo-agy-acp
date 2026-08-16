@@ -5,7 +5,7 @@
 **Paseo × Antigravity — ACP 适配器**
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](./LICENSE)
-[![Version](https://img.shields.io/badge/version-1.0.0.4-blue?style=flat-square)](./package.json)
+[![Version](https://img.shields.io/badge/version-2.0.0.0-blue?style=flat-square)](./package.json)
 [![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen?style=flat-square)](#)
 [![ACP](https://img.shields.io/badge/ACP-v1%20%2B%20draft%20v2-8A2BE2?style=flat-square)](https://agentclientprotocol.com)
 
@@ -64,7 +64,7 @@
 
 → [完整技术细节](./docs/PASEO_LOCAL_CHANGES.md)
 
-## Admission Controller Stage 3 状态
+## Admission Controller v2.0.0.0 状态
 
 当前 authority 是 confirmed Scheme 与已接受的 Stage 2 artifacts：
 
@@ -123,6 +123,7 @@ turn 在一次性 stdin 写入前先经过 production dispatch boundary；无法
 或 blocked 写入会进入持久 terminal state，不做隐藏重试。provider 明确终态后立即
 释放席位。关闭 session 会取消尚未开始的排队请求，已经运行的 turn 继续走原有
 connector 取消路径。
+新启动的 Antigravity PTY 会先等待认证和模型 redraw 稳定，再执行这一次 fenced 写入。
 
 获得席位后的 turn 继续走原有 `AgyCliSession.prompt`、conversation SQLite、
 `StreamPoller`、`Translator`、ACP 权限处理和在线 ACP 通知。Admission 不增加
@@ -130,8 +131,12 @@ connector 取消路径。
 request identity 或手工 requeue API。官方 `session/load` 与 `session/resume`
 历史回放继续由 ACP Connector 负责。
 
-本次源码工作没有安装或切换 connector，没有运行真实 Antigravity provider，没有
-触碰生产 Paseo daemon，也没有 push、tag 或发布。
+`2.0.0.0` release candidate 已完成本地构建，并从 tarball 安装到全新前缀；随后在
+隔离的 `127.0.0.1:6768` Paseo daemon 上运行真实 Antigravity
+`gemini-3.1-pro` turn。canary 精确返回 `STAGE4_ADMISSION_CANARY_OK`，持久请求完成且
+lease 已释放。生产 `127.0.0.1:6767` 连通性另由 Agent
+`81d15e58-d6e7-46c5-aea4-4061da7adbbb` 确认；本次验证没有切换或修改当前生产
+connector。
 
 ## 🔧 解决的问题
 

@@ -9,6 +9,7 @@ import {
   type AgyCliBackend,
   type AgyCliConfig
 } from "../../agy/cli.js";
+import { probeExactAgyBinaryVersion } from "../../agy/launch-spec.js";
 import type { ReplayCache } from "../../agy/db/replay.js";
 import { buildModelCatalog } from "../../agy/model/catalog.js";
 import { applyModelSelection, initialModelSelection, restoredModelSelection } from "../../agy/model/selection.js";
@@ -43,6 +44,12 @@ export async function buildSession(
   });
   if (deps.admissionEnabled === true) {
     config.promptInArgv = false;
+    config.verifiedAgyBinary = probeExactAgyBinaryVersion({
+      executable: config.agyPath,
+      cwd: config.cwd,
+      env: config.env,
+      startupLauncher: config.startupLauncher
+    });
   }
   const modelOptions = await deps.getModelOptions(config);
   const catalog = buildModelCatalog(modelOptions);

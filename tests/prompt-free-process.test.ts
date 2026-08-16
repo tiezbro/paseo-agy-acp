@@ -62,6 +62,7 @@ describe("Agy prompt-free process", () => {
         "stream-json"
       ]);
       expect(calls[0].args.filter((value) => value === "--output-format")).toHaveLength(1);
+      expect(calls[0].args.at(-1)).toBe("--print");
       expect(launch.argv.join("\u0000")).not.toContain(BUSINESS_PROMPT);
       expect(JSON.stringify(launch.environment)).not.toContain(BUSINESS_PROMPT);
       expect(launch.processTitle).not.toContain(BUSINESS_PROMPT);

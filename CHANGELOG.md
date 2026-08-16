@@ -2,7 +2,7 @@
 
 All notable changes to `paseo-agy-acp` are recorded here.
 
-## Unreleased
+## 2.0.0.0 - 2026-08-16
 
 ### Changed
 
@@ -24,6 +24,12 @@ All notable changes to `paseo-agy-acp` are recorded here.
 - Mapped `queue_timeout`, `provider_capacity`/provider failure, cancellation,
   and `recovery_required` through typed terminal behavior instead of treating
   known failures as successful `end_turn`.
+- Made the packaged ACP entry importable from its built public layout and kept
+  provider discovery available before Paseo assigns `PASEO_AGENT_ID` while
+  still rejecting business prompts until Admission composition is complete.
+- Corrected prompt-free argv ordering and made cold-start interactive PTY
+  dispatch wait for Antigravity's authentication/model redraws to settle before
+  the single durable fenced prompt write.
 
 ### Added
 
@@ -42,11 +48,16 @@ All notable changes to `paseo-agy-acp` are recorded here.
 
 ### Verification
 
-- Stage 3 local verification is receipt-bound: `npm test --
-  tests/closeout-docs-contract.test.ts`, `npm run validate:architecture`,
-  `npm run validate`, GitNexus detect-changes, and `git diff --check`.
-- S3-T21 documentation receipts are kept in `docs/design/receipts/S3-T21/`.
-- No install, connector switch, real Provider run, production `127.0.0.1:6767` access, push, tag, or release was performed.
+- Final validation passed with `npm test -- --maxWorkers=1`: 56 test files,
+  611 passed tests, and 2 skipped tests. Architecture boundaries, secret scan,
+  GitNexus detect-changes, and `git diff --check` also passed.
+- Stage 3 documentation receipts remain in `docs/design/receipts/S3-T21/`.
+- A local `2.0.0.0` tarball passed fresh-prefix installation, built public
+  entry import, CLI EOF, and native PTY smoke tests.
+- The installed tarball ran a real Antigravity `gemini-3.1-pro` Admission turn
+  on an isolated `127.0.0.1:6768` daemon. The exact canary response was
+  `STAGE4_ADMISSION_CANARY_OK`; the durable request completed and released its
+  lease. Production `127.0.0.1:6767` was not switched or mutated.
 
 ## 1.0.0.4 - 2026-08-07
 
