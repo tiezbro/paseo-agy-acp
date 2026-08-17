@@ -8,12 +8,16 @@ All notable changes to `paseo-agy-acp` are recorded here.
 
 - Promoted `2.0.0.1` after separating the earlier isolated happy-path canary
   from formal production acceptance and completing both.
-- Documented why Admission Controller v2 exists: official Antigravity CLI
-  issue [#573](https://github.com/google-antigravity/antigravity-cli/issues/573)
-  reports `agy -p` hanging under three or more longer-running neighboring CLI
-  processes. The durable account-wide queue, three shared active seats, one
-  paced start permit, reaping, recovery, soft drain, and typed settlement are
-  the bounded Paseo-side mitigation; no Google endorsement is claimed.
+- Documented why Admission Controller v2 exists: we first encountered
+  concurrency failures while running multiple Paseo agents against the same
+  Antigravity account, then surveyed the wider community to confirm the
+  behavior was not isolated. Antigravity CLI issue
+  [#573](https://github.com/google-antigravity/antigravity-cli/issues/573),
+  which reports `agy -p` hanging under three or more longer-running neighboring
+  CLI processes, is public corroborating evidence rather than the original
+  cause. The durable account-wide queue, three shared active seats, one paced
+  start permit, reaping, recovery, soft drain, and typed settlement are the
+  bounded Paseo-side mitigation; no Google endorsement is claimed.
 - Bound fresh Linux interactive streams to the conversation database opened by
   the exact Antigravity child process, preventing concurrent agents from
   attaching to another process's newly-created conversation.

@@ -69,12 +69,14 @@
 
 ### 为什么需要 v2.0
 
-直接动因来自 Antigravity CLI 官方 issue tracker 中的真实并发故障报告：
+直接动因是我们在同一 Antigravity 账号下运行多个 Paseo Agent 时，实际遇到了并发故障。
+随后我们对整个社区及 Antigravity CLI issue tracker 进行了调研，以确认这不是本项目的
+孤立现象。其中一项有代表性的公开佐证是：
 [`google-antigravity/antigravity-cli#573`](https://github.com/google-antigravity/antigravity-cli/issues/573)。
 该报告记录了 `agy -p` 与 3 个以上长时间运行的 AI CLI 进程并发时无限挂起，而单独、
-两两以及轻量并发运行均能成功。报告环境是 macOS 上的 `agy 1.1.0`；本项目将它作为
-缓解方案的设计输入，但不声称 Google 官方认可本项目，也不声称所有 Antigravity 版本
-都会以完全相同的方式失败。
+两两以及轻量并发运行均能成功，报告环境是 macOS 上的 `agy 1.1.0`。它是支持问题分析
+和缓解方案设计的外部论据，不是 v2.0 的原始起因；本项目也不声称 Google 官方认可
+本项目，或所有 Antigravity 版本都会以完全相同的方式失败。
 
 `v2.0.0.0` 引入 Admission Controller v2，是因为只给单个子进程增加 timeout 仍然不够。
 Paseo 可以从彼此独立的 session 和 connector 进程启动大量 Agent；如果每个进程只限制

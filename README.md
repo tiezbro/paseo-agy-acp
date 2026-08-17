@@ -70,14 +70,17 @@ contributors. All credit for the original ACP adapter architecture belongs to th
 
 ### Why v2.0 exists
 
-The motivation is a real concurrency failure reported in the official
-Antigravity CLI issue tracker:
-[`google-antigravity/antigravity-cli#573`](https://github.com/google-antigravity/antigravity-cli/issues/573).
-The report describes `agy -p` hanging indefinitely when it runs beside three or
-more longer-running AI CLI processes, even though solo, pairwise, and light
-parallel runs succeed. The report was reproduced on `agy 1.1.0` on macOS; it is
-the design input for this mitigation, not a claim that Google has endorsed this
-project or that every Antigravity release fails identically.
+The direct motivation came from concurrency failures we encountered while
+running multiple Paseo agents against the same Antigravity account. We then
+surveyed the wider community and Antigravity CLI issue tracker to determine
+whether the behavior was isolated. A strong public corroborating report is
+[`google-antigravity/antigravity-cli#573`](https://github.com/google-antigravity/antigravity-cli/issues/573),
+which describes `agy -p` hanging indefinitely when it runs beside three or more
+longer-running AI CLI processes, even though solo, pairwise, and light parallel
+runs succeed. The report was reproduced on `agy 1.1.0` on macOS. It is evidence
+supporting the problem analysis and mitigation design, not the original cause
+of v2.0, a claim that Google has endorsed this project, or proof that every
+Antigravity release fails identically.
 
 `v2.0.0.0` introduced Admission Controller v2 because a timeout around each
 child process is not enough. Paseo can launch many agents from independent
