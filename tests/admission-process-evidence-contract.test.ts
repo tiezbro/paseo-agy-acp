@@ -10,6 +10,7 @@ import {
 } from "../Admission Controller/controller.js";
 import {
   captureLinuxProcessIdentity,
+  inspectLinuxProcessGroup,
   observeLinuxProcessIdentity,
   type LinuxProcessEvidenceReaders,
   type LinuxProcessIdentity
@@ -217,5 +218,25 @@ describe("S3-T13 process evidence contract", () => {
       kind: "request_recovery_seat_released",
       toState: "recovery_required"
     });
+  });
+
+  it("skips an unrelated kernel process when its namespace is unreadable", () => {
+    const kernelProcess = Object.freeze({
+      ...CHILD,
+      pid: 1,
+      ppid: 0,
+      pgrp: 0,
+      session: 0,
+      startTimeTicks: "1"
+    });
+    const source = processEvidenceReaders(kernelProcess);
+    const readers: LinuxProcessEvidenceReaders = {
+      readFile: source.readFile,
+      readLink() {
+        throw Object.assign(new Error("permission denied"), { code: "EACCES" });
+      }
+    };
+
+    expect(inspectLinuxProcessGroup(CHILD, [kernelProcess.pid], readers)).toBe("empty");
   });
 });

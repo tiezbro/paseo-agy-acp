@@ -53,13 +53,16 @@ export class AgyStartupLifetimeBindingError extends Error {
  * provide. Version, fingerprint, and transport deliberately are not inputs:
  * they are derived from the opaque binary identity and fixed to PTY here.
  */
-interface RepositoryOwnedPromptFreePtyLaunchInput {
+export interface RepositoryOwnedPromptFreePtyLaunchInput<TProcess> {
+  readonly binary: VerifiedAgyBinary;
   readonly argv: readonly string[];
   readonly environment: Readonly<Record<string, string>>;
   readonly cwd: string;
   readonly processTitle: string;
   readonly temporaryFilePath: string;
   readonly launcherDiagnostics: readonly string[];
+  readonly forbiddenTexts: readonly string[];
+  readonly start: (launch: AgyLaunchSpecification) => TProcess;
 }
 
 interface RegisteredPromptFreePtyLaunch {
@@ -80,16 +83,13 @@ const registeredPromptFreePtySources = new WeakSet<object>();
  * the business prompt in argv. It is rejected here and therefore cannot
  * become fresh-PTY evidence.
  */
-function registerRepositoryOwnedPromptFreePtyLaunch(
+function createRepositoryOwnedPromptFreePtyLaunch(
   binary: VerifiedAgyBinary,
-  input: RepositoryOwnedPromptFreePtyLaunchInput
-): void {
+  input: RepositoryOwnedPromptFreePtyLaunchInput<unknown>
+): AgyLaunchSpecification {
   const executable = requiredExecutableArgument(input.argv);
   if (!isVerifiedAgyBinary(binary, executable)) {
     throw new Error("prompt-free PTY launcher requires its exact verified agy binary");
-  }
-  if (registeredPromptFreePtyLaunches.has(binary)) {
-    throw new Error("prompt-free PTY launcher is already registered for this agy binary");
   }
 
   const specification = createAgyLaunchSpecification({
@@ -107,9 +107,41 @@ function registerRepositoryOwnedPromptFreePtyLaunch(
     throw new Error("interactive PTY argv cannot be registered as prompt-free");
   }
 
+  return specification;
+}
+
+function registerRepositoryOwnedPromptFreePtyLaunch(
+  binary: VerifiedAgyBinary,
+  specification: AgyLaunchSpecification
+): void {
+  if (!isVerifiedAgyBinary(binary, specification.argv[0] ?? "")) {
+    throw new Error("prompt-free PTY launcher requires its exact verified agy binary");
+  }
+
   const source = Object.freeze({ binary, specification });
   registeredPromptFreePtySources.add(source);
   registeredPromptFreePtyLaunches.set(binary, source);
+}
+
+/**
+ * Starts the one repository-owned prompt-free PTY construction and registers
+ * that exact successful launch as the only canary source for this binary
+ * identity. The business prompt is accepted only as forbidden launch text.
+ */
+export function startRepositoryOwnedPromptFreePty<TProcess>(
+  input: RepositoryOwnedPromptFreePtyLaunchInput<TProcess>
+): AgyLaunchExecution<TProcess> {
+  const specification = createRepositoryOwnedPromptFreePtyLaunch(
+    input.binary,
+    input as RepositoryOwnedPromptFreePtyLaunchInput<unknown>
+  );
+  const execution = REPO_OWNED_AGY_LAUNCH_RUNNER.run(
+    specification,
+    input.start,
+    input.forbiddenTexts
+  );
+  registerRepositoryOwnedPromptFreePtyLaunch(input.binary, execution.launch);
+  return execution;
 }
 
 /**

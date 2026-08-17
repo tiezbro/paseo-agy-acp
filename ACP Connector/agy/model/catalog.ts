@@ -5,6 +5,7 @@ import type { SessionConfigOption as V1SessionConfigOption } from "@agentclientp
 const MODEL_CONFIG_ID = "model";
 const REASONING_EFFORT_CONFIG_ID = "reasoningEffort";
 export const NO_REASONING_VALUE = "none";
+const OPTIONAL_REASONING_EFFORTS = ["high", "medium", "low"] as const;
 
 export function defaultReasoningEffortForBase(selectedBaseModel: string, catalog: ModelCatalog): string {
   const effects = catalog.effortsFor(selectedBaseModel);
@@ -168,7 +169,13 @@ function reasoningEffortOptions(
 ): Array<{ value: string; name: string }> {
   const efforts = catalog.effortsFor(selectedBaseModel);
   if (efforts.length === 0) {
-    return [{ value: NO_REASONING_VALUE, name: "N/A" }];
+    return [
+      { value: NO_REASONING_VALUE, name: "Default" },
+      ...OPTIONAL_REASONING_EFFORTS.map((effort) => ({
+        value: effort,
+        name: effort.charAt(0).toUpperCase() + effort.slice(1)
+      }))
+    ];
   }
   return efforts.map((effort) => ({
     value: effort,

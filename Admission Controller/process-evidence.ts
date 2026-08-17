@@ -277,6 +277,24 @@ export function inspectLinuxProcessGroup(
       continue;
     }
 
+    let stat: LinuxProcessStatEvidence;
+    try {
+      stat = parseLinuxProcessStat(
+        readEvidence(() => readers.readFile(`/proc/${pid}/stat`), "process")
+      );
+    } catch (error) {
+      if (error instanceof ProcessEvidenceError && error.kind === "process_gone") continue;
+      unverifiable = true;
+      continue;
+    }
+    if (stat.pid !== pid) {
+      unverifiable = true;
+      continue;
+    }
+    if (stat.pgrp !== normalizedExpected.pgrp || stat.session !== normalizedExpected.session) {
+      continue;
+    }
+
     let observed: LinuxProcessIdentity;
     try {
       observed = captureLinuxProcessIdentity(pid, readers);
@@ -327,9 +345,9 @@ export function parseLinuxProcessStat(value: unknown): LinuxProcessStatEvidence 
 
   return Object.freeze({
     pid,
-    ppid: parsePositiveDecimal(fields[1], "parent PID", MAX_PID),
-    pgrp: parsePositiveDecimal(fields[2], "process group", MAX_PID),
-    session: parsePositiveDecimal(fields[3], "session", MAX_PID),
+    ppid: parseNonNegativeDecimal(fields[1], "parent PID", MAX_PID),
+    pgrp: parseNonNegativeDecimal(fields[2], "process group", MAX_PID),
+    session: parseNonNegativeDecimal(fields[3], "session", MAX_PID),
     startTimeTicks: parseStartTimeTicks(fields[19])
   });
 }
@@ -625,6 +643,15 @@ function parseStartTimeTicks(value: unknown): string {
 
 function parsePositiveDecimal(value: string, name: string, maximum: number): number {
   if (!POSITIVE_DECIMAL_PATTERN.test(value)) throw new ProcessEvidenceError(`${name} is malformed`);
+  const parsed = Number(value);
+  if (!Number.isSafeInteger(parsed) || parsed > maximum) {
+    throw new ProcessEvidenceError(`${name} is out of range`);
+  }
+  return parsed;
+}
+
+function parseNonNegativeDecimal(value: string, name: string, maximum: number): number {
+  if (!/^[0-9]+$/.test(value)) throw new ProcessEvidenceError(`${name} is malformed`);
   const parsed = Number(value);
   if (!Number.isSafeInteger(parsed) || parsed > maximum) {
     throw new ProcessEvidenceError(`${name} is out of range`);

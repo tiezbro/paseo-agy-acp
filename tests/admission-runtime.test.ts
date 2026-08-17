@@ -67,6 +67,36 @@ describe("Admission Controller runtime factory", () => {
     expect(() => runtime?.controller).toThrow(AdmissionRuntimeError);
   });
 
+  it("claims the durable policy and rejects a mismatched runtime opener", () => {
+    const directory = path.join(stateDir(), "shared-policy");
+    const first = createAdmissionRuntime({
+      AGY_ACP_ADMISSION_ENABLED: "1",
+      AGY_ACP_STATE_DIR: directory,
+      PASEO_AGENT_ID: "runtime-policy-owner-a"
+    });
+
+    try {
+      let failure: unknown;
+      try {
+        const second = createAdmissionRuntime({
+          AGY_ACP_ADMISSION_ENABLED: "1",
+          AGY_ACP_STATE_DIR: directory,
+          AGY_ACP_ADMISSION_MAX_ACTIVE_TURNS: "1",
+          PASEO_AGENT_ID: "runtime-policy-owner-b"
+        });
+        second?.close();
+      } catch (error) {
+        failure = error;
+      }
+      expect(failure).toMatchObject({
+        name: "AdmissionRuntimeError",
+        message: "admission runtime error: durable policy does not match shared runtime policy"
+      });
+    } finally {
+      first?.close();
+    }
+  });
+
   it("rejects an unsafe existing database instead of changing its permissions", () => {
     const directory = stateDir();
     const databasePath = path.join(directory, "runtime.sqlite");

@@ -733,7 +733,12 @@ describe("buildModelCatalog", () => {
       "none",
       catalog
     ) as SelectConfigOption;
-    expect(reasoningConfig.options).toEqual([{ value: "none", name: "N/A" }]);
+    expect(reasoningConfig.options).toEqual([
+      { value: "none", name: "Default" },
+      { value: "high", name: "High" },
+      { value: "medium", name: "Medium" },
+      { value: "low", name: "Low" }
+    ]);
   });
 
   it("still splits legacy display-name model lists", () => {
@@ -1266,7 +1271,12 @@ describe("session model config", () => {
       });
       expect(thinkingResponse.configOptions[1].currentValue).toBe("claude-opus-4-6-thinking");
       expect(thinkingResponse.configOptions[2].currentValue).toBe("none");
-      expect(optionNames(thinkingResponse.configOptions[2] as SelectConfigOption)).toEqual(["N/A"]);
+      expect(optionNames(thinkingResponse.configOptions[2] as SelectConfigOption)).toEqual([
+        "Default",
+        "High",
+        "Medium",
+        "Low"
+      ]);
 
       await connection.agent.request(methods.agent.session.prompt, {
         sessionId: session.sessionId,
@@ -1316,6 +1326,51 @@ describe("session model config", () => {
       expect(flagValue(promptCall!.args, "--effort")).toBe("high");
     } finally {
       connection.close();
+    }
+  });
+
+  it("accepts Paseo reasoning efforts for Claude models without catalog variants", async () => {
+    for (const effort of ["low", "medium", "high"] as const) {
+      const calls: Array<{ command: string; args: string[]; options: unknown }> = [];
+      const spawnProcess = (command: string, args: string[], options: unknown) => {
+        calls.push({ command, args, options });
+        if (args[0] === "models") {
+          return new FakeProcess([TEST_MODELS_OUTPUT]);
+        }
+        return new FakeProcess(["ok"]);
+      };
+      const connection = acpClient({ name: "test-client" }).connect(
+        createAcpApp(printModeOptions({ spawnProcess: spawnProcess as unknown as SpawnFactory }))
+      );
+      try {
+        const session = await connection.agent.request(methods.agent.session.new, {
+          cwd: "/repo",
+          additionalDirectories: [],
+          mcpServers: []
+        });
+        await connection.agent.request(methods.agent.session.setConfigOption, {
+          sessionId: session.sessionId,
+          configId: "model",
+          value: "claude-sonnet-4-6"
+        });
+        const reasoningResponse = await connection.agent.request(methods.agent.session.setConfigOption, {
+          sessionId: session.sessionId,
+          configId: "reasoningEffort",
+          value: effort
+        });
+        expect(reasoningResponse.configOptions[2].currentValue).toBe(effort);
+        expect(optionValues(reasoningResponse.configOptions[2] as SelectConfigOption)).toContain(effort);
+
+        await connection.agent.request(methods.agent.session.prompt, {
+          sessionId: session.sessionId,
+          prompt: [{ type: "text", text: `use ${effort}` }]
+        });
+        const promptCall = calls.find((call) => call.args.includes("--print"));
+        expect(flagValue(promptCall!.args, "--model")).toBe("claude-sonnet-4-6");
+        expect(flagValue(promptCall!.args, "--effort")).toBe(effort);
+      } finally {
+        connection.close();
+      }
     }
   });
 

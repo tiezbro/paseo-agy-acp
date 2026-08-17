@@ -5,7 +5,7 @@
 **Paseo × Antigravity — ACP 适配器**
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](./LICENSE)
-[![Version](https://img.shields.io/badge/version-2.0.0.0-blue?style=flat-square)](./package.json)
+[![Version](https://img.shields.io/badge/version-2.0.0.1-blue?style=flat-square)](./package.json)
 [![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen?style=flat-square)](#)
 [![ACP](https://img.shields.io/badge/ACP-v1%20%2B%20draft%20v2-8A2BE2?style=flat-square)](https://agentclientprotocol.com)
 
@@ -61,10 +61,63 @@
 | 5 | 回滚容错 | 整文件回滚容忍 provider 添加的 `\n` / `\r\n` |
 | 6 | 权限绕过 | 将 `--dangerously-skip-permissions` 暴露为 ACP mode id `dangerously-skip-permissions` |
 | 7 | 测试覆盖 | 为所有 Paseo 专属路径扩展测试套件 |
+| 8 | Admission Controller v2 | 增加账号级持久队列、受控并发、错峰启动、崩溃恢复和 typed failure handling |
 
 → [完整技术细节](./docs/PASEO_LOCAL_CHANGES.md)
 
-## Admission Controller v2.0.0.0 状态
+## Admission Controller v2.0
+
+### 为什么需要 v2.0
+
+直接动因来自 Antigravity CLI 官方 issue tracker 中的真实并发故障报告：
+[`google-antigravity/antigravity-cli#573`](https://github.com/google-antigravity/antigravity-cli/issues/573)。
+该报告记录了 `agy -p` 与 3 个以上长时间运行的 AI CLI 进程并发时无限挂起，而单独、
+两两以及轻量并发运行均能成功。报告环境是 macOS 上的 `agy 1.1.0`；本项目将它作为
+缓解方案的设计输入，但不声称 Google 官方认可本项目，也不声称所有 Antigravity 版本
+都会以完全相同的方式失败。
+
+`v2.0.0.0` 引入 Admission Controller v2，是因为只给单个子进程增加 timeout 仍然不够。
+Paseo 可以从彼此独立的 session 和 connector 进程启动大量 Agent；如果每个进程只限制
+自己，账号级别仍可能出现同时启动风暴。v2 用一份持久 policy 和队列协调本机同一
+Antigravity 账号的全部工作。`v2.0.0.1` 进一步补齐 production dispatch、进程身份恢复、
+安全状态目录预检、原生进程与 conversation 绑定，以及完整生产候选验收。
+
+### 队列模型
+
+```text
+本机所有 connector 提交的 Paseo turns
+                  |
+                  v
+       持久 oldest-eligible 队列
+                  |
+          单一串行启动许可
+          （间隔至少 2 秒）
+                  |
+           三个共享活动席位
+                  |
+        完成 / 取消 / 故障恢复
+                  |
+            原子释放席位
+```
+
+这是一套受控并发方案，不是把所有任务盲目串行化。最多三个已准入 turn 可以同时执行，
+但同一时刻只允许启动一个新的 Antigravity 进程。可运行请求之间保持 FIFO，并加入
+agent fairness，新的 connector 不会仅因轮询更快就插队。空闲 session 不占席位，也不
+保留常驻 turn 进程。
+
+| 设计决策 | 运行优势 |
+|---|---|
+| 账号级共享席位 | 多个独立 Paseo Agent 不会无意中叠加 Antigravity 并发上限 |
+| 单一错峰启动许可 | 消除启动风暴，同时保留启动后的有效并行能力 |
+| 持久加密队列与 policy | connector 跨进程、跨重启仍保持相同队列顺序与策略 |
+| lease heartbeat、owner 身份与 runtime reaper | 只在进程组已证实退出时回收容量，不把仍存活的进程误判为死亡 |
+| timeout/cancel 原子结算 | terminal 请求在同一事务中释放席位并删除加密 payload |
+| fenced 一次性 dispatch | 无法证明的写入进入 `dispatch_ambiguous` 或 `recovery_required`，绝不静默重放业务 prompt |
+| provider/model 级 capacity cooldown | 可信容量故障只暂停受影响工作，不阻塞其他可运行模型 |
+| 从三席 soft drain 到一席 | 不杀死活动任务、不丢弃排队请求即可平滑降低并发 |
+| typed terminal 结果 | 排队超时、provider failure、取消与恢复对 ACP client 保持可区分 |
+
+### 设计 authority 与实现边界
 
 当前 authority 是 confirmed Scheme 与已接受的 Stage 2 artifacts：
 
@@ -99,6 +152,25 @@ Antigravity 席位、持久队列、policy state、soft drain、启动限速、l
 只有同时设置 `AGY_ACP_ADMISSION_ENABLED=true`、绝对路径
 `AGY_ACP_STATE_DIR` 和 `PASEO_AGENT_ID` 时才启用 Admission；默认保持关闭。
 
+### 启用 Admission
+
+启用 Admission 前，应为每个账号创建独立的 owner-only 状态目录，并运行随包发布的
+预检命令：
+
+```bash
+export AGY_ACP_STATE_DIR="$HOME/.local/state/paseo-agy-acp/account-name"
+install -d -m 700 "$AGY_ACP_STATE_DIR"
+agy-acp-prepare-state "$AGY_ACP_STATE_DIR"
+export AGY_ACP_ADMISSION_ENABLED=true
+```
+
+预检会以 `0700` 创建缺失目录，并核验目录类型、owner 和精确权限。对于已经存在的
+宽权限目录，它会明确拒绝，不会静默改权。操作方确认路径和归属后，应执行
+`chmod 700 -- "$AGY_ACP_STATE_DIR"`，再重新运行预检。Admission key 与 SQLite
+文件均以 `0600` 创建。
+
+### 默认与保守 policy
+
 | 规则 | 默认值 |
 |---|---:|
 | 共享 Antigravity 活动 turn | 3 |
@@ -112,18 +184,39 @@ Antigravity 席位、持久队列、policy state、soft drain、启动限速、l
 oldest-eligible 调度并带 agent fairness。cooldown 会跳过受影响的 provider/model，
 但不会堵住其他可运行请求。排队超时会在同一事务中取消请求并删除加密 prompt。
 
+Policy override 明确 fail closed：
+
+| 变量 | 允许值 |
+|---|---|
+| `AGY_ACP_ADMISSION_MAX_ACTIVE_TURNS` | `1` 或 `3` |
+| `AGY_ACP_ADMISSION_MAX_CONCURRENT_STARTS` | `1` |
+| `AGY_ACP_ADMISSION_MIN_START_INTERVAL_MS` | 整数且 `>= 2000` |
+| `AGY_ACP_ADMISSION_QUEUE_TIMEOUT_MS` | `1` 到 `1800000` 的整数 |
+| `AGY_ACP_ADMISSION_CAPACITY_COOLDOWN_MS` | 整数且 `>= 30000` |
+
+### 持久化、dispatch 与恢复
+
 Stage 3 本地实现使用 `shared-admission-queue` schema v2：`turn_requests` 使用
 `agent_id`，`policy_state` 保存带 `policy_fingerprint` 与 drain state 的持久 singleton
 policy，queued owner 记录在 `queued_owner_instances`，lease 带 suspect metadata 供
 runtime reaper 使用，`schema_migrations` 记录 v1 到 v2 的迁移。额外 delivery
 authority 表仍然 fail closed。
 
+每个启用 Admission 的 runtime opener 都会在 startup recovery 前 claim 或核验这份
+持久 policy。若第二个 connector 对同一状态目录使用不同 policy，则会 fail closed，
+不会形成仅在进程内存在的 policy 分叉。
+
 空闲 session 和空闲 ACP 连接不占 turn 席位，也不保留常驻 turn 进程。获得席位的
 turn 在一次性 stdin 写入前先经过 production dispatch boundary；无法证明的 ambiguous
 或 blocked 写入会进入持久 terminal state，不做隐藏重试。provider 明确终态后立即
-释放席位。关闭 session 会取消尚未开始的排队请求，已经运行的 turn 继续走原有
+在 interactive 与 print 模式中失败并释放席位。Linux 上每个新 interactive 进程都
+绑定该子进程实际打开的 conversation DB，避免并发 Agent 消费彼此的 turn。关闭
+session 会取消尚未开始的排队请求，已经运行的 turn 继续走原有
 connector 取消路径。
 新启动的 Antigravity PTY 会先等待认证和模型 redraw 稳定，再执行这一次 fenced 写入。
+对于 Antigravity 目录中只有单一条目的 Claude 模型，connector 接受 Paseo 显式选择的
+`low`、`medium`、`high` reasoning，并通过原生 `--effort` 参数传递；选择原生默认值时
+仍不附加该参数。
 
 获得席位后的 turn 继续走原有 `AgyCliSession.prompt`、conversation SQLite、
 `StreamPoller`、`Translator`、ACP 权限处理和在线 ACP 通知。Admission 不增加
@@ -131,16 +224,24 @@ connector 取消路径。
 request identity 或手工 requeue API。官方 `session/load` 与 `session/resume`
 历史回放继续由 ACP Connector 负责。
 
-`2.0.0.0` release candidate 已完成本地构建，并从 tarball 安装到全新前缀；随后在
-隔离的 `127.0.0.1:6768` Paseo daemon 上运行真实 Antigravity
-`gemini-3.1-pro` turn。canary 精确返回 `STAGE4_ADMISSION_CANARY_OK`，持久请求完成且
-lease 已释放。生产 `127.0.0.1:6767` 连通性另由 Agent
-`81d15e58-d6e7-46c5-aea4-4061da7adbbb` 确认；本次验证没有切换或修改当前生产
-connector。
+### v2.0.0.1 验证状态
+
+`2.0.0.1` release candidate 已通过完整仓库验证、全新前缀 tarball 安装、公开入口导入、
+随包状态目录预检和隔离 runtime smoke；随后在 `127.0.0.1:6767` 完成真实生产候选验收，
+覆盖 Gemini 与 Claude turn、稳定的 `3 active + 1 queued` 接管、席位释放后的 FIFO
+准入，以及额外六请求混合 Provider 压力运行。全部已准入请求均完成，持久 ledger 最终
+回到零 lease、零残留 payload。
+
+自动化与 runtime fault matrix 覆盖 queue timeout、owner death、进程退出与重启恢复、
+runtime reaper、soft drain、ambiguous dispatch、auth gate、permission modes、typed
+terminal 结果与资源清理。Provider capacity 处理刻意保持严格：只有可信 provider/model
+身份与原生 `503 UNAVAILABLE` 信号同时成立时才创建 capacity cooldown。历史原生日志已
+证明该信号形态；最终 `agy 1.1.13` 生产候选压力窗口全部成功，因此不会为了覆盖分支而
+伪造一次 capacity failure。
 
 ## 🔧 解决的问题
 
-上游 `agy-acp` 是通用适配器。本分支解决了 5 个 Paseo 专属的可靠性问题：
+上游 `agy-acp` 是通用适配器。本分支解决了 7 个 Paseo 专属的可靠性问题：
 
 | # | 问题 | 解决方案 |
 |---|------|----------|
@@ -150,6 +251,7 @@ connector。
 | 4 | 带退出码的前台命令仍显示为"活跃"后台任务 | `task_details` + `exitCode` 行不再视为后台任务 |
 | 5 | 整文件回滚因 provider 添加的换行符而失败 | 对整文件写入操作容忍 `\n` / `\r\n` |
 | 6 | Paseo 无法选择 Antigravity 的无人值守权限绕过 | 将官方 `--dangerously-skip-permissions` 参数暴露为 ACP mode id `dangerously-skip-permissions` |
+| 7 | 独立 Agent 可能压垮 Antigravity 或遗留占用 | Admission Controller v2 通过持久、错峰、可恢复的账号级队列统一协调 |
 
 → [完整技术细节](./docs/PASEO_LOCAL_CHANGES.md)
 

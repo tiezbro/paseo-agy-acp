@@ -17,6 +17,7 @@ import {
 import { classifyProviderFailure } from "./errors.js";
 import {
   AgyCliError,
+  AgyTerminalProviderError,
   type AgyAdmissionDispatchBoundary
 } from "../agy/cli.js";
 import type { TurnClaim } from "../acp/session/turn-scheduler.js";
@@ -250,7 +251,10 @@ export class AdmissionTurnCoordinator {
         );
         return;
       }
-      if (error instanceof AgyCliError && error.exitCode !== null) {
+      if (
+        error instanceof AgyTerminalProviderError ||
+        (error instanceof AgyCliError && error.exitCode !== null)
+      ) {
         this.#controller.completeLiveTurn(lease, now, {
           outcome: "failed",
           failure: failureFromAgyError(error)
@@ -338,6 +342,14 @@ class TurnDispatchBoundary implements AgyAdmissionDispatchBoundary {
   }
 
   prepare(processId: number): void {
+    this.prepareProcess(processId, "stdin");
+  }
+
+  preparePty(processId: number): void {
+    this.prepareProcess(processId, "pty");
+  }
+
+  private prepareProcess(processId: number, promptChannel: "stdin" | "pty"): void {
     if (this.#prepared) throw new Error("admission process boundary was already prepared");
     this.claim.throwIfAborted();
     const child = captureLinuxProcessIdentity(processId, nativeLinuxProcessEvidenceReaders);
@@ -347,7 +359,7 @@ class TurnDispatchBoundary implements AgyAdmissionDispatchBoundary {
       generation: this.#lease.generation,
       ownerInstanceId: this.#lease.ownerInstanceId,
       processIdentity: Object.freeze({ connector: this.#ownerIdentity, child }),
-      promptChannel: "stdin" as const
+      promptChannel
     });
     const recorded = this.#controller.recordProcessIdentity(record);
     if (recorded.status !== "recorded") throw new Error("admission process identity was not recorded");

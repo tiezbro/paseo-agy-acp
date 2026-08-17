@@ -106,6 +106,7 @@ export function createAdmissionRuntime(
       encryptionKey: derivedKeys.encryption,
       contentFingerprintKey: derivedKeys.contentFingerprint
     });
+    controller.claimDurablePolicy(config.policy, config.agentId, Date.now());
     recoverExitedAdmissionSeats(controller);
     return new AdmissionRuntime(controller, options);
   } catch (error) {

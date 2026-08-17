@@ -4,10 +4,11 @@
 
 import type { SessionUpdate } from "@agentclientprotocol/sdk";
 import { ConversationDb } from "./database.js";
-import { newConversationId } from "./scan.js";
+import { linuxProcessConversationId, newConversationId } from "./scan.js";
 import { isSystemMessage, isSystemMessagePrefix } from "./system-message.js";
 import { toolCallId } from "./tool-call-updates.js";
 import { Translator } from "./translator.js";
+import type { ModelProviderError } from "./step-payload.js";
 import type { StepRow } from "./types.js";
 
 export interface PendingInteraction {
@@ -34,6 +35,8 @@ export interface StreamOptions {
   cwd?: string;
   /** Snapshot of conversation ids before the prompt, for binding a new DB. */
   snapshot: Set<string> | null;
+  /** Exact live agy PID used for ownership-safe Linux conversation binding. */
+  processId?: number;
 }
 
 export class StreamPoller {
@@ -44,6 +47,7 @@ export class StreamPoller {
   private _hasRows = false;
   private _busy = false;
   private _latestStepTerminal = false;
+  private _terminalProviderError: ModelProviderError | null = null;
   private _latestAssistantMessageStepIdx = -1;
   private _latestToolCallStepIdx = -1;
   private _revision = 0;
@@ -136,13 +140,19 @@ export class StreamPoller {
     );
   }
 
+  get terminalProviderError(): ModelProviderError | null {
+    return this._terminalProviderError;
+  }
+
   /** Increments whenever the observed rows (including growing in-place rows) change. */
   get revision(): number { return this._revision; }
 
   /** Read steps appended since the turn began and translate the new ones. */
   poll(): SessionUpdate[] {
     if (this.boundId === null && this.opts.snapshot !== null) {
-      this.boundId = newConversationId(this.opts.dir, this.opts.snapshot);
+      this.boundId = this.opts.processId === undefined
+        ? newConversationId(this.opts.dir, this.opts.snapshot)
+        : linuxProcessConversationId(this.opts.dir, this.opts.processId);
     }
     if (this.boundId === null) return [];
 
@@ -246,6 +256,16 @@ export class StreamPoller {
     this._hasRows = rows.length > 0;
     this._busy = rows.some((row) => row.status !== 3 && row.status !== 6 && row.status !== 7);
     const latest = rows.at(-1);
+    const latestProviderError = latest?.stepPayload.modelProviderError;
+    this._terminalProviderError =
+      !rows.hasDecodeError &&
+      latest !== undefined &&
+      isTerminalStepStatus(latest.status) &&
+      latestProviderError !== undefined &&
+      latestProviderError.summary.trim().length > 0 &&
+      latestProviderError.userMessage.trim() === latestProviderError.summary.trim()
+        ? latestProviderError
+        : null;
     // A turn can end on a completed agent message, but also on a terminal tool
     // step with no trailing message — most notably a denied/failed command
     // (status 7), after which agy returns to idle without emitting more text.

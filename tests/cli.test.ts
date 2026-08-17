@@ -8,6 +8,7 @@ import { describe, expect, it, vi } from "vitest";
 import * as installer from "../ACP Connector/agy/installer.js";
 import {
   AgyCliBackend,
+  AgyCliError,
   AgyCliSession,
   DEFAULT_AGY_MODEL_LIST_TIMEOUT_MS,
   DEFAULT_CONVERSATIONS_DIR,
@@ -31,6 +32,7 @@ import { requestPermissionV1, requestPermissionV2 } from "../ACP Connector/acp/s
 import { createConversationDb, insertStep, updateStep } from "./fixtures/conversation-db.js";
 import {
   encodeCommandResult,
+  encodeModelProviderError,
   encodePermissions,
   encodeStepPayload,
   encodeTaskDetails,
@@ -566,6 +568,54 @@ describe("permission bridge", () => {
     }
   });
 
+  it("rejects a terminal model-provider error instead of completing an empty turn", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "agy-acp-pty-provider-error-"));
+    const providerMessage =
+      "FAILED_PRECONDITION (code 400): User location is not supported for the API use.";
+    const pty = new FakePty(() => {
+      const db = createConversationDb(dir, "provider-error");
+      insertStep(db, {
+        idx: 1,
+        stepType: 15,
+        status: 3,
+        stepPayload: encodeStepPayload({ agentText: "" })
+      });
+      insertStep(db, {
+        idx: 2,
+        stepType: 17,
+        status: 3,
+        stepPayload: encodeStepPayload({
+          modelProviderError: encodeModelProviderError({
+            summary: providerMessage,
+            diagnostic: "HTTP 400 Bad Request",
+            responseJson: JSON.stringify({
+              error: {
+                code: 400,
+                message: "User location is not supported for the API use.",
+                status: "FAILED_PRECONDITION"
+              }
+            }),
+            userMessage: providerMessage
+          })
+        })
+      });
+      db.close();
+      setTimeout(() => pty.emitData("? for shortcuts"), 20);
+    });
+    const session = interactiveSession(dir, pty, "500ms");
+
+    try {
+      await expect(session.prompt("go", async () => {}, async () => "agy-allow-once"))
+        .rejects.toEqual(expect.objectContaining({
+          name: AgyCliError.name,
+          message: expect.stringContaining(providerMessage)
+        }));
+    } finally {
+      await session.close();
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("does not complete an allowed permission turn without a post-tool assistant message", async () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), "agy-acp-pty-permission-no-final-"));
     const pty = new FakePty(() => {
@@ -583,6 +633,40 @@ describe("permission bridge", () => {
         setTimeout(() => pty.emitData("? for shortcuts"), 20);
         return "agy-allow-once";
       })).rejects.toThrow(/timed out after 300ms/);
+    } finally {
+      await session.close();
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("completes a denied permission turn from terminal tool evidence without a post-tool assistant message", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "agy-acp-pty-permission-denied-terminal-"));
+    const pty = new FakePty(() => {
+      const db = createConversationDb(dir, "permission-denied-terminal");
+      insertStep(db, pendingToolRow("run_command"));
+      db.close();
+    });
+    const session = interactiveSession(dir, pty, "300ms");
+    const updates: SessionUpdate[] = [];
+
+    try {
+      const outcome = await session.prompt("go", async (update) => {
+        updates.push(update);
+      }, async () => {
+        const db = new (await import("better-sqlite3")).default(
+          path.join(dir, "permission-denied-terminal.db")
+        );
+        updateStep(db, 1, { status: 7 });
+        db.close();
+        return "agy-reject-once";
+      });
+
+      expect(outcome.stopReason).toBe("end_turn");
+      expect(pty.writes).toEqual(permissionWriteChunks("\x1b[B\x1b[B\x1b[B\r"));
+      expect(updates).toContainEqual(expect.objectContaining({
+        toolCallId: "permission-1",
+        status: "failed"
+      }));
     } finally {
       await session.close();
       fs.rmSync(dir, { recursive: true, force: true });
@@ -1871,6 +1955,53 @@ describe("prompt", () => {
     expect(fake.stdinText).toBe("");
     expect(fake.stdinEnded).toBe(true);
     expect(calls[0].options.launchSpecification).toBeUndefined();
+  });
+
+  it("rejects a terminal model-provider error observed after a print process exits", async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "agy-acp-print-provider-error-"));
+    const providerMessage =
+      "FAILED_PRECONDITION (code 400): User location is not supported for the API use.";
+    const fake = new FakeProcess([]);
+    const calls: SpawnCall[] = [];
+    const spawn = fake.spawnFactory(calls);
+    const session = new AgyCliSession({
+      ...defaultConfig(),
+      interactivePermissions: false,
+      conversationsDir: dir
+    }, (command, args, options) => {
+      const db = createConversationDb(dir, "provider-error");
+      insertStep(db, {
+        idx: 1,
+        stepType: 17,
+        status: 3,
+        stepPayload: encodeStepPayload({
+          modelProviderError: encodeModelProviderError({
+            summary: providerMessage,
+            diagnostic: "HTTP 400 Bad Request",
+            responseJson: JSON.stringify({
+              error: {
+                code: 400,
+                message: "User location is not supported for the API use.",
+                status: "FAILED_PRECONDITION"
+              }
+            }),
+            userMessage: providerMessage
+          })
+        })
+      });
+      db.close();
+      return spawn(command, args, options);
+    });
+
+    try {
+      await expect(collectUpdates(session, "go")).rejects.toEqual(expect.objectContaining({
+        name: AgyCliError.name,
+        message: expect.stringContaining(providerMessage)
+      }));
+    } finally {
+      await session.close();
+      fs.rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it("starts print turns with a model-turn permit", async () => {

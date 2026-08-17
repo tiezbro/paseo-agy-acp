@@ -8,6 +8,7 @@ import {
   AgyStartupLifetimeBindingError,
   launchAgyProcess,
   runRepositoryOwnedPromptFreePtyCanary,
+  startRepositoryOwnedPromptFreePty,
   type AgyStartupLauncher
 } from "../ACP Connector/agy/startup-launcher.js";
 
@@ -225,6 +226,67 @@ describe("Agy startup launcher", () => {
       []
     )).toBeUndefined();
     expect(fakeChildCalls).toBe(0);
+  });
+
+  it("registers only the exact successful repository-owned prompt-free PTY launch as canary source", () => {
+    const binary = probeFakeAgyVersion();
+    const process = { pid: 42 };
+    let starts = 0;
+    const execution = startRepositoryOwnedPromptFreePty({
+      binary,
+      argv: [binary.executable, "--sandbox", "--model", "model-test"],
+      environment: { TERM: "xterm-256color" },
+      cwd: os.tmpdir(),
+      processTitle: "agy-acp:test-prompt-free-pty",
+      temporaryFilePath: path.join(os.tmpdir(), "agy-prompt-free-pty.test"),
+      launcherDiagnostics: ["transport=pty", "launcher=test"],
+      forbiddenTexts: ["business prompt"],
+      start: () => {
+        starts++;
+        return process;
+      }
+    });
+    let fakeChildCalls = 0;
+    const canaryExecution = runRepositoryOwnedPromptFreePtyCanary(
+      binary,
+      () => {
+        fakeChildCalls++;
+        return { exitCode: 0 };
+      },
+      ["business prompt", "sentinel"]
+    );
+
+    expect(starts).toBe(1);
+    expect(execution.child).toBe(process);
+    expect(canaryExecution?.launch).toBe(execution.launch);
+    expect(canaryExecution?.child).toEqual({ exitCode: 0 });
+    expect(fakeChildCalls).toBe(1);
+  });
+
+  it("does not start or register a prompt-bearing PTY launch", () => {
+    const binary = probeFakeAgyVersion();
+    let starts = 0;
+
+    expect(() => startRepositoryOwnedPromptFreePty({
+      binary,
+      argv: [binary.executable, "business prompt"],
+      environment: { TERM: "xterm-256color" },
+      cwd: os.tmpdir(),
+      processTitle: "agy-acp:test-prompt-bearing-pty",
+      temporaryFilePath: path.join(os.tmpdir(), "agy-prompt-bearing-pty.test"),
+      launcherDiagnostics: ["transport=pty", "launcher=test"],
+      forbiddenTexts: ["business prompt"],
+      start: () => {
+        starts++;
+        return { pid: 42 };
+      }
+    })).toThrow("forbidden text");
+    expect(starts).toBe(0);
+    expect(runRepositoryOwnedPromptFreePtyCanary(
+      binary,
+      () => ({ exitCode: 0 }),
+      ["business prompt"]
+    )).toBeUndefined();
   });
 });
 

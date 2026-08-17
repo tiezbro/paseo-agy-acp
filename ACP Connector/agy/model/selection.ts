@@ -98,9 +98,9 @@ export function applyModelSelection(
 ): void {
   const effects = catalog.effortsFor(selectedBaseModel);
   if (effects.length === 0) {
-    const selection = catalog.agySelection(selectedBaseModel, NO_REASONING_VALUE);
+    const selection = catalog.agySelection(selectedBaseModel, selectedReasoningEffort);
     agy.setModel(selection.model);
-    agy.setEffort(undefined);
+    agy.setEffort(selection.effort);
     return;
   }
 

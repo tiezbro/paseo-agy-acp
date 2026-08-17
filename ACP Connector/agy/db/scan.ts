@@ -2,6 +2,7 @@
 // Used to bind a session to the new DB that agy creates when a fresh prompt runs.
 
 import * as fs from "node:fs";
+import * as path from "node:path";
 
 /** Snapshot the set of conversation ids (`*.db` stems) currently on disk. */
 export function conversationSnapshot(dir: string): Set<string> {
@@ -38,4 +39,40 @@ export function newConversationId(
     return null;
   }
   return created[0] ?? null;
+}
+
+/**
+ * Resolve the unique conversation database currently opened by one Linux agy
+ * process. Directory snapshots cannot identify ownership when several fresh
+ * conversations are created concurrently.
+ */
+export function linuxProcessConversationId(dir: string, processId: number): string | null {
+  if (process.platform !== "linux" || !Number.isSafeInteger(processId) || processId <= 0) {
+    return null;
+  }
+
+  let conversationsDir: string;
+  let descriptors: string[];
+  try {
+    conversationsDir = fs.realpathSync(dir);
+    descriptors = fs.readdirSync(`/proc/${processId}/fd`);
+  } catch {
+    return null;
+  }
+
+  const matches = new Set<string>();
+  for (const descriptor of descriptors) {
+    let target: string;
+    try {
+      target = fs.readlinkSync(`/proc/${processId}/fd/${descriptor}`);
+    } catch {
+      continue;
+    }
+    if (!path.isAbsolute(target) || target.endsWith(" (deleted)")) continue;
+    if (path.dirname(target) !== conversationsDir) continue;
+    const filename = path.basename(target);
+    if (!filename.endsWith(".db")) continue;
+    matches.add(filename.slice(0, -3));
+  }
+  return matches.size === 1 ? [...matches][0]! : null;
 }

@@ -2,6 +2,60 @@
 
 All notable changes to `paseo-agy-acp` are recorded here.
 
+## 2.0.0.1 - 2026-08-17
+
+### Changed
+
+- Promoted `2.0.0.1` after separating the earlier isolated happy-path canary
+  from formal production acceptance and completing both.
+- Documented why Admission Controller v2 exists: official Antigravity CLI
+  issue [#573](https://github.com/google-antigravity/antigravity-cli/issues/573)
+  reports `agy -p` hanging under three or more longer-running neighboring CLI
+  processes. The durable account-wide queue, three shared active seats, one
+  paced start permit, reaping, recovery, soft drain, and typed settlement are
+  the bounded Paseo-side mitigation; no Google endorsement is claimed.
+- Bound fresh Linux interactive streams to the conversation database opened by
+  the exact Antigravity child process, preventing concurrent agents from
+  attaching to another process's newly-created conversation.
+- Made final persisted model-provider errors fail both interactive and print
+  turns immediately, instead of waiting for the turn timeout or completing an
+  empty successful turn. ACP admission still owns the typed terminal mapping.
+- Accepted Paseo's `low`, `medium`, and `high` reasoning selections for Claude
+  models whose Antigravity catalog has one base model rather than separate
+  effort variants. The native default remains available without `--effort`.
+- Made every enabled runtime opener claim or assert the shared durable policy
+  before startup recovery. A connector with a mismatched policy now fails
+  closed instead of running with an empty `policy_state` singleton.
+- Added the packaged `agy-acp-prepare-state` preflight so installation and
+  isolated acceptance create account state directories with exact mode `0700`
+  and reject existing permissive directories without silently changing them.
+
+### Verification
+
+- The state-directory preflight passed focused tests for secure creation,
+  fail-closed handling of an existing `0775` directory, and published-manifest
+  exposure. The complete repository validation passed with 58 test files,
+  626 passed tests, 2 skipped tests, architecture PASS, and secret scan PASS.
+- A fresh `2.0.0.1` tarball installed into a new prefix and exposed the packaged
+  preflight binary. That binary created an absent state directory as `0700`;
+  its `admission.key` and `runtime.sqlite` were `0600`. A clean isolated Paseo
+  daemon on `127.0.0.1:6768` then completed a real Antigravity turn with marker
+  `STATE_DIR_FIX_R11_OK`; the durable request was `completed`, with zero leases
+  and zero retained payloads afterward.
+- The complete fault matrix passed for concurrent admission, queueing and
+  pressure, crash/restart recovery, reaping and queued-owner death, soft drain,
+  ambiguous dispatch, queue timeout, auth/permission modes, typed terminal
+  outcomes, and trusted Provider capacity classification.
+- Production-candidate acceptance on `127.0.0.1:6767` passed with real Gemini
+  and Claude turns, stable `3 active + 1 queued` FIFO handoff, an additional
+  six-request mixed-provider pressure run, zero final leases, zero retained
+  payloads, SQLite integrity PASS, and no OOM or candidate-process residue.
+- Nine additional `agy 1.1.13` Claude pressure probes completed through the
+  production queue. The Provider did not emit a live capacity `503` in that
+  window; historical native `1.1.12` logs establish the trusted
+  `503 UNAVAILABLE` carrier while deterministic tests verify the current
+  classifier and cooldown boundary.
+
 ## 2.0.0.0 - 2026-08-16
 
 ### Changed

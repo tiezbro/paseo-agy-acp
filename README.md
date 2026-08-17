@@ -5,7 +5,7 @@
 **Paseo × Antigravity — ACP Adapter**
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](./LICENSE)
-[![Version](https://img.shields.io/badge/version-2.0.0.0-blue?style=flat-square)](./package.json)
+[![Version](https://img.shields.io/badge/version-2.0.0.1-blue?style=flat-square)](./package.json)
 [![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen?style=flat-square)](#)
 [![ACP](https://img.shields.io/badge/ACP-v1%20%2B%20draft%20v2-8A2BE2?style=flat-square)](https://agentclientprotocol.com)
 
@@ -62,10 +62,69 @@ contributors. All credit for the original ACP adapter architecture belongs to th
 | 5 | Revert tolerance | Whole-file revert handles trailing `\n` / `\r\n` from provider |
 | 6 | Permission bypass | Exposes `--dangerously-skip-permissions` as ACP mode id `dangerously-skip-permissions` |
 | 7 | Test coverage | Extended test suite for all Paseo-specific paths |
+| 8 | Admission Controller v2 | Adds an account-wide durable queue, bounded concurrency, paced starts, crash recovery, and typed failure handling |
 
 → [Full technical detail](./docs/PASEO_LOCAL_CHANGES.md)
 
-## Admission Controller v2.0.0.0 Status
+## Admission Controller v2.0
+
+### Why v2.0 exists
+
+The motivation is a real concurrency failure reported in the official
+Antigravity CLI issue tracker:
+[`google-antigravity/antigravity-cli#573`](https://github.com/google-antigravity/antigravity-cli/issues/573).
+The report describes `agy -p` hanging indefinitely when it runs beside three or
+more longer-running AI CLI processes, even though solo, pairwise, and light
+parallel runs succeed. The report was reproduced on `agy 1.1.0` on macOS; it is
+the design input for this mitigation, not a claim that Google has endorsed this
+project or that every Antigravity release fails identically.
+
+`v2.0.0.0` introduced Admission Controller v2 because a timeout around each
+child process is not enough. Paseo can launch many agents from independent
+sessions and connector processes, so each process enforcing its own limit can
+still create an account-wide start burst. v2 coordinates the whole local
+Antigravity account through one durable policy and queue. `v2.0.0.1` hardens
+that design with production dispatch, process-identity recovery, secure state
+preflight, native process/conversation binding, and full production-candidate
+validation.
+
+### Queue model
+
+```text
+Paseo turns from every local connector
+                  |
+                  v
+       durable oldest-eligible queue
+                  |
+        one serialized start permit
+        (at least 2 seconds apart)
+                  |
+          three shared active seats
+                  |
+       complete / cancel / recover
+                  |
+          atomic seat release
+```
+
+This is controlled concurrency, not blind serialization. Up to three admitted
+turns can make progress at once, while only one new Antigravity process may
+start at a time. Requests remain FIFO among eligible work, with agent fairness,
+so a new connector cannot jump ahead merely because it polls faster. Idle
+sessions consume no seat and keep no resident turn process.
+
+| Design decision | Operational advantage |
+|---|---|
+| Account-wide shared seats | Independent Paseo agents cannot accidentally multiply the configured Antigravity concurrency |
+| One paced start permit | Removes startup bursts while preserving useful parallel work after startup |
+| Durable encrypted queue and policy | Queue order and policy remain consistent across connector processes and restarts |
+| Lease heartbeat, owner identity, and runtime reaper | Dead owners and verified-exited process groups release capacity without guessing that a live process is dead |
+| Atomic timeout/cancel settlement | Terminal requests release their seat and encrypted payload in the same transaction |
+| Fenced one-shot dispatch | An unprovable write becomes `dispatch_ambiguous` or `recovery_required`; business prompts are never silently replayed |
+| Provider/model-scoped capacity cooldown | A trusted capacity failure pauses only affected eligible work instead of blocking unrelated models |
+| Soft drain from three seats to one | Operators can reduce concurrency without killing active work or discarding queued requests |
+| Typed terminal outcomes | Queue timeout, provider failure, cancellation, and recovery remain distinguishable to ACP clients |
+
+### Design authority and implementation
 
 Current authority is the confirmed Scheme plus accepted Stage 2 artifacts:
 
@@ -102,6 +161,27 @@ entrypoints stay inside `ACP Connector/`.
 Admission is disabled unless `AGY_ACP_ADMISSION_ENABLED=true` is set together
 with an absolute `AGY_ACP_STATE_DIR` and `PASEO_AGENT_ID`.
 
+### Enabling Admission
+
+Before enabling Admission, create one owner-only state directory per account and
+run the packaged preflight:
+
+```bash
+export AGY_ACP_STATE_DIR="$HOME/.local/state/paseo-agy-acp/account-name"
+install -d -m 700 "$AGY_ACP_STATE_DIR"
+agy-acp-prepare-state "$AGY_ACP_STATE_DIR"
+export AGY_ACP_ADMISSION_ENABLED=true
+```
+
+The preflight creates a missing directory with mode `0700` and verifies its
+type, owner, and exact mode. It deliberately rejects an existing permissive
+directory instead of silently changing it. After confirming the path and
+ownership, repair that operator-owned directory with
+`chmod 700 -- "$AGY_ACP_STATE_DIR"`, then rerun the preflight. Admission key and
+SQLite files are created with mode `0600`.
+
+### Default and conservative policy
+
 | Rule | Default |
 |---|---:|
 | Shared active Antigravity turns | 3 |
@@ -117,6 +197,18 @@ Requests are selected oldest-eligible with agent fairness. A cooldown skips the
 affected provider/model without blocking other eligible requests. Queue timeout
 cancels the request and deletes its encrypted prompt in the same transaction.
 
+Policy overrides are deliberately fail-closed:
+
+| Variable | Accepted values |
+|---|---|
+| `AGY_ACP_ADMISSION_MAX_ACTIVE_TURNS` | `1` or `3` |
+| `AGY_ACP_ADMISSION_MAX_CONCURRENT_STARTS` | `1` |
+| `AGY_ACP_ADMISSION_MIN_START_INTERVAL_MS` | Integer `>= 2000` |
+| `AGY_ACP_ADMISSION_QUEUE_TIMEOUT_MS` | Integer from `1` through `1800000` |
+| `AGY_ACP_ADMISSION_CAPACITY_COOLDOWN_MS` | Integer `>= 30000` |
+
+### Durability, dispatch, and recovery
+
 The Stage 3 local implementation uses `shared-admission-queue` schema v2:
 `turn_requests` uses `agent_id`, `policy_state` stores the durable singleton
 policy with `policy_fingerprint` and drain state, queued owners are recorded in
@@ -124,14 +216,24 @@ policy with `policy_fingerprint` and drain state, queued owners are recorded in
 and `schema_migrations` records the v1 to v2 migration. Unexpected delivery
 authority tables still fail closed.
 
+Each enabled runtime opener claims or verifies that durable policy before
+startup recovery. A second connector using the same state directory but a
+different policy fails closed rather than creating a process-local policy split.
+
 Idle sessions and idle ACP connections consume no turn seat and retain no
 resident turn process. An admitted turn uses the production dispatch boundary
 before the one-shot stdin write; ambiguous or blocked writes become durable
 terminal states instead of hidden retries. Confirmed provider terminal
-settlement releases the seat immediately. Closing a session cancels queued work
+errors fail promptly in both interactive and print modes, and settlement
+releases the seat immediately. On Linux, each fresh interactive process binds
+streaming to the conversation database that exact child opened, so concurrent
+agents cannot consume one another's turns. Closing a session cancels queued work
 while an already running turn follows the existing connector cancellation path.
 On a fresh Antigravity PTY, the connector waits for authentication and model
 redraws to settle before performing that single fenced write.
+Claude models with a single Antigravity catalog entry accept Paseo's explicit
+`low`, `medium`, and `high` reasoning choices through the native `--effort`
+flag; selecting the native default still omits that flag.
 
 The admitted turn still uses the existing `AgyCliSession.prompt`,
 conversation SQLite, `StreamPoller`, `Translator`, ACP permission handling,
@@ -140,17 +242,29 @@ path, outbox, ACK protocol, terminal replay, shadow comparison, custom request
 identity, or manual requeue API. Official `session/load` and
 `session/resume` history replay remain ACP Connector responsibilities.
 
-The `2.0.0.0` release candidate was built locally, installed from its tarball in
-a fresh prefix, and exercised against a real Antigravity `gemini-3.1-pro` turn
-on an isolated Paseo daemon at `127.0.0.1:6768`. The canary returned
-`STAGE4_ADMISSION_CANARY_OK`, the durable request completed, and its lease was
-released. Existing production `127.0.0.1:6767` connectivity was separately
-confirmed through Agent `81d15e58-d6e7-46c5-aea4-4061da7adbbb`; the active
-production connector was not switched or modified during this validation.
+### v2.0.0.1 validation status
+
+The `2.0.0.1` release candidate passed the complete repository validation,
+fresh-prefix tarball installation, public-entry import, packaged state-directory
+preflight, and isolated runtime smoke. It then passed production-candidate
+acceptance on `127.0.0.1:6767` with real Gemini and Claude turns, a stable
+`3 active + 1 queued` handoff, FIFO admission after seat release, and an
+additional six-request mixed-provider pressure run. All accepted requests
+completed and the durable ledger returned to zero leases and zero retained
+payloads.
+
+The automated and runtime fault matrix covers queue timeout, owner death,
+process exit and restart recovery, runtime reaping, soft drain, ambiguous
+dispatch, auth gating, permission modes, typed terminal outcomes, and cleanup.
+Provider capacity handling is intentionally strict: only trusted provider/model
+identity plus a native `503 UNAVAILABLE` signal creates a capacity cooldown.
+Historical native logs prove that signal shape; the final `agy 1.1.13`
+production-candidate pressure window completed successfully and therefore did
+not manufacture a capacity failure merely to exercise the branch.
 
 ## What This Fixes
 
-Upstream `agy-acp` is a general-purpose adapter. This fork solves 5 Paseo-specific
+Upstream `agy-acp` is a general-purpose adapter. This fork solves 7 Paseo-specific
 reliability problems:
 
 | # | Problem | Solution |
@@ -161,6 +275,7 @@ reliability problems:
 | 4 | Explicit-exit foreground commands stuck as "active" | `task_details` + `exitCode` rows not treated as background tasks |
 | 5 | Whole-file revert broken by provider-added newlines | `\n` / `\r\n` tolerance for whole-file writes |
 | 6 | Paseo cannot select Antigravity's unattended permission bypass | Exposes the native `--dangerously-skip-permissions` parameter as ACP mode id `dangerously-skip-permissions` |
+| 7 | Independent agents can overload or strand Antigravity work | Admission Controller v2 coordinates a durable, paced, recoverable account-wide queue |
 
 → [Full technical detail](./docs/PASEO_LOCAL_CHANGES.md)
 

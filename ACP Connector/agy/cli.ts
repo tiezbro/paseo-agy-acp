@@ -1,5 +1,5 @@
 import type { SessionUpdate } from "@agentclientprotocol/sdk";
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { spawn, type ChildProcessWithoutNullStreams } from "node:child_process";
 import { once } from "node:events";
 import { chmodSync, existsSync, statSync } from "node:fs";
@@ -26,7 +26,15 @@ import {
   startAgyPromptFreeProcess,
   type AgyPromptFreeProcess
 } from "./prompt-free-process.js";
-import { launchAgyProcess, type AgyStartupLauncher } from "./startup-launcher.js";
+import {
+  launchAgyProcess,
+  startRepositoryOwnedPromptFreePty,
+  type AgyStartupLauncher
+} from "./startup-launcher.js";
+import {
+  asAgyFreshPtyCanaryVerifier,
+  runPromptFreePtyCanary
+} from "./prompt-free-canary.js";
 import { conversationSnapshot } from "./db/scan.js";
 import { defaultInstallBinDir, ensureAgyInstalled } from "./installer.js";
 import { StreamPoller } from "./db/streaming.js";
@@ -306,6 +314,10 @@ interface AgyAdmissionDispatchIntentBridge {
   commitDispatchIntent(): void;
 }
 
+interface AgyAdmissionPtyIdentityBridge {
+  preparePty(processId: number): void;
+}
+
 export class AgyCliError extends Error {
   readonly command: string[];
   readonly exitCode: number | null;
@@ -325,10 +337,24 @@ export class AgyCliError extends Error {
   }
 }
 
+/** Provider failure proven terminal by the persisted Antigravity conversation. */
+export class AgyTerminalProviderError extends AgyCliError {}
+
+function throwTerminalProviderError(poller: StreamPoller, command: string[]): void {
+  const error = poller.terminalProviderError;
+  if (!error) return;
+  throw new AgyTerminalProviderError(
+    error.userMessage.trim() || error.summary.trim() || "agy provider request failed",
+    command,
+    null,
+    error.diagnostic
+  );
+}
+
 export class AgyCliSession {
   #process: SpawnedProcess | undefined;
   #pty: PtyProcess | undefined;
-  #ptyExit: Promise<{ exitCode: number }> | undefined;
+  #ptyExit: Promise<{ exitCode: number; signal?: number }> | undefined;
   #ptyOutput = "";
   #ptyLastDataAt = 0;
   #ptyIdleMarkerCount = 0;
@@ -563,11 +589,11 @@ export class AgyCliSession {
     this.#cancelled = false;
     this.#cancelWait = new Promise((resolve) => { this.#cancelTurn = resolve; });
     try {
-      if (this.shouldUseInteractivePermissions()) {
+      if (admissionBoundary !== undefined || this.shouldUseInteractivePermissions()) {
         return await this.runInteractivePrompt(
           prompt,
           onUpdate,
-          onPermission!,
+          onPermission ?? missingPermissionCallback,
           fsBridge,
           elicitationCap,
           admissionBoundary
@@ -598,6 +624,106 @@ export class AgyCliSession {
     }
   }
 
+  private startAdmittedPromptFreePty(
+    factory: PtyFactory,
+    command: string[],
+    businessPrompt: string
+  ): PtyProcess {
+    const binary = this.verifiedAgyBinaryForPromptFreeProcess();
+    const execution = startRepositoryOwnedPromptFreePty({
+      binary,
+      argv: command,
+      environment: this.promptFreeEnvironment(businessPrompt),
+      cwd: this.config.cwd,
+      processTitle: "agy-acp:prompt-free-pty",
+      temporaryFilePath: path.join(os.tmpdir(), "paseo-agy-acp", "prompt-free-pty.launch"),
+      launcherDiagnostics: [
+        "agy-acp launch=prompt-free-pty",
+        "transport=pty"
+      ],
+      forbiddenTexts: businessPrompt.length === 0 ? [] : [businessPrompt],
+      start: (launch) => launchAgyProcess(
+        this.config.startupLauncher,
+        "resident_pty",
+        () => {
+          const [program, ...args] = launch.argv;
+          if (!program) throw new Error("prompt-free PTY launch specification has no executable");
+          return factory.spawn(program, args, {
+            cwd: launch.cwd,
+            env: { ...launch.environment },
+            cols: 120,
+            rows: 40
+          });
+        },
+        "pty"
+      )
+    });
+    cliProducedPromptFreePtyLaunches.add(execution.launch);
+    return execution.child;
+  }
+
+  private runAdmittedPromptFreePtyDispatch(
+    prompt: string,
+    admissionBoundary: AgyAdmissionDispatchBoundary
+  ): AgyDispatchBoundaryResult<PtyProcess, PromptFreeDispatchProcessIdentity> {
+    const pty = this.#pty;
+    const processId = ptyProcessId(pty);
+    const binary = this.verifiedAgyBinaryForPromptFreeProcess();
+    const canaryKey = randomBytes(32);
+    const canary = runPromptFreePtyCanary({
+      businessPrompt: prompt,
+      verifiedAgyBinary: binary,
+      agyVersion: binary.version,
+      launcherFingerprint: binary.launcherFingerprint,
+      canaryKey,
+      fakeChild: () => ({ exitCode: 0 })
+    });
+    const verifyFreshPtyCanary = asAgyFreshPtyCanaryVerifier(canary, {
+      businessPrompt: prompt,
+      verifiedAgyBinary: binary,
+      agyVersion: binary.version,
+      launcherFingerprint: binary.launcherFingerprint,
+      canaryKey
+    });
+
+    const boundary = new AgyPromptFreeDispatchBoundary<PtyProcess, PromptFreeDispatchProcessIdentity>(
+      prompt,
+      {
+        requestId: "admission-boundary",
+        leaseId: "admission-boundary",
+        generation: 0,
+        ownerInstanceId: "admission-boundary"
+      },
+      {
+        spawnPromptFree: () => ({
+          process: pty!,
+          identity: processId === undefined ? null : { pid: processId },
+          promptChannel: "pty",
+          writeInitialPrompt: (candidatePrompt) => {
+            if (candidatePrompt !== prompt || pty === undefined) return { status: "ambiguous" };
+            try {
+              this.writePtyBusinessPrompt(prompt);
+              return { status: "accepted" };
+            } catch {
+              return { status: "ambiguous" };
+            }
+          }
+        }),
+        verifyFreshPtyCanary,
+        persistProcessIdentity: (record) => this.persistAdmittedPtyProcessIdentity(admissionBoundary, record),
+        recheckCancellation: (record) => this.recheckAdmittedDispatch(admissionBoundary, record),
+        commitDispatchIntent: () => commitAdmissionDispatchIntent(admissionBoundary)
+      }
+    );
+    return boundary.run();
+  }
+
+  private writePtyBusinessPrompt(prompt: string): void {
+    const pty = this.#pty;
+    if (pty === undefined) throw new Error("prompt-free PTY is unavailable");
+    pty.write(`\x1b[200~${prompt.replaceAll("\x1b", "")}\x1b[201~\r`);
+  }
+
   private async runInteractivePrompt(
     prompt: string,
     onUpdate: (update: SessionUpdate) => Promise<void>,
@@ -620,6 +746,7 @@ export class AgyCliSession {
     const observeReported = (reported: ReportedContent[]): Promise<void> =>
       this.observeReported(editBaseline, reported);
     const signature = JSON.stringify([this.config.model, this.config.effort, this.config.mode]);
+    if (admissionBoundary !== undefined && this.#pty) await this.stopPty();
     if (this.#pty && this.#ptyConfig !== signature) await this.stopPty();
     if (this.#cancelled) { this.#cancelTurn = undefined; return { stopReason: "cancelled" }; }
     const snapshot = this.#conversationId === null ? conversationSnapshot(this.config.conversationsDir) : null;
@@ -630,12 +757,14 @@ export class AgyCliSession {
       const [program, ...args] = this.interactiveCommandForPrompt(prompt, {
         includeStartupPrompt: admissionBoundary === undefined
       });
-      this.#pty = launchAgyProcess(
-        this.config.startupLauncher,
-        "resident_pty",
-        () => factory.spawn(program, args, { ...this.spawnOptions(), cols: 120, rows: 40 }),
-        "pty"
-      );
+      this.#pty = admissionBoundary === undefined
+        ? launchAgyProcess(
+            this.config.startupLauncher,
+            "resident_pty",
+            () => factory.spawn(program, args, { ...this.spawnOptions(), cols: 120, rows: 40 }),
+            "pty"
+          )
+        : this.startAdmittedPromptFreePty(factory, [program, ...args], prompt);
       freshPty = true;
       this.#ptyConfig = signature;
       this.#ptyOutput = "";
@@ -698,41 +827,45 @@ export class AgyCliSession {
             this.#ptyOutput
           );
         }
-        const exited = await Promise.race([
-          this.#ptyExit!.then(() => true),
-          sleep(POLL_INTERVAL_MS).then(() => false)
+        const terminal = await Promise.race([
+          this.#ptyExit!,
+          sleep(POLL_INTERVAL_MS).then(() => undefined)
         ]);
-        if (exited) {
+        if (terminal) {
           const output = this.#ptyOutput.trim() || "<no output>";
           await this.stopPty();
           throw new AgyCliError(
             `agy interactive PTY exited unexpectedly: ${output}`,
             [this.config.agyPath],
-            null,
+            ptyTerminalExitCode(terminal),
             this.#ptyOutput
           );
         }
       }
     }
     if (!freshPty || admissionBoundary !== undefined) {
-      const writePrompt = () => {
-        this.#pty?.write(`\x1b[200~${prompt.replaceAll("\x1b", "")}\x1b[201~\r`);
-      };
       if (admissionBoundary !== undefined) {
-        const processId = ptyProcessId(this.#pty);
-        if (processId === undefined) {
-          throw new AgyPromptFreeDispatchError("blocked", "child_process_identity_unavailable");
+        try {
+          const dispatch = this.runAdmittedPromptFreePtyDispatch(prompt, admissionBoundary);
+          if (dispatch.state !== "active") {
+            markAdmissionDispatchAmbiguous(admissionBoundary);
+            throw new AgyPromptFreeDispatchError(
+              dispatch.state,
+              dispatch.state === "blocked" ? dispatch.reason : undefined
+            );
+          }
+          admissionBoundary.afterPromptWrite();
+        } catch (error) {
+          await this.stopPty();
+          throw error;
         }
-        admissionBoundary.prepare(processId);
-        admissionBoundary.beforePromptWrite();
-        writePrompt();
-        admissionBoundary.afterPromptWrite();
       } else {
-        writePrompt();
+        this.writePtyBusinessPrompt(prompt);
       }
     }
     const poller = new StreamPoller({ dir: this.config.conversationsDir, conversationId: this.#conversationId,
-      baseStepIdx: this.#lastStepIdx, skipNarration: false, cwd: this.config.cwd, snapshot });
+      baseStepIdx: this.#lastStepIdx, skipNarration: false, cwd: this.config.cwd, snapshot,
+      processId: liveLinuxPtyProcessId(this.#pty) });
     // Tracked separately: a toolCallId can legitimately go through the live
     // gate first (status 9 -> keys sent) and later reappear as a completed
     // edit once agy applies it, at which point it's still worth routing
@@ -750,6 +883,7 @@ export class AgyCliSession {
     // lifecycle. agy can rewrite a rejected status-9 row to completed after
     // the menu closes; never let that late DB state override the rejection.
     const deniedToolIds = new Set<string>();
+    let deniedTerminalObserved = false;
     let permissionContinuationResolved = false;
     let suppressAssistantMessagesAfterDenial = false;
     const isToolUpdate = (update: SessionUpdate): boolean => {
@@ -787,6 +921,19 @@ export class AgyCliSession {
       while (true) {
         if (this.#cancelled) break;
         const updates = poller.poll();
+        throwTerminalProviderError(poller, [this.config.agyPath]);
+        if (updates.some((update) => {
+          const raw = update as unknown as {
+            sessionUpdate?: string;
+            toolCallId?: string;
+            status?: string;
+          };
+          return isToolUpdate(update) &&
+            Boolean(raw.toolCallId && deniedToolIds.has(raw.toolCallId)) &&
+            (raw.status === "failed" || raw.status === "cancelled");
+        })) {
+          deniedTerminalObserved = true;
+        }
         if (poller.revision !== seenRevision) {
           seenRevision = poller.revision;
           candidateRevision = poller.turnCompleteCandidate ? poller.revision : -1;
@@ -1023,7 +1170,7 @@ export class AgyCliSession {
         for (const update of stagedUpdates) {
           await emitVisibleUpdate(update);
         }
-        const hasStableFinalEvidence = candidateRevision === poller.revision;
+        const hasStableFinalEvidence = candidateRevision === poller.revision || deniedTerminalObserved;
         const hasCompletionSignal =
           this.#ptyIdleMarkerCount >= requiredIdleMarkerCount ||
           permissionContinuationResolved;
@@ -1033,14 +1180,14 @@ export class AgyCliSession {
           // Do not re-arm deadline here: only poller revision progress (above)
           // refreshes the timeout, so a missing completion cannot hang forever.
           if (poller.hasActiveBackgroundTasks && !this.#cancelled) {
-            const exited = await Promise.race([activePtyExit.then(() => true), sleep(POLL_INTERVAL_MS).then(() => false)]);
-            if (exited && !this.#cancelled) throw new AgyCliError(`agy interactive PTY exited unexpectedly: ${this.#ptyOutput.trim() || "<no output>"}`, [this.config.agyPath], null, this.#ptyOutput);
+            const terminal = await Promise.race([activePtyExit, sleep(POLL_INTERVAL_MS).then(() => undefined)]);
+            if (terminal && !this.#cancelled) throw new AgyCliError(`agy interactive PTY exited unexpectedly: ${this.#ptyOutput.trim() || "<no output>"}`, [this.config.agyPath], ptyTerminalExitCode(terminal), this.#ptyOutput);
             continue;
           }
           break;
         }
-        const exited = await Promise.race([activePtyExit.then(() => true), sleep(POLL_INTERVAL_MS).then(() => false)]);
-        if (exited && !this.#cancelled) throw new AgyCliError(`agy interactive PTY exited unexpectedly: ${this.#ptyOutput.trim() || "<no output>"}`, [this.config.agyPath], null, this.#ptyOutput);
+        const terminal = await Promise.race([activePtyExit, sleep(POLL_INTERVAL_MS).then(() => undefined)]);
+        if (terminal && !this.#cancelled) throw new AgyCliError(`agy interactive PTY exited unexpectedly: ${this.#ptyOutput.trim() || "<no output>"}`, [this.config.agyPath], ptyTerminalExitCode(terminal), this.#ptyOutput);
       }
       if (editBaseline && !this.#cancelled) {
         // The final idle marker has already proved that agy completed. Do not
@@ -1057,7 +1204,7 @@ export class AgyCliSession {
       this.#lastStepIdx = Math.max(this.#lastStepIdx, poller.lastStepIdx);
       this.#lastPromptUserStepIdxs = poller.userStepIdxs;
       poller.close();
-      if (this.#cancelled && !failed) await this.stopPty();
+      if ((admissionBoundary !== undefined || this.#cancelled) && !failed) await this.stopPty();
     }
   }
 
@@ -1250,7 +1397,9 @@ export class AgyCliSession {
       }
 
       const pollOnce = async () => {
-        for (const update of poller.poll()) {
+        const updates = poller.poll();
+        throwTerminalProviderError(poller, command);
+        for (const update of updates) {
           await onUpdate(update);
           // Record what disk holds for the reported paths, so end-of-turn
           // reconciliation only reports what the client has *not* been told.
@@ -1283,12 +1432,11 @@ export class AgyCliSession {
       })();
       pollLoop.catch(() => {});
 
-      const [exitCode] = child.exitCode === null
-        ? await Promise.race([
-            this.raceProcessError(exitPromise, errorPromise, command),
-            pollErrorPromise
-          ])
-        : [child.exitCode, null];
+      const processExitPromise: Promise<[number | null, NodeJS.Signals | null]> =
+        child.exitCode === null
+          ? this.raceProcessError(exitPromise, errorPromise, command)
+          : Promise.resolve([child.exitCode, null]);
+      const [exitCode] = await Promise.race([processExitPromise, pollErrorPromise]);
       polling = false;
       await pollLoop;
 
@@ -1420,6 +1568,23 @@ export class AgyCliSession {
     try {
       if (record.processIdentity === null) return { status: "not_recorded" };
       admissionBoundary.prepare(record.processIdentity.pid);
+      return { status: "recorded" };
+    } catch {
+      return { status: "not_recorded" };
+    }
+  }
+
+  private persistAdmittedPtyProcessIdentity(
+    admissionBoundary: AgyAdmissionDispatchBoundary,
+    record: AgyDispatchProcessRecord<PromptFreeDispatchProcessIdentity>
+  ): AgyDispatchIdentityPersistenceResult {
+    try {
+      if (record.processIdentity === null || record.promptChannel !== "pty") {
+        return { status: "not_recorded" };
+      }
+      const bridge = admissionBoundary as Partial<AgyAdmissionPtyIdentityBridge>;
+      if (typeof bridge.preparePty !== "function") return { status: "not_recorded" };
+      bridge.preparePty(record.processIdentity.pid);
       return { status: "recorded" };
     } catch {
       return { status: "not_recorded" };
@@ -1711,6 +1876,28 @@ function ptyProcessId(pty: PtyProcess | undefined): number | undefined {
   const pid = (pty as { pid?: unknown } | undefined)?.pid;
   return typeof pid === "number" && Number.isSafeInteger(pid) && pid > 0 ? pid : undefined;
 }
+
+function liveLinuxPtyProcessId(pty: PtyProcess | undefined): number | undefined {
+  const processId = ptyProcessId(pty);
+  if (
+    process.platform !== "linux" ||
+    processId === undefined ||
+    processId === process.pid
+  ) return undefined;
+  return existsSync(`/proc/${processId}/fd`) ? processId : undefined;
+}
+
+function ptyTerminalExitCode(event: { exitCode: number; signal?: number }): number | null {
+  if (event.signal === 9 || event.exitCode === -9) return null;
+  if (typeof event.signal === "number" && Number.isSafeInteger(event.signal) && event.signal > 0) {
+    return -event.signal;
+  }
+  return Number.isSafeInteger(event.exitCode) && event.exitCode !== 0 ? event.exitCode : null;
+}
+
+const missingPermissionCallback: PermissionCallback = async () => {
+  throw new Error("agy requested interactive permission without an ACP permission callback");
+};
 
 function markAdmissionDispatchAmbiguous(boundary: AgyAdmissionDispatchBoundary): void {
   const bridge = boundary as Partial<AgyAdmissionDispatchAmbiguousBridge>;

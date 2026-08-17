@@ -1,8 +1,6 @@
-import { EventEmitter } from "node:events";
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { PassThrough, Readable } from "node:stream";
 import Database from "better-sqlite3";
 import { afterEach, describe, expect, it } from "vitest";
 import {
@@ -24,15 +22,17 @@ import {
   AgyCliSession,
   DEFAULT_AGY_MODEL_LIST_TIMEOUT_MS,
   type AgyCliConfig,
-  type SpawnFactory,
-  type SpawnOptions
+  type PtyFactory,
+  type PtyProcess
 } from "../ACP Connector/agy/cli.js";
 import {
   probeExactAgyBinaryVersion,
   type VerifiedAgyBinary
 } from "../ACP Connector/agy/launch-spec.js";
+import { createConversationDb, insertStep } from "./fixtures/conversation-db.js";
+import { encodeStepPayload } from "./fixtures/step-encoder.js";
 
-const BUSINESS_PROMPT = "S3-T19 native stdin prompt";
+const BUSINESS_PROMPT = "S3-T19 native PTY prompt";
 const POLICY: AdmissionPolicy = {
   maxActiveTurns: 1,
   maxConcurrentStarts: 1,
@@ -49,12 +49,12 @@ afterEach(() => {
   for (const dir of tempDirs.splice(0)) fs.rmSync(dir, { recursive: true, force: true });
 });
 
-describe("S3-T19 native Pipe/EOF/signal/descendant regression", () => {
-  it("drives Pipe+EOF through AgyCliSession.prompt to a normal terminal without hanging", async () => {
+describe("S3-T19 native prompt-free PTY signal/descendant regression", () => {
+  it("drives one fenced PTY write through AgyCliSession.prompt without hanging or residency", async () => {
     const requestId = "s3-t19-pipe-eof";
     const { admission, databasePath } = admissionFixture();
-    const child = new FakeNativeAgyProcess("normal");
-    const calls: SpawnCall[] = [];
+    const child = new FakeNativeAgyPty("normal");
+    const calls: PtySpawnCall[] = [];
     const session = sessionFor(child, calls);
     const subject = coordinator(admission, requestId);
 
@@ -71,14 +71,15 @@ describe("S3-T19 native Pipe/EOF/signal/descendant regression", () => {
         undefined,
         boundary
       )
-    }), 2_000, "Pipe+EOF prompt")).resolves.toBe("end_turn");
+    }), 2_000, "prompt-free PTY prompt")).resolves.toBe("end_turn");
 
     expect(calls).toHaveLength(1);
     expect(JSON.stringify([calls[0].args, calls[0].options.env])).not.toContain(BUSINESS_PROMPT);
+    expect(calls[0].args).not.toContain("--print");
+    expect(calls[0].args).not.toContain("--prompt-interactive");
     expect(child.writeAttempts).toBe(1);
-    expect(child.writePayloads).toEqual([BUSINESS_PROMPT]);
-    expect(child.endCalls).toBe(1);
-    expect(child.exitCode).toBe(0);
+    expect(child.writePayloads).toEqual([`\x1b[200~${BUSINESS_PROMPT}\x1b[201~\r`]);
+    expect(child.killCalls).toBe(1);
     expect(requestSnapshot(databasePath, requestId)).toMatchObject({
       state: "completed",
       payloadCount: 0,
@@ -90,7 +91,7 @@ describe("S3-T19 native Pipe/EOF/signal/descendant regression", () => {
   it("turns SIGTERM into a typed AgyCliError and releases the admission seat", async () => {
     const requestId = "s3-t19-sigterm";
     const { admission, databasePath } = admissionFixture();
-    const child = new FakeNativeAgyProcess("sigterm");
+    const child = new FakeNativeAgyPty("sigterm");
     const session = sessionFor(child, []);
     const subject = coordinator(admission, requestId);
 
@@ -126,8 +127,8 @@ describe("S3-T19 native Pipe/EOF/signal/descendant regression", () => {
   it("keeps SIGKILL as recovery_required debt with one dispatch attempt and no replayable payload", async () => {
     const requestId = "s3-t19-sigkill";
     const { admission, databasePath } = admissionFixture();
-    const child = new FakeNativeAgyProcess("sigkill");
-    const calls: SpawnCall[] = [];
+    const child = new FakeNativeAgyPty("sigkill");
+    const calls: PtySpawnCall[] = [];
     const session = sessionFor(child, calls);
     const subject = coordinator(admission, requestId);
 
@@ -152,7 +153,7 @@ describe("S3-T19 native Pipe/EOF/signal/descendant regression", () => {
     expect(calls).toHaveLength(1);
     expect(child.signalEvents[0]).toBe("SIGKILL");
     expect(child.writeAttempts).toBe(1);
-    expect(child.writePayloads).toEqual([BUSINESS_PROMPT]);
+    expect(child.writePayloads).toEqual([`\x1b[200~${BUSINESS_PROMPT}\x1b[201~\r`]);
     expect(requestSnapshot(databasePath, requestId)).toMatchObject({
       state: "recovery_required",
       payloadCount: 0,
@@ -167,7 +168,7 @@ describe("S3-T19 native Pipe/EOF/signal/descendant regression", () => {
   it("observes descendant residue by matching pgrp and session through injected proc readers", async () => {
     const requestId = "s3-t19-descendant";
     const { admission } = admissionFixture();
-    const child = new FakeNativeAgyProcess("sigkill");
+    const child = new FakeNativeAgyPty("sigkill");
     const session = sessionFor(child, []);
     const subject = coordinator(admission, requestId);
 
@@ -237,11 +238,16 @@ function coordinator(admission: AdmissionController, requestId: string): Admissi
   });
 }
 
-function sessionFor(child: FakeNativeAgyProcess, calls: SpawnCall[]): AgyCliSession {
+function sessionFor(child: FakeNativeAgyPty, calls: PtySpawnCall[]): AgyCliSession {
   const fixture = verifiedAgyBinary();
+  const conversationsDir = tempDir("conversations");
+  child.bindConversations(conversationsDir);
   return new AgyCliSession(
-    { ...defaultConfig(fixture.binary), conversationsDir: tempDir("conversations") },
-    child.spawnFactory(calls)
+    { ...defaultConfig(fixture.binary), conversationsDir },
+    () => {
+      throw new Error("native admission regression must not use print-mode spawn");
+    },
+    child.ptyFactory(calls)
   );
 }
 
@@ -294,7 +300,7 @@ function defaultConfig(binary: VerifiedAgyBinary): AgyCliConfig {
     cwd: tempDir("workspace"),
     additionalDirectories: [],
     agyPath: binary.executable,
-    printTimeout: "250ms",
+    printTimeout: "1s",
     effort: undefined,
     mode: "default",
     sandbox: true,
@@ -330,89 +336,95 @@ function withTimeout<T>(promise: Promise<T>, milliseconds: number, label: string
   });
 }
 
-interface SpawnCall {
+interface PtySpawnCall {
   readonly command: string;
   readonly args: string[];
-  readonly options: SpawnOptions;
+  readonly options: { cwd: string; env?: NodeJS.ProcessEnv; cols: number; rows: number };
 }
 
 type FakeTerminalMode = "normal" | "sigterm" | "sigkill";
 
-class FakeNativeAgyProcess extends EventEmitter {
-  readonly stdout = new PassThrough();
-  readonly stderr = new PassThrough();
+class FakeNativeAgyPty implements PtyProcess {
   readonly pid = process.pid;
   readonly writePayloads: string[] = [];
   readonly signalEvents: string[] = [];
-  exitCode: number | null = null;
   writeAttempts = 0;
-  endCalls = 0;
+  killCalls = 0;
+  #conversationsDir: string | undefined;
+  readonly #dataListeners: Array<(data: string) => void> = [];
+  readonly #exitListeners: Array<(event: { exitCode: number; signal?: number }) => void> = [];
   #terminal = false;
 
-  readonly stdin = {
-    write: (data: string) => {
-      this.writeAttempts += 1;
-      this.writePayloads.push(data);
-      return true;
-    },
-    end: () => {
-      this.endCalls += 1;
-      this.queueTerminal();
-    }
-  };
-
   constructor(private readonly mode: FakeTerminalMode) {
-    super();
   }
 
-  kill(signal?: NodeJS.Signals): boolean {
+  bindConversations(directory: string): void {
+    this.#conversationsDir = directory;
+  }
+
+  start(): void {
+    queueMicrotask(() => this.emitData("? for shortcuts"));
+  }
+
+  write(data: string): void {
+    this.writeAttempts++;
+    this.writePayloads.push(data);
+    queueMicrotask(() => this.finishBusinessWrite());
+  }
+
+  kill(signal?: string): void {
+    this.killCalls++;
+    if (this.#terminal) return;
     this.signalEvents.push(signal ?? "SIGTERM");
-    if (this.signalEvents[0] === "SIGKILL" && signal !== "SIGKILL") {
-      return true;
-    }
-    if (signal === "SIGKILL") {
-      this.finish(-9, "SIGKILL");
-    } else {
-      this.finish(-15, signal ?? "SIGTERM");
-    }
-    return true;
+    this.finish(signal === "SIGKILL" ? 9 : 15);
   }
 
-  spawnFactory(calls: SpawnCall[]): SpawnFactory {
-    return (command, args, options) => {
+  onData(listener: (data: string) => void): { dispose(): void } {
+    this.#dataListeners.push(listener);
+    return { dispose() {} };
+  }
+
+  onExit(listener: (event: { exitCode: number; signal?: number }) => void): { dispose(): void } {
+    this.#exitListeners.push(listener);
+    return { dispose() {} };
+  }
+
+  ptyFactory(calls: PtySpawnCall[]): PtyFactory {
+    return { spawn: (command, args, options) => {
       calls.push({ command, args, options });
-      return this as unknown as ReturnType<SpawnFactory>;
-    };
+      this.start();
+      return this;
+    } };
   }
 
-  private queueTerminal(): void {
-    queueMicrotask(() => {
-      if (this.mode === "normal") {
-        this.finish(0, null);
-        return;
-      }
-      if (this.mode === "sigterm") {
-        this.stderr.write("terminated by SIGTERM\n");
-        this.signalEvents.push("SIGTERM");
-        this.finish(-15, "SIGTERM");
-        return;
-      }
-      setTimeout(() => {
-        this.stderr.write("terminated by SIGKILL\n");
-        this.signalEvents.push("SIGKILL");
-        this.emit("error", Object.assign(new Error("process terminated by SIGKILL"), { code: "SIGKILL" }));
-        setTimeout(() => this.finish(-9, "SIGKILL"), 0);
-      }, 0);
-    });
+  private finishBusinessWrite(): void {
+    if (this.mode === "normal") {
+      if (!this.#conversationsDir) throw new Error("native PTY conversations directory is missing");
+      const db = createConversationDb(this.#conversationsDir, "native-pty");
+      insertStep(db, {
+        idx: 1,
+        stepType: 15,
+        status: 3,
+        stepPayload: encodeStepPayload({ agentText: "native PTY turn done" })
+      });
+      db.close();
+      this.emitData("? for shortcuts");
+      return;
+    }
+    const signal = this.mode === "sigterm" ? 15 : 9;
+    this.signalEvents.push(this.mode === "sigterm" ? "SIGTERM" : "SIGKILL");
+    this.emitData(`terminated by ${this.signalEvents.at(-1)}\n`);
+    this.finish(signal);
   }
 
-  private finish(exitCode: number, signal: NodeJS.Signals | null): void {
+  private finish(signal: number): void {
     if (this.#terminal) return;
     this.#terminal = true;
-    this.exitCode = exitCode;
-    this.stdout.end();
-    this.stderr.end();
-    this.emit("exit", exitCode, signal);
+    for (const listener of this.#exitListeners) listener({ exitCode: 0, signal });
+  }
+
+  private emitData(data: string): void {
+    for (const listener of this.#dataListeners) listener(data);
   }
 }
 

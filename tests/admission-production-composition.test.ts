@@ -71,7 +71,7 @@ describe("admission production composition", () => {
       });
       expect(initialized).toMatchObject({
         protocolVersion: 1,
-        agentInfo: { name: "agy-acp", version: "2.0.0.0" }
+        agentInfo: { name: "agy-acp", version: "2.0.0.1" }
       });
       const session = await connection.agent.request(methods.agent.session.new, {
         cwd: directory,

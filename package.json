@@ -1,6 +1,6 @@
 {
   "name": "paseo-agy-acp",
-  "version": "2.0.0.0",
+  "version": "2.0.0.1",
   "description": "Paseo-focused ACP adapter for Google Antigravity CLI — community derivative of agy-acp (ACP v1 + experimental draft ACP v2)",
   "type": "module",
   "author": {
@@ -25,10 +25,12 @@
   "types": "dist/ACP Connector/agent.d.ts",
   "license": "Apache-2.0",
   "bin": {
-    "agy-acp": "dist/ACP Connector/main.js"
+    "agy-acp": "dist/ACP Connector/main.js",
+    "agy-acp-prepare-state": "scripts/prepare-admission-state-dir.mjs"
   },
   "files": [
     "dist",
+    "scripts/prepare-admission-state-dir.mjs",
     "README.md",
     "README.zh-CN.md",
     "CHANGELOG.md",

@@ -15,6 +15,7 @@ import {
   type PtyProcess,
   type SpawnFactory
 } from "../ACP Connector/agy/cli.js";
+import { probeExactAgyBinaryVersion } from "../ACP Connector/agy/launch-spec.js";
 import { createConversationDb, insertStep, updateStep } from "./fixtures/conversation-db.js";
 import {
   encodeStepPayload,
@@ -48,6 +49,7 @@ describe("S3-T10 admission permission chain", () => {
     const session = new AgyCliSession(
       {
         ...defaultConfig(workspace, conversations),
+        ...promptFreeBinaryConfig(workspace),
         interactivePermissions: true
       },
       unusedPrintSpawn,
@@ -70,8 +72,9 @@ describe("S3-T10 admission permission chain", () => {
       expect(outcome).toEqual({ stopReason: "end_turn" });
       expect(pty.businessWrites).toEqual(["\x1b[200~wait for ready\x1b[201~\r"]);
       expect(boundary.events).toEqual([
-        "prepare:12345",
+        "preparePty:12345",
         "beforePromptWrite",
+        "commitDispatchIntent",
         "afterPromptWrite"
       ]);
     } finally {
@@ -128,15 +131,74 @@ describe("S3-T10 admission permission chain", () => {
     }
   });
 
-  it("fences one reused-PTY business prompt without counting permission-key writes as dispatch", async () => {
+  it("runs permission-bypass admission through one fenced prompt-free PTY and stops it after the turn", async () => {
     const workspace = tempDir("workspace");
     const conversations = tempDir("conversations");
-    const pty = new ScriptedPty(() => {
+    const agyBinary = path.join(workspace, "agy");
+    writeFileSync(agyBinary, "#!/bin/sh\nprintf '%s\\n' 'agy version 1.1.13'\n", { mode: 0o700 });
+    const pty = new ScriptedPty(() => {});
+    pty.onBusinessWrite = () => {
+      const db = createConversationDb(conversations, "permission-bypass");
+      insertStep(db, {
+        idx: 1,
+        stepType: 15,
+        status: 3,
+        stepPayload: encodeStepPayload({ agentText: "permission bypass turn done" })
+      });
+      db.close();
+      queueMicrotask(() => pty.emitData("? for shortcuts"));
+    };
+    let session: Awaited<ReturnType<typeof buildSession>> | undefined;
+
+    try {
+      session = await buildSession(workspace, [], null, {
+        env: { ...process.env, NODE_ENV: "test", AGY_BIN: agyBinary },
+        argv: ["--dangerously-skip-permissions"],
+        backend: new AgyCliBackend(unusedPrintSpawn, ptyFactory(pty)),
+        getModelOptions: async () => MODEL_LIST,
+        conversationsDir: conversations,
+        admissionEnabled: true
+      });
+      session.sessionId = "permission-bypass-session";
+      session.agy.config.printTimeout = "1s";
+      const boundary = new RecordingBoundary();
+
+      const outcome = await session.agy.prompt(
+        "run without permission prompts",
+        async () => {},
+        undefined,
+        undefined,
+        undefined,
+        boundary
+      );
+
+      expect(outcome).toEqual({ stopReason: "end_turn" });
+      expect(pty.businessWrites).toEqual([
+        "\x1b[200~run without permission prompts\x1b[201~\r"
+      ]);
+      expect(pty.permissionWrites).toEqual([]);
+      expect(boundary.events).toEqual([
+        "preparePty:12345",
+        "beforePromptWrite",
+        "commitDispatchIntent",
+        "afterPromptWrite"
+      ]);
+      expect(pty.killCalls).toBe(1);
+    } finally {
+      await session?.agy.close().catch(() => {});
+    }
+  });
+
+  it("replaces a legacy resident PTY before fencing an admitted business prompt", async () => {
+    const workspace = tempDir("workspace");
+    const conversations = tempDir("conversations");
+    const legacyPty = new ScriptedPty(() => {
       const db = createConversationDb(conversations, "permission-chain");
       insertStep(db, pendingPermissionStep());
       db.close();
     });
-    pty.onBusinessWrite = () => {
+    const admittedPty = new ScriptedPty(() => {});
+    admittedPty.onBusinessWrite = () => {
       const db = new Database(path.join(conversations, "permission-chain.db"));
       insertStep(db, {
         idx: 3,
@@ -145,22 +207,31 @@ describe("S3-T10 admission permission chain", () => {
         stepPayload: encodeStepPayload({ agentText: "second turn done" })
       });
       db.close();
-      setTimeout(() => pty.emitData("? for shortcuts"), 0);
+      setTimeout(() => admittedPty.emitData("? for shortcuts"), 0);
     };
+    const ptys = [legacyPty, admittedPty];
 
     const session = new AgyCliSession(
       {
         ...defaultConfig(workspace, conversations),
+        ...promptFreeBinaryConfig(workspace),
         interactivePermissions: true,
         mode: "accept-edits"
       },
       unusedPrintSpawn,
-      ptyFactory(pty)
+      {
+        spawn: () => {
+          const next = ptys.shift();
+          if (!next) throw new Error("unexpected extra PTY spawn");
+          next.start();
+          return next;
+        }
+      }
     );
 
     try {
       await session.prompt("first turn", async () => {}, async () => {
-        completePermissionTurn(conversations, "permission-chain", pty, 1, 2);
+        completePermissionTurn(conversations, "permission-chain", legacyPty, 1, 2);
         return "agy-allow-once";
       });
 
@@ -177,8 +248,11 @@ describe("S3-T10 admission permission chain", () => {
       );
 
       expect(outcome).toEqual({ stopReason: "end_turn" });
-      expect(pty.permissionWrites).toEqual(["\r"]);
-      expect(pty.businessWrites).toEqual(["\x1b[200~second turn\x1b[201~\r"]);
+      expect(legacyPty.permissionWrites).toEqual(["\r"]);
+      expect(legacyPty.businessWrites).toEqual([]);
+      expect(legacyPty.killCalls).toBe(1);
+      expect(admittedPty.businessWrites).toEqual(["\x1b[200~second turn\x1b[201~\r"]);
+      expect(admittedPty.killCalls).toBe(1);
       expect(boundary.count("beforePromptWrite")).toBe(1);
       expect(boundary.count("afterPromptWrite")).toBe(1);
     } finally {
@@ -210,6 +284,15 @@ function defaultConfig(cwd: string, conversationsDir: string): AgyCliConfig {
     discoverModels: true,
     modelListTimeoutMs: DEFAULT_AGY_MODEL_LIST_TIMEOUT_MS,
     conversationsDir
+  };
+}
+
+function promptFreeBinaryConfig(cwd: string): Pick<AgyCliConfig, "agyPath" | "verifiedAgyBinary"> {
+  const agyPath = path.join(cwd, "agy-prompt-free-test");
+  writeFileSync(agyPath, "#!/bin/sh\nprintf '%s\\n' 'agy version 1.1.13'\n", { mode: 0o700 });
+  return {
+    agyPath,
+    verifiedAgyBinary: probeExactAgyBinaryVersion({ executable: agyPath, cwd })
   };
 }
 
@@ -269,8 +352,16 @@ class RecordingBoundary implements AgyAdmissionDispatchBoundary {
     this.events.push(`prepare:${processId}`);
   }
 
+  preparePty(processId: number): void {
+    this.events.push(`preparePty:${processId}`);
+  }
+
   beforePromptWrite(): void {
     this.events.push("beforePromptWrite");
+  }
+
+  commitDispatchIntent(): void {
+    this.events.push("commitDispatchIntent");
   }
 
   afterPromptWrite(): void {
@@ -286,6 +377,7 @@ class ScriptedPty implements PtyProcess {
   readonly pid = 12_345;
   readonly permissionWrites: string[] = [];
   readonly businessWrites: string[] = [];
+  killCalls = 0;
   onBusinessWrite: ((data: string) => void) | undefined;
   private readonly dataListeners: Array<(data: string) => void> = [];
   private readonly exitListeners: Array<(event: { exitCode: number }) => void> = [];
@@ -323,6 +415,7 @@ class ScriptedPty implements PtyProcess {
   }
 
   kill(): void {
+    this.killCalls++;
     for (const listener of this.exitListeners) listener({ exitCode: 0 });
   }
 
