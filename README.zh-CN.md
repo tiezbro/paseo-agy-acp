@@ -5,7 +5,7 @@
 **Paseo × Antigravity — ACP 适配器**
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](./LICENSE)
-[![Version](https://img.shields.io/badge/version-2.0.0.1-blue?style=flat-square)](./package.json)
+[![Version](https://img.shields.io/badge/version-2.0.0.2-blue?style=flat-square)](./package.json)
 [![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen?style=flat-square)](#)
 [![ACP](https://img.shields.io/badge/ACP-v1%20%2B%20draft%20v2-8A2BE2?style=flat-square)](https://agentclientprotocol.com)
 
@@ -240,6 +240,14 @@ terminal 结果与资源清理。Provider capacity 处理刻意保持严格：�
 身份与原生 `503 UNAVAILABLE` 信号同时成立时才创建 capacity cooldown。历史原生日志已
 证明该信号形态；最终 `agy 1.1.13` 生产候选压力窗口全部成功，因此不会为了覆盖分支而
 伪造一次 capacity failure。
+
+### v2.0.0.2 验证状态
+
+`2.0.0.2` 是叠在 `2.0.0.1` 运行时上的文档与证据补丁。已授权的 `agy 1.1.14`
+现场观测捕获了 Gemini 成功 turn，以及 Claude 个人额度耗尽时的 stream-json
+`result.error` 载体；没有观测到 HTTP 503 / `httpStatus` / `code` / `reason`。
+历史 `1.1.12` 原生日志声称仍未核实。trusted-503 物理来源关单保持开放；
+额度文案不按 capacity `503` 处理。
 
 ## 🔧 解决的问题
 

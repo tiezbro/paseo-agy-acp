@@ -1,0 +1,135 @@
+TASK_ID: S3-T08-OBS-002
+UTC: 2026-08-19T04:52:00Z
+HEAD: b16aaacfb4a59a44362b9aae5b19e91786a9433b
+agy --version: 1.1.14
+agy file: /home/tiezbro/.local/bin/agy: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0, BuildID[md5/uuid]=a9cd43d5fc76c81c4bf88ae1cf77b0fe, stripped
+agy sha256: 2549632914935c42faf6560cbf383ae6b3a3ed5b9f7b0579892e6139a0658fc6  /home/tiezbro/.local/bin/agy
+AUTHORIZATION: user authorized S2-SPIKE-503-001 §6 condition 2 only (isolated/real Claude observation only)
+
+ROUND_1_CLOSED_EVIDENCE:
+- /home/tiezbro/projects/paseo-agy-acp/docs/design/receipts/S3-T08/observation-1.txt is treated as closed evidence.
+- Round 1 recorded LIVE_503_CAPTURED=no for live agy 1.1.14 sha256 2549632914935c42faf6560cbf383ae6b3a3ed5b9f7b0579892e6139a0658fc6.
+- Round 1 Gemini/default SUCCESS and invalid-model generic result.error are not re-used here as Claude proof.
+- Historical 1.1.12 CHANGELOG/log prose remains unverified-changelog-only and is not treated as proof.
+
+BOUNDARIES:
+- Repo: /home/tiezbro/projects/paseo-agy-acp
+- Working directory requested for live agy observation: /tmp/s3-t08-obs2-Mg0U
+- command -v agy: /home/tiezbro/.local/bin/agy
+- Environment for live agy starts used env -i with only PATH, HOME, USER, SHELL, and TERM restored for the agy process; PASEO_*, AGY_ACP_ADMISSION_ENABLED, and AGY_ACP_STATE_DIR were stripped.
+- Attempt 5 is the corrected isolated-cwd Claude observation and is the only attempt relied on for the isolated-cwd condition.
+- Attempts 1-4 used the requested flags and stripped environment, but process cwd remained /home/tiezbro/projects/paseo-agy-acp while --add-dir pointed at /tmp/s3-t08-obs2-Mg0U; they are retained as raw non-authoritative process-start evidence and not relied on for isolated-cwd proof.
+- Process-start budget: agy --version identity pin plus five agy --print starts = 6 agy starts if the identity pin is counted. No optional concurrent pair was run. Gemini was not used.
+- After the corrected isolated-cwd Claude run produced a live quota/capacity-class result.error carrier, no additional agy starts were made.
+- Production Paseo 127.0.0.1:6767 was not used for observation and was not mutated. A read-only child-agent bootstrap inspect of 127.0.0.1:6767 was performed before task execution per controlling agent-runtime instructions.
+- Production Admission runtime.sqlite / Health / ~/.paseo / ~/.agents were not intentionally written.
+- Capture secret scan: no account email, cookie, authorization, bearer, api key, or set-cookie pattern found.
+- Process cleanup check: pgrep -af '/home/tiezbro/.local/bin/agy|(^|/)agy( |$)' returned no matches after the attempts.
+- Isolated cwd file check: find /tmp/s3-t08-obs2-Mg0U -maxdepth 2 -type f returned no files.
+
+CAPTURE_FILES:
+- docs/design/receipts/S3-T08/captures2/attempt1.meta.txt sha256=cee6d056a79873008a74e383f3ca17b074dab4246e8cc34dd1de396a80a48cde
+- docs/design/receipts/S3-T08/captures2/attempt1.stderr.txt sha256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+- docs/design/receipts/S3-T08/captures2/attempt1.stdout.ndjson sha256=3a8bb5131bff81228247a26bed47f4865b84ab612bd077fd5ecd881b55dfdfe3
+- docs/design/receipts/S3-T08/captures2/attempt2.meta.txt sha256=6a7ed37efb8257f24aac7b2905dce2bae17c8843d2cd40891c05f3a81125fd5f
+- docs/design/receipts/S3-T08/captures2/attempt2.stderr.txt sha256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+- docs/design/receipts/S3-T08/captures2/attempt2.stdout.ndjson sha256=a51c27aef6a3460d3d36b97eef05b800a84a0a9ba5d767886a93a323d1833139
+- docs/design/receipts/S3-T08/captures2/attempt3.meta.txt sha256=64168f47705e66d7d325f58992db24d20d77b1e1fa4c155b8ed8120699a2d25d
+- docs/design/receipts/S3-T08/captures2/attempt3.stderr.txt sha256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+- docs/design/receipts/S3-T08/captures2/attempt3.stdout.ndjson sha256=e7a0fcc6a5b18a44fb5362c4f55fe54376a221596c94e0539fbb382c51ad3f74
+- docs/design/receipts/S3-T08/captures2/attempt4.meta.txt sha256=6fcf425a26eb80ebf2f59205f278700ccdc37e534befaadba008a22466cec2db
+- docs/design/receipts/S3-T08/captures2/attempt4.stderr.txt sha256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+- docs/design/receipts/S3-T08/captures2/attempt4.stdout.ndjson sha256=372ed3efba73532388d50222ab7e9d6fa9b6cb88124cd5b44558e657d54926ba
+- docs/design/receipts/S3-T08/captures2/attempt5.meta.txt sha256=0cb6d2593f0c61650306f1db8e32894b2b57e466d753aa9e41a666e88cae010d
+- docs/design/receipts/S3-T08/captures2/attempt5.stderr.txt sha256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+- docs/design/receipts/S3-T08/captures2/attempt5.stdout.ndjson sha256=4923dc660caf2ea88d02debe6c10dae972fb2576820a31ce9822d7b2eda9dbf1
+
+ATTEMPTS:
+- attempt 1:
+  UTC_START: 2026-08-19T04:42:42Z
+  UTC_END: 2026-08-19T04:42:56Z
+  command: timeout 75s env -i PATH="$PATH" HOME="$HOME" USER="$USER" SHELL="$SHELL" TERM="${TERM:-xterm}" /home/tiezbro/.local/bin/agy --print 'Reply with the single word pong.' --print-timeout 60s --output-format stream-json --disable-slash-commands --add-dir /tmp/s3-t08-obs2-Mg0U --model 'Claude Sonnet 4.6 (Thinking)'
+  version: agy 1.1.14 sha256 2549632914935c42faf6560cbf383ae6b3a3ed5b9f7b0579892e6139a0658fc6
+  exit: 1
+  init fields: event=init; conversation_id=726359fd-f919-4740-bfa4-4bcd9a8ecbf8; model="Claude Sonnet 4.6 (Thinking)"; cwd="/home/tiezbro/projects/paseo-agy-acp"; permission_mode="request-review"
+  stdout: stream-json init, step_update, terminal result
+  stderr excerpt: empty
+  result fields: event=result; conversation_id=726359fd-f919-4740-bfa4-4bcd9a8ecbf8; status=ERROR; response=""; error="Individual quota reached. Please upgrade your subscription to increase your limits. Resets in 100h25m46s."; httpStatus absent/null; code absent/null; reason absent/null; duration_seconds=0; num_turns=1; usage all zero
+  provider semantics: live Claude quota/capacity-class carrier in generic result.error; not HTTP 503; no structured httpStatus/code/reason.
+  observed error class: provider_or_account_quota_error
+  isolated-cwd proof: no; process cwd remained the repo, so this attempt is not relied on for the isolated-cwd condition.
+- attempt 2:
+  UTC_START: 2026-08-19T04:42:56Z
+  UTC_END: 2026-08-19T04:43:09Z
+  command: timeout 75s env -i PATH="$PATH" HOME="$HOME" USER="$USER" SHELL="$SHELL" TERM="${TERM:-xterm}" /home/tiezbro/.local/bin/agy --print 'Reply with the single word pong.' --print-timeout 60s --output-format stream-json --disable-slash-commands --add-dir /tmp/s3-t08-obs2-Mg0U --model 'Claude Sonnet 4.6 (Thinking)'
+  version: agy 1.1.14 sha256 2549632914935c42faf6560cbf383ae6b3a3ed5b9f7b0579892e6139a0658fc6
+  exit: 1
+  init fields: event=init; conversation_id=edd5ab38-3eb0-4e10-bea6-b915e321b4f5; model="Claude Sonnet 4.6 (Thinking)"; cwd="/home/tiezbro/projects/paseo-agy-acp"; permission_mode="request-review"
+  stdout: stream-json init, step_update, terminal result
+  stderr excerpt: empty
+  result fields: event=result; conversation_id=edd5ab38-3eb0-4e10-bea6-b915e321b4f5; status=ERROR; response=""; error="Individual quota reached. Please upgrade your subscription to increase your limits. Resets in 100h25m34s."; httpStatus absent/null; code absent/null; reason absent/null; duration_seconds=0; num_turns=1; usage all zero
+  provider semantics: live Claude quota/capacity-class carrier in generic result.error; not HTTP 503; no structured httpStatus/code/reason.
+  observed error class: provider_or_account_quota_error
+  isolated-cwd proof: no; process cwd remained the repo, so this attempt is not relied on for the isolated-cwd condition.
+- attempt 3:
+  UTC_START: 2026-08-19T04:43:09Z
+  UTC_END: 2026-08-19T04:43:21Z
+  command: timeout 75s env -i PATH="$PATH" HOME="$HOME" USER="$USER" SHELL="$SHELL" TERM="${TERM:-xterm}" /home/tiezbro/.local/bin/agy --print 'Reply with the single word pong.' --print-timeout 60s --output-format stream-json --disable-slash-commands --add-dir /tmp/s3-t08-obs2-Mg0U --model 'Claude Opus 4.6 (Thinking)'
+  version: agy 1.1.14 sha256 2549632914935c42faf6560cbf383ae6b3a3ed5b9f7b0579892e6139a0658fc6
+  exit: 1
+  init fields: event=init; conversation_id=da4d9e10-1c3a-4e07-8f67-2c6592ed191d; model="Claude Opus 4.6 (Thinking)"; cwd="/home/tiezbro/projects/paseo-agy-acp"; permission_mode="request-review"
+  stdout: stream-json init, step_update, terminal result
+  stderr excerpt: empty
+  result fields: event=result; conversation_id=da4d9e10-1c3a-4e07-8f67-2c6592ed191d; status=ERROR; response=""; error="Individual quota reached. Please upgrade your subscription to increase your limits. Resets in 100h25m21s."; httpStatus absent/null; code absent/null; reason absent/null; duration_seconds=0; num_turns=1; usage all zero
+  provider semantics: live Claude quota/capacity-class carrier in generic result.error; not HTTP 503; no structured httpStatus/code/reason.
+  observed error class: provider_or_account_quota_error
+  isolated-cwd proof: no; process cwd remained the repo, so this attempt is not relied on for the isolated-cwd condition.
+- attempt 4:
+  UTC_START: 2026-08-19T04:43:21Z
+  UTC_END: 2026-08-19T04:43:34Z
+  command: timeout 75s env -i PATH="$PATH" HOME="$HOME" USER="$USER" SHELL="$SHELL" TERM="${TERM:-xterm}" /home/tiezbro/.local/bin/agy --print 'Reply with the single word pong.' --print-timeout 60s --output-format stream-json --disable-slash-commands --add-dir /tmp/s3-t08-obs2-Mg0U --model 'Claude Opus 4.6 (Thinking)'
+  version: agy 1.1.14 sha256 2549632914935c42faf6560cbf383ae6b3a3ed5b9f7b0579892e6139a0658fc6
+  exit: 1
+  init fields: event=init; conversation_id=34e5fb02-b3cc-43d5-952d-fa9cafc44d41; model="Claude Opus 4.6 (Thinking)"; cwd="/home/tiezbro/projects/paseo-agy-acp"; permission_mode="request-review"
+  stdout: stream-json init, step_update, terminal result
+  stderr excerpt: empty
+  result fields: event=result; conversation_id=34e5fb02-b3cc-43d5-952d-fa9cafc44d41; status=ERROR; response=""; error="Individual quota reached. Please upgrade your subscription to increase your limits. Resets in 100h25m9s."; httpStatus absent/null; code absent/null; reason absent/null; duration_seconds=0; num_turns=1; usage all zero
+  provider semantics: live Claude quota/capacity-class carrier in generic result.error; not HTTP 503; no structured httpStatus/code/reason.
+  observed error class: provider_or_account_quota_error
+  isolated-cwd proof: no; process cwd remained the repo, so this attempt is not relied on for the isolated-cwd condition.
+- attempt 5:
+  UTC_START: 2026-08-19T04:44:32Z
+  UTC_END: 2026-08-19T04:44:43Z
+  command: timeout 75s env -i PATH="$PATH" HOME="$HOME" USER="$USER" SHELL="$SHELL" TERM="${TERM:-xterm}" /home/tiezbro/.local/bin/agy --print 'Reply with the single word pong.' --print-timeout 60s --output-format stream-json --disable-slash-commands --add-dir /tmp/s3-t08-obs2-Mg0U --model 'Claude Sonnet 4.6 (Thinking)'
+  version: agy 1.1.14 sha256 2549632914935c42faf6560cbf383ae6b3a3ed5b9f7b0579892e6139a0658fc6
+  exit: 1
+  init fields: event=init; conversation_id=69efefe3-6928-455d-b0f9-9e059f90ded2; model="Claude Sonnet 4.6 (Thinking)"; cwd="/tmp/s3-t08-obs2-Mg0U"; permission_mode="request-review"
+  stdout: stream-json init, step_update, terminal result
+  stderr excerpt: empty
+  terminal result object:
+    status=ERROR
+    error="Individual quota reached. Please upgrade your subscription to increase your limits. Resets in 100h23m59s."
+    httpStatus absent/null
+    code absent/null
+    reason absent/null
+  result fields: event=result; conversation_id=69efefe3-6928-455d-b0f9-9e059f90ded2; status=ERROR; response=""; duration_seconds=0; num_turns=1; usage all zero
+  provider semantics: live Claude quota/capacity-class carrier in generic result.error; not HTTP 503; no structured httpStatus/code/reason.
+  observed error class: provider_or_account_quota_error
+  isolated-cwd proof: yes; init.cwd is /tmp/s3-t08-obs2-Mg0U.
+  stop reason: corrected isolated-cwd Claude run produced a live quota/capacity-class carrier; no further agy starts were made.
+
+LIVE_503_CAPTURED: no
+LIVE_CLAUDE_QUOTA_CARRIER_CAPTURED: yes
+CARRIER: non-503 current-binary Claude carrier was stream-json terminal result.error with status=ERROR; no stderr carrier; no httpStatus/code/reason fields; no literal HTTP 503 status was observed.
+NON_503_FAILURE_CARRIER_OBSERVED: result.error in all five Claude attempts; the only isolated-cwd authoritative attempt is attempt 5.
+HISTORICAL_1_1_12_LOGS: unverified-changelog-only
+
+TYPED_BLOCKERS after this observation:
+SOURCE_FIELD_GAP: open for Scheme §4.5 trusted-503 physical contract. Live agy 1.1.14 Claude produced only generic terminal result.error for an individual quota limit; no HTTP 503, httpStatus, code, reason, exact trusted phrase, or source field path was observed.
+REAL_PROVIDER_REQUIRED: narrowed but not closed for trusted-503. A real current-binary Claude observation was captured in isolated cwd, but it produced quota exhaustion rather than a live HTTP 503 trusted-capacity carrier.
+SOURCE_IDENTITY_UNKNOWN: open. The live binary identity is pinned as agy 1.1.14 with sha256 2549632914935c42faf6560cbf383ae6b3a3ed5b9f7b0579892e6139a0658fc6, but no source commit or reproducible provider-503 emitter/stderr call path was proven.
+
+CLOSEOUT_EFFECT:
+- Does this close Scheme §4.5 trusted-503 physical contract? no
+- ACP_CLOSEOUT still NOT_READY for trusted-503 unless the open blockers are closed with live version-bound 503 carrier proof.
+- No classifier/source/test edits, commit, push, tag, install, release, login/logout, fake stderr, regex/phrase normalization, Health writes, Admission runtime.sqlite writes, or JOINT ACCEPT were performed.

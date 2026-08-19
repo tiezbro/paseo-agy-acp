@@ -1,0 +1,105 @@
+TASK_ID: S3-T08-OBS-001
+UTC: 2026-08-19T03:40:22Z
+HEAD: b16aaacfb4a59a44362b9aae5b19e91786a9433b
+agy --version: 1.1.14
+agy file: /home/tiezbro/.local/bin/agy: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0, BuildID[md5/uuid]=d4538a1c9a7a1a5e075cf5cd2160bb9b, stripped
+agy sha256: 2549632914935c42faf6560cbf383ae6b3a3ed5b9f7b0579892e6139a0658fc6  /home/tiezbro/.local/bin/agy
+AUTHORIZATION: user authorized S2-SPIKE-503-001 §6 condition 2 (isolated/real observation only)
+
+BOUNDARIES:
+- Repo: /home/tiezbro/projects/paseo-agy-acp
+- Scheme SHA-256 verified: d3b712ee5dd01029c66b0372a482f248a6f1ecbcf81572eb74d7b4ba5d98a98d  /home/tiezbro/projects/MAACS/docs/maacs-paseo-agy-acp-confirmed-scheme.md
+- Working directory for live agy attempts: /tmp/s3-t08-obs-AJ4EY8
+- command -v agy: /home/tiezbro/.local/bin/agy
+- Production Paseo 127.0.0.1:6767 was not touched.
+- Production Admission runtime.sqlite / Health / ~/.paseo / ~/.agents were not written.
+- Capture secret scan: no account email, cookie, authorization, bearer, or api key pattern found. The literal token matches were usage fields such as input_tokens/total_tokens only.
+- Process cleanup check: pgrep -af '/home/tiezbro/.local/bin/agy|agy' returned no matches after the attempts.
+
+CAPTURE_FILES:
+- docs/design/receipts/S3-T08/captures/attempt1.stdout.ndjson sha256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+- docs/design/receipts/S3-T08/captures/attempt1.stderr.txt sha256=f9cd8f6c133bb72dd15fd3bd083951cf66d8bf0f1f05a8cc5ff2e91258b71a63
+- docs/design/receipts/S3-T08/captures/attempt2.stdout.ndjson sha256=950a177f4a78a57811b60a7b5f86a88d335f3f845d164bb63ce50f68eb075732
+- docs/design/receipts/S3-T08/captures/attempt2.stderr.txt sha256=3a7f8550106d86abb322e8ed0fb30a0296c0e97c6be03d5a8033b99d16737459
+- docs/design/receipts/S3-T08/captures/attempt3.stdout.ndjson sha256=2603c9777e5d5025f8422447e8859866936e2c7eee2960c5d4bf529d3300ab86
+- docs/design/receipts/S3-T08/captures/attempt3.stderr.txt sha256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+- docs/design/receipts/S3-T08/captures/attempt4.stdout.ndjson sha256=0cde6cd90fba58420925acb1315aa6126aa3ec8ea0a953e4eb36a0ace991d346
+- docs/design/receipts/S3-T08/captures/attempt4.stderr.txt sha256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+- docs/design/receipts/S3-T08/captures/attempt5.stdout.ndjson sha256=b162df5eb985941161e7f5043fdc3305c408a0ec76cc1aa71dba338f99428f4c
+- docs/design/receipts/S3-T08/captures/attempt5.stderr.txt sha256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
+
+ATTEMPTS:
+- attempt 1:
+  UTC_START: 2026-08-19T03:37:54Z
+  UTC_END: 2026-08-19T03:37:54Z
+  command: printf 'Reply with the single word pong.\n' | env -u PASEO_AGENT_ID -u PASEO_HOME -u AGY_ACP_ADMISSION_ENABLED -u AGY_ACP_STATE_DIR timeout 75s /home/tiezbro/.local/bin/agy --print-timeout 60s --mode plan --add-dir /tmp/s3-t08-obs-AJ4EY8 --output-format stream-json --print
+  version: agy 1.1.14 sha256 2549632914935c42faf6560cbf383ae6b3a3ed5b9f7b0579892e6139a0658fc6
+  exit: 2
+  stdout: empty; no result object; stdout had result.error: no
+  stderr excerpt: flag needs an argument: -print; followed by agy usage/help text
+  result fields: none
+  provider semantics: no provider dispatch; current CLI flag parser rejected the repo-style prompt-free stdin shape because --print requires an argument in this live binary.
+  observed error class: cli_usage_error
+- attempt 2:
+  UTC_START: 2026-08-19T03:38:15Z
+  UTC_END: 2026-08-19T03:38:31Z
+  command: env -u PASEO_AGENT_ID -u PASEO_HOME -u AGY_ACP_ADMISSION_ENABLED -u AGY_ACP_STATE_DIR timeout 75s /home/tiezbro/.local/bin/agy --print 'Reply with the single word pong.' --print-timeout 60s --mode plan --add-dir /tmp/s3-t08-obs-AJ4EY8 --output-format stream-json --disable-slash-commands
+  version: agy 1.1.14 sha256 2549632914935c42faf6560cbf383ae6b3a3ed5b9f7b0579892e6139a0658fc6
+  exit: 0
+  stdout: stream-json init, step_update, terminal result
+  stderr excerpt: warning: --mode plan has no effect while slash command expansion is disabled.
+  result fields: event=result; conversation_id=eecd8353-b535-4479-9951-7a66968319fb; status=SUCCESS; response="pong\n"; duration_seconds=7.473285711; num_turns=1; usage.input_tokens=15844; usage.output_tokens=149; usage.thinking_tokens=148; usage.cache_read_tokens=0; usage.total_tokens=15993; result.error absent
+  provider semantics: real provider turn completed successfully; no capacity/503 signal; no httpStatus/code/reason fields.
+  observed error class: none_success
+- attempt 3:
+  UTC_START: 2026-08-19T03:38:59Z
+  UTC_END: 2026-08-19T03:39:07Z
+  command: env -u PASEO_AGENT_ID -u PASEO_HOME -u AGY_ACP_ADMISSION_ENABLED -u AGY_ACP_STATE_DIR timeout 75s /home/tiezbro/.local/bin/agy --print 'Reply with the single word pong.' --print-timeout 60s --model __s3_t08_nonexistent_model__ --add-dir /tmp/s3-t08-obs-AJ4EY8 --output-format stream-json --disable-slash-commands
+  version: agy 1.1.14 sha256 2549632914935c42faf6560cbf383ae6b3a3ed5b9f7b0579892e6139a0658fc6
+  exit: 1
+  stdout: one terminal stream-json result; stdout had result.error: yes
+  stderr excerpt: empty
+  result fields: event=result; conversation_id=""; status=ERROR; response=""; error="invalid model selection (--model \"__s3_t08_nonexistent_model__\" --effort \"\"): model __s3_t08_nonexistent_model__ is not recognized as a known model or custom model in settings"; duration_seconds=0; num_turns=0; usage all zero
+  provider semantics: current-binary real CLI failure carrier only; this is local model-selection/configuration failure before provider capacity, not a provider 503/capacity failure.
+  observed error class: cli_model_selection_error
+- attempt 4:
+  UTC_START: 2026-08-19T03:39:28Z
+  UTC_END: 2026-08-19T03:39:43Z
+  command: env -u PASEO_AGENT_ID -u PASEO_HOME -u AGY_ACP_ADMISSION_ENABLED -u AGY_ACP_STATE_DIR timeout 75s /home/tiezbro/.local/bin/agy --print 'Reply with the single word pong.' --print-timeout 60s --model 'Gemini 3.7 Flash (Low)' --add-dir /tmp/s3-t08-obs-AJ4EY8 --output-format stream-json --disable-slash-commands
+  version: agy 1.1.14 sha256 2549632914935c42faf6560cbf383ae6b3a3ed5b9f7b0579892e6139a0658fc6
+  exit: 0
+  stdout: stream-json init, step_update, terminal result
+  stderr excerpt: empty
+  result fields: event=result; conversation_id=8dd06a16-a76f-46cd-80b0-a416eab5898f; status=SUCCESS; response="pong\n"; duration_seconds=4.048156055; num_turns=1; usage.input_tokens=15575; usage.output_tokens=20; usage.thinking_tokens=19; usage.cache_read_tokens=0; usage.total_tokens=15595; result.error absent
+  provider semantics: real provider turn completed successfully on model Gemini 3.7 Flash (Low); no capacity/503 signal; no httpStatus/code/reason fields.
+  observed error class: none_success
+- attempt 5:
+  UTC_START: 2026-08-19T03:39:55Z
+  UTC_END: 2026-08-19T03:40:09Z
+  command: env -u PASEO_AGENT_ID -u PASEO_HOME -u AGY_ACP_ADMISSION_ENABLED -u AGY_ACP_STATE_DIR timeout 75s /home/tiezbro/.local/bin/agy --print 'Reply with the single word pong.' --print-timeout 60s --model 'Gemini 3.7 Flash (Low)' --add-dir /tmp/s3-t08-obs-AJ4EY8 --output-format stream-json --disable-slash-commands
+  version: agy 1.1.14 sha256 2549632914935c42faf6560cbf383ae6b3a3ed5b9f7b0579892e6139a0658fc6
+  exit: 0
+  stdout: stream-json init, step_update, terminal result
+  stderr excerpt: empty
+  result fields: event=result; conversation_id=d9b6243b-49d0-4d64-926b-e0860a059f83; status=SUCCESS; response="pong\n"; duration_seconds=3.652760073; num_turns=1; usage.input_tokens=15580; usage.output_tokens=1; usage.thinking_tokens=0; usage.cache_read_tokens=0; usage.total_tokens=15581; result.error absent
+  provider semantics: real provider turn completed successfully on model Gemini 3.7 Flash (Low); no capacity/503 signal; no httpStatus/code/reason fields.
+  observed error class: none_success
+
+LIVE_503_CAPTURED: no
+CARRIER: none
+NON_503_FAILURE_CARRIER_OBSERVED: result.error in attempt 3, but only for a local invalid-model CLI error; not provider capacity and not HTTP 503.
+HISTORICAL_1_1_12_LOGS: unverified-changelog-only
+HISTORICAL_SEARCH_NOTES:
+- Searched repo, /home/tiezbro/Documents, /home/tiezbro/.codex, and /tmp for 1.1.12 plus 503 carrier terms.
+- /tmp/spike-503-001 referenced by the Stage 2 feasibility artifact is absent on this machine.
+- Hits were CHANGELOG/README/test/session prose or prior discussion, not a bound raw receipt containing command, agy 1.1.12 identity, exit, stdout/stderr, result carrier, and file hash.
+- Therefore the CHANGELOG claim about historical native 1.1.12 503 UNAVAILABLE remains unverified for this observation and cannot close current agy 1.1.14 SOURCE_IDENTITY.
+
+TYPED_BLOCKERS after this observation:
+SOURCE_FIELD_GAP: open. Current live agy 1.1.14 produced SUCCESS results for three real provider turns and one non-provider invalid-model ERROR result; no provider capacity/503 condition, exact phrase, httpStatus, code, reason, or trusted carrier was observed.
+REAL_PROVIDER_REQUIRED: open. Real provider was exercised, but the required real provider capacity/503 failure condition did not occur. Generic CLI/model-selection failure is not provider capacity.
+SOURCE_IDENTITY_UNKNOWN: open. The live binary identity is pinned as agy 1.1.14 with sha256 2549632914935c42faf6560cbf383ae6b3a3ed5b9f7b0579892e6139a0658fc6, but no source commit or reproducible provider-capacity condition -> emitter/stderr call path was proven; the previous 1.1.13 assumption is stale.
+
+CLOSEOUT_EFFECT:
+- Does this close Scheme §4.5 trusted-503 physical contract? no
+- ACP_CLOSEOUT still NOT_READY unless all three close with live version-bound carrier proof
