@@ -5,7 +5,7 @@
 **Paseo × Antigravity — ACP Adapter**
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](./LICENSE)
-[![Version](https://img.shields.io/badge/version-2.0.0.1-blue?style=flat-square)](./package.json)
+[![Version](https://img.shields.io/badge/version-2.0.0.2-blue?style=flat-square)](./package.json)
 [![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen?style=flat-square)](#)
 [![ACP](https://img.shields.io/badge/ACP-v1%20%2B%20draft%20v2-8A2BE2?style=flat-square)](https://agentclientprotocol.com)
 
@@ -264,6 +264,16 @@ identity plus a native `503 UNAVAILABLE` signal creates a capacity cooldown.
 Historical native logs prove that signal shape; the final `agy 1.1.13`
 production-candidate pressure window completed successfully and therefore did
 not manufacture a capacity failure merely to exercise the branch.
+
+### v2.0.0.2 validation status
+
+`2.0.0.2` is a documentation and evidence patch on the `2.0.0.1` runtime.
+Authorized live observation on `agy 1.1.14` captured Gemini successes and a
+Claude individual-quota failure on the stream-json `result.error` carrier.
+No live HTTP 503 / `httpStatus` / `code` / `reason` was observed. The
+historical `1.1.12` native-log claim remains unverified. Trusted-503
+physical-source closeout stays open; quota text is not treated as capacity
+`503`.
 
 ## What This Fixes
 

@@ -1,0 +1,1 @@
+warning: --mode plan has no effect while slash command expansion is disabled.

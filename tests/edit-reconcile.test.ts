@@ -747,7 +747,7 @@ describe("reconcileWorkingTree", () => {
       fs.writeFileSync(file, "created", "utf8");
       await observeEditedPaths(baseline, [{ path: file }]);
       fs.rmSync(file);
-      fs.rmSync(link);
+      fs.unlinkSync(link);
 
       expect(await reconcileWorkingTree(baseline)).toEqual({ reflected: [], unsupported: [] });
 

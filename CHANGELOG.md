@@ -2,6 +2,30 @@
 
 All notable changes to `paseo-agy-acp` are recorded here.
 
+## 2.0.0.2 - 2026-08-19
+
+### Changed
+
+- Recorded authorized live Antigravity CLI observation for the trusted-503
+  physical-source gate. Current `agy 1.1.14` produced Gemini successes and a
+  Claude individual-quota failure on the stream-json `result.error` carrier,
+  with no `httpStatus`, `code`, `reason`, or HTTP 503.
+- Corrected the earlier 2.0.0.1 verification claim that historical native
+  `1.1.12` logs establish the trusted `503 UNAVAILABLE` carrier. Those logs
+  remain unverified prose; this release does not close Scheme §4.5 and does
+  not change the fail-closed classifier.
+- Runtime Admission and Connector code is unchanged from `2.0.0.1`. This
+  patch ships evidence and documentation only.
+
+### Verification
+
+- Live observation receipts: `docs/design/receipts/S3-T08/observation-1.txt`
+  and `observation-2.txt`, plus raw captures. `LIVE_503_CAPTURED=no`.
+- Repository validation is recorded in the release commit. One existing
+  symlink cleanup in `tests/edit-reconcile.test.ts` now unlinks the
+  directory symlink so current Node `fs.rmSync` does not treat it as a
+  directory.
+
 ## 2.0.0.1 - 2026-08-17
 
 ### Changed
