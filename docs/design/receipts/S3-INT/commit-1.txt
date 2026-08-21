@@ -1,0 +1,326 @@
+RECEIPT=S3-INT-COMMIT-1
+STATUS=PASS
+UTC=2026-08-16T08:35:18Z
+EXTERNAL_RECEIPT=true
+STAGED=false
+COMMIT=bcac1f9c04d05b6a932eae873b1bae778b6866a9
+PARENT=83fb97257814f9072770c77d1bb0da4cfa2b420e
+TREE=9418646fb5bbca9160c58f575f27ee1ac9c89ce4
+SUBJECT=feat: complete Stage 3 admission controller closeout
+COMMIT_RANGE=83fb97257814f9072770c77d1bb0da4cfa2b420e..bcac1f9c04d05b6a932eae873b1bae778b6866a9
+COMMIT_COUNT=1
+COMMITTED_PATH_COUNT=280
+ACCEPTED_APPLICATION_CONFIG_SCRIPT_TEST_PATHS=39
+ACCEPTED_DOCUMENTATION_PATHS=4
+ACCEPTED_RECEIPT_CONTROL_EVIDENCE_PATHS=237
+S3_INT_CONFLICT=inapplicable
+SCHEDULER_EVENT_4_PATH=docs/design/receipts/S3-INT/scheduler-event-4.txt
+SCHEDULER_EVENT_4_GIT_BLOB=b257a0186a1192689989cbeb4229d9548c9ddf42
+SCHEDULER_EVENT_4_SHA256_FROM_COMMITTED_BYTES=10fda20278f071baac48405b6b4748c44f034b8721d9fc34c3bf39116131165d
+SCHEDULER_EVENT_4_STAGING_BINDING=phase-2.txt and precommit-manifest-1.txt both bind this exact SHA-256
+
+COMMANDS_EXECUTED
+1. git rev-list --parents -n 1 HEAD
+   EXIT=0
+2. git rev-list --count 83fb97257814f9072770c77d1bb0da4cfa2b420e..HEAD
+   EXIT=0
+3. git diff-tree --no-commit-id --name-status -r HEAD
+   EXIT=0
+4. git diff --check 83fb97257814f9072770c77d1bb0da4cfa2b420e HEAD
+   EXIT=0
+5. git show HEAD:docs/design/receipts/S3-INT/scheduler-event-4.txt | sha256sum
+   EXIT=0
+
+KEY_LINES
+- bcac1f9c04d05b6a932eae873b1bae778b6866a9 83fb97257814f9072770c77d1bb0da4cfa2b420e
+- tree 9418646fb5bbca9160c58f575f27ee1ac9c89ce4
+- 1 commit in the required parent-to-HEAD range
+- 280 committed paths: 39 accepted code/config/script/test, 4 accepted docs, 237 accepted receipts/control evidence
+- scheduler-event-4.txt 10fda20278f071baac48405b6b4748c44f034b8721d9fc34c3bf39116131165d
+
+COMPLETE_COMMITTED_PATH_LIST_BEGIN
+M	ACP Connector/acp/agent.ts
+M	ACP Connector/acp/session/prompt.ts
+M	ACP Connector/acp/session/setup.ts
+M	ACP Connector/admission/runtime.ts
+M	ACP Connector/admission/startup-recovery.ts
+M	ACP Connector/admission/turn-coordinator.ts
+M	ACP Connector/agy/cli.ts
+M	Admission Controller/controller.ts
+M	Admission Controller/process-evidence.ts
+M	Admission Controller/schema.ts
+M	CHANGELOG.md
+M	README.md
+M	README.zh-CN.md
+A	docs/design/receipts/S3-INT-CODE/phase-1.txt
+A	docs/design/receipts/S3-INT-DOCS/phase-2.txt
+A	docs/design/receipts/S3-INT/acceptance-stage-1.txt
+A	docs/design/receipts/S3-INT/acceptance-stage-2.txt
+A	docs/design/receipts/S3-INT/acceptance-stage-3.txt
+A	docs/design/receipts/S3-INT/acceptance-stage-4.txt
+A	docs/design/receipts/S3-INT/acceptance-stage-5.txt
+A	docs/design/receipts/S3-INT/acceptance-stage-6.txt
+A	docs/design/receipts/S3-INT/controller-preintegration-1.txt
+A	docs/design/receipts/S3-INT/method-evidence.txt
+A	docs/design/receipts/S3-INT/precommit-gitnexus-1.txt
+A	docs/design/receipts/S3-INT/precommit-manifest-1.txt
+A	docs/design/receipts/S3-INT/precommit-validation-1.txt
+A	docs/design/receipts/S3-INT/scheduler-event-2.txt
+A	docs/design/receipts/S3-INT/scheduler-event-3.txt
+A	docs/design/receipts/S3-INT/scheduler-event-4.txt
+A	docs/design/receipts/S3-PARALLELISM-REPAIR/evidence-1.txt
+A	docs/design/receipts/S3-REV-QUAL/method-evidence-2.txt
+A	docs/design/receipts/S3-REV-QUAL/method-evidence-3.txt
+A	docs/design/receipts/S3-REV-QUAL/verdict-1.txt
+A	docs/design/receipts/S3-REV-QUAL/verdict-2.txt
+A	docs/design/receipts/S3-REV-QUAL/verdict-3.txt
+A	docs/design/receipts/S3-REV-SPEC/method-evidence-1.txt
+A	docs/design/receipts/S3-REV-SPEC/method-evidence-2.txt
+A	docs/design/receipts/S3-REV-SPEC/verdict-1.txt
+A	docs/design/receipts/S3-REV-SPEC/verdict-2.txt
+A	docs/design/receipts/S3-T01/architecture.txt
+A	docs/design/receipts/S3-T01/broad.txt
+A	docs/design/receipts/S3-T01/expanded-affected.txt
+A	docs/design/receipts/S3-T01/green-1.txt
+A	docs/design/receipts/S3-T01/green-2.txt
+A	docs/design/receipts/S3-T02/architecture.txt
+A	docs/design/receipts/S3-T02/broad-validate.txt
+A	docs/design/receipts/S3-T02/detect-changes.txt
+A	docs/design/receipts/S3-T02/git-status.txt
+A	docs/design/receipts/S3-T02/green-1-focused.txt
+A	docs/design/receipts/S3-T02/green-2-affected.txt
+A	docs/design/receipts/S3-T02/green-3-high-expanded.txt
+A	docs/design/receipts/S3-T02/impact-1.txt
+A	docs/design/receipts/S3-T02/method-evidence.txt
+A	docs/design/receipts/S3-T02/red-1.txt
+A	docs/design/receipts/S3-T03/affected-1.txt
+A	docs/design/receipts/S3-T03/architecture-1.txt
+A	docs/design/receipts/S3-T03/broad-1.txt
+A	docs/design/receipts/S3-T03/broad-2.txt
+A	docs/design/receipts/S3-T03/detect-1.txt
+A	docs/design/receipts/S3-T03/detect-2.txt
+A	docs/design/receipts/S3-T03/green-1.txt
+A	docs/design/receipts/S3-T03/green-2.txt
+A	docs/design/receipts/S3-T03/high-expanded-1.txt
+A	docs/design/receipts/S3-T03/impact-1.txt
+A	docs/design/receipts/S3-T03/impact-2.txt
+A	docs/design/receipts/S3-T03/method-1.txt
+A	docs/design/receipts/S3-T03/red-1.txt
+A	docs/design/receipts/S3-T04/affected.txt
+A	docs/design/receipts/S3-T04/architecture.txt
+A	docs/design/receipts/S3-T04/broad.txt
+A	docs/design/receipts/S3-T04/detect-changes.txt
+A	docs/design/receipts/S3-T04/green-1.txt
+A	docs/design/receipts/S3-T04/green-2.txt
+A	docs/design/receipts/S3-T04/green-3.txt
+A	docs/design/receipts/S3-T04/method-evidence.txt
+A	docs/design/receipts/S3-T05/affected.txt
+A	docs/design/receipts/S3-T05/architecture.txt
+A	docs/design/receipts/S3-T05/broad.txt
+A	docs/design/receipts/S3-T05/detect-changes.txt
+A	docs/design/receipts/S3-T05/green-1.txt
+A	docs/design/receipts/S3-T05/green-2.txt
+A	docs/design/receipts/S3-T06/affected-1.txt
+A	docs/design/receipts/S3-T06/architecture-1.txt
+A	docs/design/receipts/S3-T06/broad-1.txt
+A	docs/design/receipts/S3-T06/detect-changes-1.txt
+A	docs/design/receipts/S3-T06/green-1.txt
+A	docs/design/receipts/S3-T06/high-expanded-1.txt
+A	docs/design/receipts/S3-T06/impact-1.txt
+A	docs/design/receipts/S3-T06/red-1.txt
+A	docs/design/receipts/S3-T06/residual-binding-1.txt
+A	docs/design/receipts/S3-T07/affected.txt
+A	docs/design/receipts/S3-T07/architecture.txt
+A	docs/design/receipts/S3-T07/broad.txt
+A	docs/design/receipts/S3-T07/detect-changes.txt
+A	docs/design/receipts/S3-T07/green-1.txt
+A	docs/design/receipts/S3-T07/green-2.txt
+A	docs/design/receipts/S3-T08/typed-blocked.txt
+A	docs/design/receipts/S3-T09/affected-1.txt
+A	docs/design/receipts/S3-T09/architecture.txt
+A	docs/design/receipts/S3-T09/broad-validate.txt
+A	docs/design/receipts/S3-T09/detect-changes.txt
+A	docs/design/receipts/S3-T09/green-1.txt
+A	docs/design/receipts/S3-T09/impact-1.txt
+A	docs/design/receipts/S3-T09/method-evidence.txt
+A	docs/design/receipts/S3-T09/red-1.txt
+A	docs/design/receipts/S3-T09/task-contract.txt
+A	docs/design/receipts/S3-T10/affected-1.txt
+A	docs/design/receipts/S3-T10/affected-2-official.txt
+A	docs/design/receipts/S3-T10/architecture-1.txt
+A	docs/design/receipts/S3-T10/architecture-2.txt
+A	docs/design/receipts/S3-T10/broad-deferred-1.txt
+A	docs/design/receipts/S3-T10/broad-validate-2.txt
+A	docs/design/receipts/S3-T10/detect-1.txt
+A	docs/design/receipts/S3-T10/detect-2.txt
+A	docs/design/receipts/S3-T10/green-1.txt
+A	docs/design/receipts/S3-T10/green-2-official.txt
+A	docs/design/receipts/S3-T10/impact-1.txt
+A	docs/design/receipts/S3-T10/method-1.txt
+A	docs/design/receipts/S3-T10/red-1.txt
+A	docs/design/receipts/S3-T11/affected.txt
+A	docs/design/receipts/S3-T11/architecture.txt
+A	docs/design/receipts/S3-T11/broad-validate.txt
+A	docs/design/receipts/S3-T11/green-1.txt
+A	docs/design/receipts/S3-T11/green-2.txt
+A	docs/design/receipts/S3-T11/method-impact.txt
+A	docs/design/receipts/S3-T12/affected-1.txt
+A	docs/design/receipts/S3-T12/architecture-1.txt
+A	docs/design/receipts/S3-T12/authority-addendum-1.txt
+A	docs/design/receipts/S3-T12/broad-1.txt
+A	docs/design/receipts/S3-T12/detect-changes-1.txt
+A	docs/design/receipts/S3-T12/green-1.txt
+A	docs/design/receipts/S3-T12/high-expanded-1.txt
+A	docs/design/receipts/S3-T12/impact-1.txt
+A	docs/design/receipts/S3-T12/impact-2.txt
+A	docs/design/receipts/S3-T12/method-1.txt
+A	docs/design/receipts/S3-T12/red-1.txt
+A	docs/design/receipts/S3-T12/repair-f1-affected-1.txt
+A	docs/design/receipts/S3-T12/repair-f1-architecture-1.txt
+A	docs/design/receipts/S3-T12/repair-f1-authority-impact-1.txt
+A	docs/design/receipts/S3-T12/repair-f1-broad-2.txt
+A	docs/design/receipts/S3-T12/repair-f1-broad-deferred-1.txt
+A	docs/design/receipts/S3-T12/repair-f1-detect-1.txt
+A	docs/design/receipts/S3-T12/repair-f1-detect-2.txt
+A	docs/design/receipts/S3-T12/repair-f1-diff-check-2.txt
+A	docs/design/receipts/S3-T12/repair-f1-green-1.txt
+A	docs/design/receipts/S3-T12/repair-f1-high-expanded-1.txt
+A	docs/design/receipts/S3-T12/repair-f1-method-1.txt
+A	docs/design/receipts/S3-T12/repair-f1-red-1.txt
+A	docs/design/receipts/S3-T12/repair-f1-status-2.txt
+A	docs/design/receipts/S3-T12/typed-blocked-green-1.txt
+A	docs/design/receipts/S3-T13/architecture.txt
+A	docs/design/receipts/S3-T13/broad-validate.txt
+A	docs/design/receipts/S3-T13/detect-changes-pre-receipts.txt
+A	docs/design/receipts/S3-T13/expanded-affected.txt
+A	docs/design/receipts/S3-T13/green-1.txt
+A	docs/design/receipts/S3-T13/green-2.txt
+A	docs/design/receipts/S3-T14/affected-1.txt
+A	docs/design/receipts/S3-T14/architecture-1.txt
+A	docs/design/receipts/S3-T14/broad-1.txt
+A	docs/design/receipts/S3-T14/detect-1.txt
+A	docs/design/receipts/S3-T14/diff-check-1.txt
+A	docs/design/receipts/S3-T14/green-1.txt
+A	docs/design/receipts/S3-T14/high-expanded-1.txt
+A	docs/design/receipts/S3-T14/impact-1.txt
+A	docs/design/receipts/S3-T14/method-1.txt
+A	docs/design/receipts/S3-T14/red-1.txt
+A	docs/design/receipts/S3-T14/red-2.txt
+A	docs/design/receipts/S3-T14/repair-f2-f3-affected-1.txt
+A	docs/design/receipts/S3-T14/repair-f2-f3-architecture-1.txt
+A	docs/design/receipts/S3-T14/repair-f2-f3-broad-1.txt
+A	docs/design/receipts/S3-T14/repair-f2-f3-detect-1.txt
+A	docs/design/receipts/S3-T14/repair-f2-f3-diff-check-1.txt
+A	docs/design/receipts/S3-T14/repair-f2-f3-green-1.txt
+A	docs/design/receipts/S3-T14/repair-f2-f3-high-expanded-1.txt
+A	docs/design/receipts/S3-T14/repair-f2-f3-impact-1.txt
+A	docs/design/receipts/S3-T14/repair-f2-f3-method-1.txt
+A	docs/design/receipts/S3-T14/repair-f2-f3-red-1.txt
+A	docs/design/receipts/S3-T15/affected.txt
+A	docs/design/receipts/S3-T15/architecture.txt
+A	docs/design/receipts/S3-T15/broad-validate.txt
+A	docs/design/receipts/S3-T15/detect-changes.txt
+A	docs/design/receipts/S3-T15/green-1.txt
+A	docs/design/receipts/S3-T15/green-2.txt
+A	docs/design/receipts/S3-T15/green-3.txt
+A	docs/design/receipts/S3-T15/impact.txt
+A	docs/design/receipts/S3-T15/method-evidence.txt
+A	docs/design/receipts/S3-T16/affected.txt
+A	docs/design/receipts/S3-T16/architecture.txt
+A	docs/design/receipts/S3-T16/authority-1.txt
+A	docs/design/receipts/S3-T16/broad.txt
+A	docs/design/receipts/S3-T16/detect.txt
+A	docs/design/receipts/S3-T16/diff-check.txt
+A	docs/design/receipts/S3-T16/focused.txt
+A	docs/design/receipts/S3-T16/green-1.txt
+A	docs/design/receipts/S3-T16/green-2.txt
+A	docs/design/receipts/S3-T16/green-3.txt
+A	docs/design/receipts/S3-T16/high-expanded.txt
+A	docs/design/receipts/S3-T16/impact-1.txt
+A	docs/design/receipts/S3-T16/method-1.txt
+A	docs/design/receipts/S3-T16/red-1.txt
+A	docs/design/receipts/S3-T16/red-2.txt
+A	docs/design/receipts/S3-T16/status-1.txt
+A	docs/design/receipts/S3-T16/typed-blocked.txt
+A	docs/design/receipts/S3-T17/architecture.txt
+A	docs/design/receipts/S3-T17/detect-changes.txt
+A	docs/design/receipts/S3-T17/expanded-affected.txt
+A	docs/design/receipts/S3-T17/focused.txt
+A	docs/design/receipts/S3-T17/green-1.txt
+A	docs/design/receipts/S3-T17/green-2.txt
+A	docs/design/receipts/S3-T17/impact.txt
+A	docs/design/receipts/S3-T17/validate.txt
+A	docs/design/receipts/S3-T18/detect-changes-1.txt
+A	docs/design/receipts/S3-T18/detect-changes-2.txt
+A	docs/design/receipts/S3-T18/green-1.txt
+A	docs/design/receipts/S3-T18/impact-1.txt
+A	docs/design/receipts/S3-T18/red-1.txt
+A	docs/design/receipts/S3-T18/validation-1.txt
+A	docs/design/receipts/S3-T18/validation-2.txt
+A	docs/design/receipts/S3-T18R/architecture.txt
+A	docs/design/receipts/S3-T18R/broad-validate.txt
+A	docs/design/receipts/S3-T18R/detect-changes.txt
+A	docs/design/receipts/S3-T18R/diff-check.txt
+A	docs/design/receipts/S3-T18R/git-status.txt
+A	docs/design/receipts/S3-T18R/green-1-focused-affected.txt
+A	docs/design/receipts/S3-T18R/green-2-t18-focused.txt
+A	docs/design/receipts/S3-T18R/green-3-high-expanded.txt
+A	docs/design/receipts/S3-T18R/method-evidence.txt
+A	docs/design/receipts/S3-T18R/method-impact.txt
+A	docs/design/receipts/S3-T18R/repair-before-1.txt
+A	docs/design/receipts/S3-T18R/sha256.txt
+A	docs/design/receipts/S3-T18R/task-contract.txt
+A	docs/design/receipts/S3-T19/affected.txt
+A	docs/design/receipts/S3-T19/architecture.txt
+A	docs/design/receipts/S3-T19/broad-validate.txt
+A	docs/design/receipts/S3-T19/detect-changes.txt
+A	docs/design/receipts/S3-T19/diff-check.txt
+A	docs/design/receipts/S3-T19/git-status.txt
+A	docs/design/receipts/S3-T19/green-1.txt
+A	docs/design/receipts/S3-T19/green-2.txt
+A	docs/design/receipts/S3-T19/green-3.txt
+A	docs/design/receipts/S3-T19/high-expanded.txt
+A	docs/design/receipts/S3-T19/method-impact.txt
+A	docs/design/receipts/S3-T20/green-1.txt
+A	docs/design/receipts/S3-T20/method-1.txt
+A	docs/design/receipts/S3-T20/red-1.txt
+A	docs/design/receipts/S3-T20/validation-1.txt
+A	docs/design/receipts/S3-T21/green-1.txt
+A	docs/design/receipts/S3-T21/method-1.txt
+A	docs/design/receipts/S3-T21/red-1.txt
+A	docs/design/receipts/S3-T21/validation-1.txt
+M	docs/design/v2.0.0.0-admission-controller.md
+M	package.json
+A	scripts/verify-no-secrets.mjs
+A	tests/admission-503-classifier.test.ts
+A	tests/admission-auth-gate.test.ts
+M	tests/admission-controller.test.ts
+A	tests/admission-dispatch-faultpoints.test.ts
+M	tests/admission-fault-security-matrix.test.ts
+A	tests/admission-native-process.test.ts
+A	tests/admission-owner-crash.test.ts
+A	tests/admission-permission.test.ts
+A	tests/admission-policy-consistency.test.ts
+A	tests/admission-process-evidence-contract.test.ts
+M	tests/admission-process.test.ts
+A	tests/admission-production-dispatch.test.ts
+A	tests/admission-race-contract.test.ts
+A	tests/admission-reaper.test.ts
+A	tests/admission-scheduling-contract.test.ts
+A	tests/admission-schema-contract.test.ts
+A	tests/admission-schema-v2.test.ts
+M	tests/admission-schema.test.ts
+A	tests/admission-seats-contract.test.ts
+A	tests/admission-soft-drain.test.ts
+A	tests/admission-sqlite-contention.test.ts
+M	tests/admission-startup-recovery.test.ts
+A	tests/admission-timeout-contract.test.ts
+M	tests/admission-turn-coordinator.test.ts
+A	tests/admission-typed-terminal.test.ts
+A	tests/closeout-docs-contract.test.ts
+A	tests/secret-scan.test.ts
+COMPLETE_COMMITTED_PATH_LIST_END
+
+NON_CLAIMS
+- This receipt is intentionally external and untracked; it is not a second commit.
+- No push, tag, deploy, release, installation, active-connector switch, real Provider request, or production 127.0.0.1:6767 contact was performed.
