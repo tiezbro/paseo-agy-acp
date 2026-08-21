@@ -1,0 +1,22 @@
+S3-T08 / v2.0.0.2 production prefix switch
+
+UTC: 2026-08-19T05:08:00Z
+HEAD / tag: f2f90ec494608e26a2d1553ead0d9d580e4af1e6 / v2.0.0.2
+Release remote: forgejo ssh://git@192.168.6.10:222/tiezbro/paseo-agy-acp.git
+
+Prefix: /home/tiezbro/.local/opt/paseo-agy-acp-2.0.0.2
+Wrapper: /home/tiezbro/.local/opt/paseo-agy-acp-2.0.0.2/bin/agy-acp-production
+Symlink: /home/tiezbro/.local/bin/agy-acp -> wrapper
+Admission env in wrapper: AGY_ACP_ADMISSION_ENABLED=true
+State dir: /home/tiezbro/.local/state/paseo-agy-acp/production (not rewritten)
+Previous prefix retained: /home/tiezbro/.local/opt/paseo-agy-acp-2.0.0.1
+
+main.js sha256 source=install:
+d16f418c180233ab832594b5572749a905066f53ca30ef1a6b88d9c8dd651ccb
+
+Isolated initialize smoke: agentInfo.version=2.0.0.2 (Admission env stripped)
+Production daemon 127.0.0.1:6767 pid 63527 startedAt 2026-08-19T01:10:30.792Z unchanged
+runtime.sqlite sha256 unchanged
+Daemon was not restarted
+
+JOINT_REVIEW remains NOT_READY. Trusted-503 physical contract remains open.
