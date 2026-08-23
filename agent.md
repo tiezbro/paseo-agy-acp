@@ -42,3 +42,13 @@ Rewrite the commit, then `git push --force-with-lease forgejo main`. GitHub is t
 ## Push
 
 Push to `forgejo` only (`ssh://git@192.168.6.10:222/tiezbro/paseo-agy-acp.git`). Do not `git push origin` unless the maintainer explicitly asks.
+
+## GitHub About
+
+README is not the GitHub **About** blurb. That lives in repo metadata and is updated with:
+
+```bash
+gh repo edit tiezbro/paseo-agy-acp --description "..."
+```
+
+Keep it aligned with the README subtitle: official ACP kernel, Paseo-ready product adapter, NDJSON proxy, daemon context, Admission queue. Do **not** write “not a scraper” or “not a shindgew fork” there. Changing README does not change About.
