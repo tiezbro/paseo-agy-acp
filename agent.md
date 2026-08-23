@@ -39,6 +39,18 @@ Rewrite the commit, then `git push --force-with-lease forgejo main`. GitHub is t
 
 **Never** toggle the GitHub repo public ↔ private to hide a contributor. That deletes stars and forks.
 
+If GitHub’s **Contributors** sidebar still shows `cursoragent` after the trailer is gone from `main`, GitHub is indexing a **dangling** commit (for example a rewritten SHA that is still fetchable by URL). Flush that cache on GitHub only:
+
+1. Create a branch at current `main` (`flush-contributors`).
+2. `gh repo edit --default-branch flush-contributors`
+3. Wait a few seconds.
+4. `gh repo edit --default-branch main`
+5. Delete `flush-contributors`.
+6. Re-run `gh repo edit --description "..."` (About is metadata; this switch must not leave the old blurb).
+7. Confirm `mentionableUsers` is only `tiezbro` and the live HTML has zero `cursoragent`.
+
+Do not use a visibility toggle. Do not `git push origin` unless asked.
+
 ## Push
 
 Push to `forgejo` only (`ssh://git@192.168.6.10:222/tiezbro/paseo-agy-acp.git`). Do not `git push origin` unless the maintainer explicitly asks.
