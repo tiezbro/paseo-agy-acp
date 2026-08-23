@@ -1,0 +1,16 @@
+---
+description: Never let Cursor Co-authored-by reach git history or GitHub Contributors
+alwaysApply: true
+---
+
+# No Cursor git co-author
+
+Commits on this repo are authored only by `tiezbro`.
+
+After every `git commit`, run `git log -1 --format=%B`. If you see `Co-authored-by: Cursor` or `cursoragent@cursor.com`, do **not** push. Strip the trailer with `git commit-tree` as documented in `agent.md`, then confirm the message is clean.
+
+Never add a `Co-authored-by` line for Cursor, Cursor Agent, or cursoragent.
+
+If a Cursor-trailer commit already reached `main`: rewrite it and force-push **forgejo only**. Never toggle GitHub visibility to hide contributors (that deletes stars and forks).
+
+Push to the `forgejo` remote. GitHub is the mirror.

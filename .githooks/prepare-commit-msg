@@ -1,0 +1,10 @@
+#!/bin/sh
+# Drop Cursor's automatic Co-authored-by trailer so GitHub Contributors
+# stays the human maintainer only. See agent.md.
+msg_file=$1
+[ -n "$msg_file" ] && [ -f "$msg_file" ] || exit 0
+sed -i '/^Co-authored-by: Cursor <cursoragent@cursor.com>[[:space:]]*$/d' "$msg_file"
+# Trim trailing blank lines left behind after deleting the trailer.
+tmp="${msg_file}.paseo-trim"
+sed -e :a -e '/^\n*$/{$d;N;ba' -e '}' "$msg_file" > "$tmp" && mv "$tmp" "$msg_file"
+exit 0

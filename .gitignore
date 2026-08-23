@@ -1,6 +1,30 @@
+# dependencies & build
 node_modules/
 dist/
+coverage/
+*.tsbuildinfo
+
+# packaging
+*.tgz
+
+# runtime / local state
 .agy-acp/
 *.log
+.env
+.env.*
+!.env.example
+
+# OS / editor
 .DS_Store
-*.tgz
+*.swp
+.idea/
+
+# GitNexus local index (also listed in .git/info/exclude)
+.gitnexus/
+
+# temp harness leftovers
+.tmp-*/
+
+# local GitNexus/Claude copies — not product source
+.claude/
+CLAUDE.md

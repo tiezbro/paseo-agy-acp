@@ -1,3 +1,9 @@
+# Agent rules for paseo-agy-acp
+
+**Read [agent.md](./agent.md) before every `git commit` and `git push`.**
+
+Commits are authored only by the human maintainer (`tiezbro`). After `git commit`, run `git log -1 --format=%B`. If you see `Co-authored-by: Cursor` or `cursoragent@cursor.com`, do **not** push — strip the trailer with `git commit-tree` as in `agent.md`. Never toggle GitHub public/private to hide a contributor (that deletes stars and forks). Push `forgejo` only; GitHub is the mirror.
+
 <!-- gitnexus:start -->
 # GitNexus — Code Intelligence
 
