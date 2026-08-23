@@ -1,5 +1,11 @@
 import { isAbsolute, join } from "node:path";
 import type { AdmissionPolicy } from "./controller.js";
+import {
+  DEFAULT_ADMISSION_ACTIVE_TURNS,
+  DEFAULT_ADMISSION_CONCURRENT_STARTS,
+  isAllowedAdmissionActiveTurns,
+  isAllowedAdmissionConcurrentStarts
+} from "./policy-limits.js";
 
 export type AdmissionRuntimeEnvironment = Readonly<Record<string, string | undefined>>;
 
@@ -25,8 +31,8 @@ export class AdmissionRuntimeConfigError extends Error {
 }
 
 export const DEFAULT_ADMISSION_POLICY: Readonly<AdmissionPolicy> = Object.freeze({
-  maxActiveTurns: 3,
-  maxConcurrentStarts: 1,
+  maxActiveTurns: DEFAULT_ADMISSION_ACTIVE_TURNS,
+  maxConcurrentStarts: DEFAULT_ADMISSION_CONCURRENT_STARTS,
   minStartIntervalMs: 2_000,
   queueTimeoutMs: 30 * 60 * 1_000,
   capacityCooldownMs: 30_000
@@ -61,13 +67,13 @@ export function parseAdmissionRuntimeConfig(
       environment,
       POLICY_ENV.maxActiveTurns,
       DEFAULT_ADMISSION_POLICY.maxActiveTurns,
-      (value) => value === 1 || value === 3
+      isAllowedAdmissionActiveTurns
     ),
     maxConcurrentStarts: parsePolicyOverride(
       environment,
       POLICY_ENV.maxConcurrentStarts,
       DEFAULT_ADMISSION_POLICY.maxConcurrentStarts,
-      (value) => value === 1
+      isAllowedAdmissionConcurrentStarts
     ),
     minStartIntervalMs: parsePolicyOverride(
       environment,

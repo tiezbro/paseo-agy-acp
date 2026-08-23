@@ -1,18 +1,26 @@
-# Technical Changelog — paseo-agy-acp
+# Technical notes — paseo-agy-acp
 
-This document records local modifications made to [`shindgew/agy-acp`](https://github.com/shindgew/agy-acp)
-that differentiate this community derivative.
+From 2.1.0.0 the ACP kernel is official Google Antigravity ACP (spawned, not
+vendored). This file keeps historical Paseo product notes. It is no longer a
+delta log against `shindgew/agy-acp`.
 
-Last updated: 2026-08-07
+Last updated: 2026-08-23
 
 ## Baseline
 
 | Item | Detail |
 |---|---|
-| Upstream | `https://github.com/shindgew/agy-acp.git` |
-| Upstream HEAD | `6f44500` (release/v0.4.3) |
+| ACP kernel | Official Google `agy_acp_server` / Registry id `antigravity-acp` |
+| Product source license | Apache-2.0 (unchanged; we do not relicense) |
+| Official kernel license | Proprietary (Antigravity ToS); not redistributed in the npm package |
 | This project | `https://github.com/tiezbro/paseo-agy-acp` |
-| Package | `paseo-agy-acp@1.0.0.3` |
+| Package | `paseo-agy-acp@2.1.0.0` |
+
+Historical sections 1–7 below describe Paseo product behavior that used to sit
+on the scraper kernel. Sections 2–6 (PTY permission scrape, SQLite completion
+gating, whole-file revert) are **removed with the scraper**. Section 1 (daemon
+context) and section 7/Admission remain, implemented on the official NDJSON
+proxy.
 
 ## Source Changes
 
@@ -196,3 +204,28 @@ Verification for `1.0.0.2`:
 - Installed mode list check returned
   `["default","accept-edits","plan","dangerously-skip-permissions"]`.
 - Production Paseo daemon `127.0.0.1:6767` was not restarted.
+
+### 8. Official ACP kernel proxy (2.1.0.0)
+
+**Files:** `ACP Connector/official-kernel/*`, `ACP Connector/main.ts`,
+`ACP Connector/acp/session/paseo-context.ts`, `ACP Connector/admission/dispatch-boundary.ts`,
+`tests/official-kernel.test.ts`
+
+The CLI **only** spawns the pinned official `agy-acp` NDJSON server and proxies
+Paseo Generic ACP. Product-side behavior kept: daemon `appendSystemPrompt`,
+Admission fence on `session/prompt`, product `agentInfo` overlay, blank-turn
+normalization, and mode mapping (`accept-edits` → `auto_edit`,
+`dangerously-skip-permissions` → `yolo`, `plan` → `default`).
+
+The PTY/SQLite scraper is **deleted**. `PASEO_AGY_ACP_KERNEL=legacy` and
+`--legacy-kernel` fail closed. Official binary override:
+`PASEO_AGY_ACP_OFFICIAL_BIN`. Isolated canary `127.0.0.1:6768` proved the
+product proxy + official kernel. Default Admission is **8 seats /
+8 concurrent starts / 2s interval** from production testing (queue still on,
+so Paseo → Antigravity delegation stays steadier under burst). Raise seats
+and starts with env integers ≥ 1 to probe higher concurrency; this repo does
+not publish a product max. Optional 3+1 via env is only a tighter fence.
+Production adapter cutover (daemon not restarted) points
+`/home/tiezbro/.local/bin/agy-acp` at
+`paseo-agy-acp-2.1.0.0-20260823T112457Z` with Admission 8/8/2s and a fresh
+`production-official-8` ledger. `antigravity-official-canary` is disabled.

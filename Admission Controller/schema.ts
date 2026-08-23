@@ -1,7 +1,7 @@
 import type Database from "better-sqlite3";
 
 /** The newest AdmissionController schema this connector can safely use. */
-export const ADMISSION_SCHEMA_VERSION = 2;
+export const ADMISSION_SCHEMA_VERSION = 3;
 
 /** Raised when an admission database is not exactly the supported schema. */
 export class SchemaIntegrityError extends Error {
@@ -101,7 +101,8 @@ interface MigrationRow {
 
 const MIGRATIONS: readonly MigrationSpec[] = [
   { version: 1, name: "shared-admission-queue" },
-  { version: 2, name: "shared-admission-queue-v2" }
+  { version: 2, name: "shared-admission-queue-v2" },
+  { version: 3, name: "shared-admission-queue-v3" }
 ];
 
 const TABLES: readonly TableSpec[] = [
@@ -247,8 +248,8 @@ const TABLES: readonly TableSpec[] = [
     uniqueConstraints: [],
     requiredSqlFragments: [
       "id INTEGER PRIMARY KEY CHECK (id = 1)",
-      "max_active_turns INTEGER NOT NULL CHECK (max_active_turns IN (1, 3))",
-      "max_concurrent_starts INTEGER NOT NULL CHECK (max_concurrent_starts = 1)",
+      "max_active_turns INTEGER NOT NULL CHECK (max_active_turns >= 1)",
+      "max_concurrent_starts INTEGER NOT NULL CHECK (max_concurrent_starts >= 1)",
       "min_start_interval_ms INTEGER NOT NULL CHECK (min_start_interval_ms >= 2000)",
       "queue_timeout_ms INTEGER NOT NULL CHECK (queue_timeout_ms > 0 AND queue_timeout_ms <= 1800000)",
       "capacity_cooldown_ms INTEGER NOT NULL CHECK (capacity_cooldown_ms >= 30000)",

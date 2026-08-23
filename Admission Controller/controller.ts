@@ -12,11 +12,21 @@ import {
   type LinuxProcessEvidenceReaders,
   type LinuxProcessIdentityState
 } from "./process-evidence.js";
+import {
+  isAllowedAdmissionActiveTurns,
+  isAllowedAdmissionConcurrentStarts
+} from "./policy-limits.js";
+
+export {
+  isAllowedAdmissionActiveTurns,
+  isAllowedAdmissionConcurrentStarts
+} from "./policy-limits.js";
 
 const MAX_DISPATCH_CONTENTION_RECHECKS = 500;
 const DISPATCH_CONTENTION_RECHECK_DELAY_MS = 2;
 const MAX_RUNTIME_PID = 2_147_483_647;
 const LEASE_HEARTBEAT_STALE_MS = 4_000;
+
 const dispatchContentionRetrySignal = new Int32Array(new SharedArrayBuffer(Int32Array.BYTES_PER_ELEMENT));
 
 export interface AdmissionPolicy {
@@ -1193,6 +1203,10 @@ export class AdmissionController {
           this.migrateV1ToV2(Date.now());
           applied = 2;
         }
+        if (applied === 2) {
+          this.migrateV2ToV3(Date.now());
+          applied = 3;
+        }
         if (applied !== ADMISSION_SCHEMA_VERSION) {
           throw new AdmissionMigrationError(`schema version ${applied} is not supported`);
         }
@@ -1344,8 +1358,8 @@ export class AdmissionController {
       ALTER TABLE leases ADD COLUMN suspect_reason TEXT CHECK (suspect_reason IS NULL OR suspect_reason IN ('heartbeat_expired', 'identity_unverifiable'));
       CREATE TABLE policy_state (
         id INTEGER PRIMARY KEY CHECK (id = 1),
-        max_active_turns INTEGER NOT NULL CHECK (max_active_turns IN (1, 3)),
-        max_concurrent_starts INTEGER NOT NULL CHECK (max_concurrent_starts = 1),
+        max_active_turns INTEGER NOT NULL CHECK (max_active_turns >= 1),
+        max_concurrent_starts INTEGER NOT NULL CHECK (max_concurrent_starts >= 1),
         min_start_interval_ms INTEGER NOT NULL CHECK (min_start_interval_ms >= 2000),
         queue_timeout_ms INTEGER NOT NULL CHECK (queue_timeout_ms > 0 AND queue_timeout_ms <= 1800000),
         capacity_cooldown_ms INTEGER NOT NULL CHECK (capacity_cooldown_ms >= 30000),
@@ -1369,6 +1383,29 @@ export class AdmissionController {
     `);
     this.#db
       .prepare("INSERT INTO schema_migrations (version, name, applied_at) VALUES (2, 'shared-admission-queue-v2', ?)")
+      .run(appliedAt);
+  }
+
+  private migrateV2ToV3(appliedAt: number): void {
+    this.#db.exec(`
+      CREATE TABLE policy_state_v3 (
+        id INTEGER PRIMARY KEY CHECK (id = 1),
+        max_active_turns INTEGER NOT NULL CHECK (max_active_turns >= 1),
+        max_concurrent_starts INTEGER NOT NULL CHECK (max_concurrent_starts >= 1),
+        min_start_interval_ms INTEGER NOT NULL CHECK (min_start_interval_ms >= 2000),
+        queue_timeout_ms INTEGER NOT NULL CHECK (queue_timeout_ms > 0 AND queue_timeout_ms <= 1800000),
+        capacity_cooldown_ms INTEGER NOT NULL CHECK (capacity_cooldown_ms >= 30000),
+        drain_state TEXT NOT NULL CHECK (drain_state IN ('steady', 'soft_draining_to_1')),
+        policy_fingerprint TEXT NOT NULL,
+        updated_at INTEGER NOT NULL,
+        updated_by_owner_instance_id TEXT NOT NULL
+      );
+      INSERT INTO policy_state_v3 SELECT * FROM policy_state;
+      DROP TABLE policy_state;
+      ALTER TABLE policy_state_v3 RENAME TO policy_state;
+    `);
+    this.#db
+      .prepare("INSERT INTO schema_migrations (version, name, applied_at) VALUES (3, 'shared-admission-queue-v3', ?)")
       .run(appliedAt);
   }
 
@@ -2169,8 +2206,11 @@ function validatePolicy(policy: AdmissionPolicy): AdmissionPolicy {
       throw new Error(`invalid admission policy ${name}`);
     }
   }
-  if (policy.maxActiveTurns !== 1 && policy.maxActiveTurns !== 3) {
+  if (!isAllowedAdmissionActiveTurns(policy.maxActiveTurns)) {
     throw new Error("invalid admission policy maxActiveTurns");
+  }
+  if (!isAllowedAdmissionConcurrentStarts(policy.maxConcurrentStarts)) {
+    throw new Error("invalid admission policy maxConcurrentStarts");
   }
   return Object.freeze({ ...policy });
 }
@@ -2196,7 +2236,7 @@ function policyStateMatches(row: PolicyStateRow, policy: AdmissionPolicy, policy
   );
 }
 
-function policyFromState(row: PolicyStateRow, maxActiveTurns: 1 | 3): AdmissionPolicy {
+function policyFromState(row: PolicyStateRow, maxActiveTurns: number): AdmissionPolicy {
   return validatePolicy({
     maxActiveTurns,
     maxConcurrentStarts: policyStateInteger(row.max_concurrent_starts, "durable policy max_concurrent_starts"),

@@ -89,26 +89,41 @@ describe("Admission Controller runtime configuration", () => {
     });
   });
 
-  it("defaults to three shared active Antigravity seats and accepts only one or three", () => {
-    expect(DEFAULT_ADMISSION_POLICY.maxActiveTurns).toBe(3);
-    for (const maxActiveTurns of [1, 3]) {
+  it("defaults to eight shared seats and eight concurrent starts, and still accepts scraper-era 3+1", () => {
+    expect(DEFAULT_ADMISSION_POLICY.maxActiveTurns).toBe(8);
+    expect(DEFAULT_ADMISSION_POLICY.maxConcurrentStarts).toBe(8);
+    expect(DEFAULT_ADMISSION_POLICY.minStartIntervalMs).toBe(2_000);
+    const defaultConfig = parseAdmissionRuntimeConfig(enabledEnvironment);
+    expect(defaultConfig.enabled && defaultConfig.policy.maxActiveTurns).toBe(8);
+    expect(defaultConfig.enabled && defaultConfig.policy.maxConcurrentStarts).toBe(8);
+    for (const maxActiveTurns of [1, 3, 8, 9, 16]) {
       const config = parseAdmissionRuntimeConfig({
         ...enabledEnvironment,
         AGY_ACP_ADMISSION_MAX_ACTIVE_TURNS: String(maxActiveTurns)
       });
       expect(config.enabled && config.policy.maxActiveTurns).toBe(maxActiveTurns);
     }
+    const restored = parseAdmissionRuntimeConfig({
+      ...enabledEnvironment,
+      AGY_ACP_ADMISSION_MAX_ACTIVE_TURNS: "3",
+      AGY_ACP_ADMISSION_MAX_CONCURRENT_STARTS: "1"
+    });
+    expect(restored.enabled && restored.policy).toMatchObject({
+      maxActiveTurns: 3,
+      maxConcurrentStarts: 1,
+      minStartIntervalMs: 2_000
+    });
   });
 
   it("fails closed for unknown enable values and unsafe or malformed policy overrides", () => {
     const invalidEnvironments = [
       { ...enabledEnvironment, AGY_ACP_ADMISSION_ENABLED: "enabled" },
       { ...enabledEnvironment, AGY_ACP_ADMISSION_MAX_ACTIVE_TURNS: "0" },
-      { ...enabledEnvironment, AGY_ACP_ADMISSION_MAX_ACTIVE_TURNS: "2" },
-      { ...enabledEnvironment, AGY_ACP_ADMISSION_MAX_ACTIVE_TURNS: "4" },
-      { ...enabledEnvironment, AGY_ACP_ADMISSION_MAX_ACTIVE_TURNS: "5" },
+      { ...enabledEnvironment, AGY_ACP_ADMISSION_MAX_ACTIVE_TURNS: "-1" },
       { ...enabledEnvironment, AGY_ACP_ADMISSION_MAX_ACTIVE_TURNS: "1.5" },
-      { ...enabledEnvironment, AGY_ACP_ADMISSION_MAX_CONCURRENT_STARTS: "2" },
+      { ...enabledEnvironment, AGY_ACP_ADMISSION_MAX_CONCURRENT_STARTS: "0" },
+      { ...enabledEnvironment, AGY_ACP_ADMISSION_MAX_CONCURRENT_STARTS: "-1" },
+      { ...enabledEnvironment, AGY_ACP_ADMISSION_MAX_CONCURRENT_STARTS: "1.5" },
       { ...enabledEnvironment, AGY_ACP_ADMISSION_MIN_START_INTERVAL_MS: "1999" },
       { ...enabledEnvironment, AGY_ACP_ADMISSION_QUEUE_TIMEOUT_MS: "1800001" },
       { ...enabledEnvironment, AGY_ACP_ADMISSION_CAPACITY_COOLDOWN_MS: "29999" },

@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 import { existsSync } from "node:fs";
 import { createRequire } from "node:module";
-import { runInteractiveAgyLogin } from "./agy/auth.js";
-import { runAcp } from "./agent.js";
+import { resolveAcpKernel } from "./official-kernel/kernel.js";
+import { runOfficialLogin } from "./official-kernel/login.js";
+import { runOfficialKernel } from "./official-kernel/run.js";
 
 const argv = process.argv;
 const require = createRequire(import.meta.url);
@@ -12,13 +13,20 @@ const packageJson = require(
     : "../../package.json"
 ) as { version?: string };
 
-// Terminal auth method (`type: "terminal"`, args: ["--login"]) re-invokes this
-// binary so the user can complete agy's interactive login (API key or web code).
+const version = packageJson.version ?? "0.0.0";
+
 if (argv.includes("--version")) {
-  process.stdout.write(`${packageJson.version ?? "0.0.0"}\n`);
+  process.stdout.write(`${version}\n`);
 } else if (argv.includes("--login")) {
-  const code = await runInteractiveAgyLogin({ argv, env: process.env });
+  const code = await runOfficialLogin(process.env);
   process.exit(code);
 } else {
-  runAcp({ argv });
+  try {
+    resolveAcpKernel(process.env, argv);
+    await runOfficialKernel({ env: process.env, version });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    process.stderr.write(`${message}\n`);
+    process.exit(1);
+  }
 }

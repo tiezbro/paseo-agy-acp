@@ -13,7 +13,7 @@ import {
   type AdmissionTurnCoordinatorOptions
 } from "../ACP Connector/admission/turn-coordinator.js";
 import { TurnClaim } from "../ACP Connector/acp/session/turn-scheduler.js";
-import { AgyCliError } from "../ACP Connector/agy/cli.js";
+import { AgyCliError } from "../ACP Connector/admission/dispatch-boundary.js";
 
 const stateDirs: string[] = [];
 const controllers: AdmissionController[] = [];

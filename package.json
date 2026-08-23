@@ -1,7 +1,7 @@
 {
   "name": "paseo-agy-acp",
-  "version": "2.0.0.2",
-  "description": "Paseo-focused ACP adapter for Google Antigravity CLI — community derivative of agy-acp (ACP v1 + experimental draft ACP v2)",
+  "version": "2.1.0.0",
+  "description": "Paseo product ACP adapter that proxies the official Google Antigravity ACP kernel (NDJSON) with Admission and daemon context",
   "type": "module",
   "author": {
     "name": "tiezbro"
@@ -48,11 +48,7 @@
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
-    "@agentclientprotocol/sdk": "^1.3.0",
-    "@bufbuild/protobuf": "^2.13.0",
-    "better-sqlite3": "^13.0.1",
-    "node-pty": "^1.1.0",
-    "zod": "^4.4.3"
+    "better-sqlite3": "^13.0.1"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.13",
@@ -64,7 +60,6 @@
     "node": ">=22"
   },
   "allowScripts": {
-    "node-pty@1.1.0": true,
     "better-sqlite3@13.0.1": true
   }
 }

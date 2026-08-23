@@ -108,7 +108,8 @@ describe("AdmissionController schema v2", () => {
       ]);
       expect(db.prepare("SELECT version, name FROM schema_migrations ORDER BY version").all()).toEqual([
         { version: 1, name: "shared-admission-queue" },
-        { version: 2, name: "shared-admission-queue-v2" }
+        { version: 2, name: "shared-admission-queue-v2" },
+        { version: 3, name: "shared-admission-queue-v3" }
       ]);
       expect(tables).not.toContain("delivery_outbox");
       expect(tables).not.toContain("delivery_claim_leases");

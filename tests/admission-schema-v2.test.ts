@@ -263,8 +263,8 @@ describe("Admission schema v2 migration", () => {
       db.pragma("foreign_keys = ON");
       const sqliteVersion = db.prepare("SELECT sqlite_version() AS version").get() as { version: string };
       expect(sqliteVersion.version.localeCompare("3.25.0", undefined, { numeric: true })).toBeGreaterThanOrEqual(0);
-      expect(ADMISSION_SCHEMA_VERSION).toBe(2);
-      expect(admission.schemaVersion).toBe(2);
+      expect(ADMISSION_SCHEMA_VERSION).toBe(3);
+      expect(admission.schemaVersion).toBe(3);
       expect(() => assertAdmissionSchemaIntegrity(db)).not.toThrow(SchemaIntegrityError);
       expect(tableNames(db)).toEqual([
         "cooldowns",
@@ -346,7 +346,8 @@ describe("Admission schema v2 migration", () => {
       expect(foreignKeys(db, "queued_owner_instances")).toEqual([]);
       expect(db.prepare("SELECT version, name FROM schema_migrations ORDER BY version ASC").all()).toEqual([
         { version: 1, name: "shared-admission-queue" },
-        { version: 2, name: "shared-admission-queue-v2" }
+        { version: 2, name: "shared-admission-queue-v2" },
+        { version: 3, name: "shared-admission-queue-v3" }
       ]);
       expect(sessionLayout(db)).toEqual(beforeSessions);
       expect(() => assertLegacyConnectorRejects(file, 1)).toThrow(/newer than this connector supports/);

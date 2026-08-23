@@ -19,7 +19,7 @@ import {
   AgyCliError,
   AgyTerminalProviderError,
   type AgyAdmissionDispatchBoundary
-} from "../agy/cli.js";
+} from "./dispatch-boundary.js";
 import type { TurnClaim } from "../acp/session/turn-scheduler.js";
 
 const DEFAULT_QUEUE_POLL_INTERVAL_MS = 100;

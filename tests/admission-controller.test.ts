@@ -73,8 +73,8 @@ describe("AdmissionController final shared-queue policy", () => {
     expect(admission.getRequest("four")?.state).toBe("queued");
   });
 
-  it("rejects unsupported two, four, and five seat policies", () => {
-    for (const maxActiveTurns of [2, 4, 5]) {
+  it("rejects non-positive or non-integer seat and start counts", () => {
+    for (const maxActiveTurns of [0, -1, 1.5]) {
       const stateDir = mkdtempSync(path.join(os.tmpdir(), "paseo-agy-invalid-policy-"));
       stateDirs.push(stateDir);
       expect(() => new AdmissionController({
@@ -83,6 +83,16 @@ describe("AdmissionController final shared-queue policy", () => {
         encryptionKey: Buffer.alloc(32, 31),
         contentFingerprintKey: Buffer.alloc(32, 32)
       })).toThrow(/maxActiveTurns/);
+    }
+    for (const maxConcurrentStarts of [0, -1, 1.5]) {
+      const stateDir = mkdtempSync(path.join(os.tmpdir(), "paseo-agy-invalid-starts-"));
+      stateDirs.push(stateDir);
+      expect(() => new AdmissionController({
+        databasePath: path.join(stateDir, "runtime.sqlite"),
+        policy: { ...POLICY, maxConcurrentStarts },
+        encryptionKey: Buffer.alloc(32, 31),
+        contentFingerprintKey: Buffer.alloc(32, 32)
+      })).toThrow(/maxConcurrentStarts/);
     }
   });
 

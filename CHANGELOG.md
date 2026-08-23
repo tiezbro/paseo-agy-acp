@@ -2,6 +2,55 @@
 
 All notable changes to `paseo-agy-acp` are recorded here.
 
+## 2.1.0.0 - 2026-08-23
+
+### Changed
+
+- Switched ACP execution from the PTY/SQLite scraper to the official Google
+  `agy-acp` NDJSON server (Registry id `antigravity-acp`). The product binary
+  stays `agy-acp` and runs as a thin proxy: it injects Paseo daemon
+  `appendSystemPrompt`, maps session modes, rewrites MCP `http` servers to
+  `sse`, overlays product identity, and fences Admission around the official
+  `session/prompt` write.
+- Official live modes are `default`, `auto_edit`, and `yolo`. Legacy
+  `accept-edits` maps to `auto_edit`, `dangerously-skip-permissions` maps to
+  `yolo`, and `plan` maps to `default` because official has no plan mode.
+- Blank official `end_turn` results with no visible assistant output become a
+  JSON-RPC error instead of an empty successful turn.
+- **Deleted** the scraper kernel. `PASEO_AGY_ACP_KERNEL=legacy` and
+  `--legacy-kernel` fail closed. The product source stays **Apache-2.0**; the
+  official kernel binary is proprietary and is spawned, not redistributed.
+  Set `PASEO_AGY_ACP_OFFICIAL_BIN` to override the pinned official wrapper.
+  Official Admission state is isolated under `$AGY_ACP_STATE_DIR/official-kernel`.
+- Isolated canary on `127.0.0.1:6768` proved product `2.1.0.0` + official
+  kernel + daemon context (`ISOLATED_OFFICIAL_KERNEL_CANARY_OK`). Production
+  `127.0.0.1:6767` was not mutated by that canary.
+- Default Admission is **8 shared seats / 8 concurrent starts / 2s start
+  interval**, from production testing (including a 10-agent Antigravity
+  dispatch that did not reproduce the scraper hang). The queue stays enabled
+  so Paseo → Antigravity delegation stays steadier under burst. Env integers
+  **≥ 1** can raise seats/starts for concurrency experiments; this repo does
+  **not** publish a product maximum. Admission schema v3 rebuilds
+  `policy_state` so SQLite no longer carries a leftover upper CHECK from the
+  old 1–8 ledger. Isolated 6-way yolo stress on `127.0.0.1:6768` also did not
+  reproduce the scraper hang; official ACP is still not proven unlimited.
+  Optional `AGY_ACP_ADMISSION_MAX_ACTIVE_TURNS=3` and
+  `AGY_ACP_ADMISSION_MAX_CONCURRENT_STARTS=1` remain a tighter fence, not the
+  default.
+
+### Unchanged
+
+- Production Paseo daemon `127.0.0.1:6767` was **not restarted**. After the
+  8/8 Admission raise, `/home/tiezbro/.local/bin/agy-acp` was retargeted to
+  `/home/tiezbro/.local/opt/paseo-agy-acp-2.1.0.0-20260823T112457Z/bin/agy-acp-production`
+  with a fresh ledger at
+  `/home/tiezbro/.local/state/paseo-agy-acp/production-official-8` so the
+  durable 3+1 fingerprint cannot fail-close the new policy. The default Paseo
+  `antigravity` provider still runs that symlink. `antigravity-official-canary`
+  is disabled so production is not split. Idle Antigravity agents pick up 8/8
+  on the next spawn; live Cursor/Claude agents were left running.
+- Stage 2 Scheme pointers and the 2.0.0.0 closeout facts below are unchanged.
+
 ## 2.0.0.2 - 2026-08-19
 
 ### Changed

@@ -80,27 +80,44 @@ afterEach(() => {
 });
 
 describe("S3-T01 admission seat contract", () => {
-  it("defaults the shared Antigravity pool to three seats and accepts explicit three", () => {
+  it("defaults the shared Antigravity pool to eight seats and still accepts explicit three", () => {
     const defaultConfig = parseAdmissionRuntimeConfig(enabledEnvironment);
-    const explicitConfig = parseAdmissionRuntimeConfig({
+    const explicitThree = parseAdmissionRuntimeConfig({
       ...enabledEnvironment,
       AGY_ACP_ADMISSION_MAX_ACTIVE_TURNS: "3"
     });
+    const explicitEight = parseAdmissionRuntimeConfig({
+      ...enabledEnvironment,
+      AGY_ACP_ADMISSION_MAX_ACTIVE_TURNS: "8",
+      AGY_ACP_ADMISSION_MAX_CONCURRENT_STARTS: "8"
+    });
 
-    expect(defaultConfig.enabled && defaultConfig.policy.maxActiveTurns).toBe(3);
-    expect(explicitConfig.enabled && explicitConfig.policy.maxActiveTurns).toBe(3);
-    expect(DEFAULT_ADMISSION_POLICY.maxActiveTurns).toBe(3);
+    expect(defaultConfig.enabled && defaultConfig.policy.maxActiveTurns).toBe(8);
+    expect(defaultConfig.enabled && defaultConfig.policy.maxConcurrentStarts).toBe(8);
+    expect(explicitThree.enabled && explicitThree.policy.maxActiveTurns).toBe(3);
+    expect(explicitEight.enabled && explicitEight.policy.maxActiveTurns).toBe(8);
+    expect(DEFAULT_ADMISSION_POLICY.maxActiveTurns).toBe(8);
+    expect(DEFAULT_ADMISSION_POLICY.maxConcurrentStarts).toBe(8);
   });
 
   it("fails closed for unsupported seat policies from env and direct controller policy", () => {
-    for (const rawMaxActiveTurns of ["2", "4", "5", "0", "-1", "1.5"]) {
+    for (const rawMaxActiveTurns of ["0", "-1", "1.5"]) {
       expect(() => parseAdmissionRuntimeConfig({
         ...enabledEnvironment,
         AGY_ACP_ADMISSION_MAX_ACTIVE_TURNS: rawMaxActiveTurns
       })).toThrow(AdmissionRuntimeConfigError);
     }
 
-    for (const maxActiveTurns of [2, 4, 5, 0, -1, 1.5]) {
+    const raised = parseAdmissionRuntimeConfig({
+      ...enabledEnvironment,
+      AGY_ACP_ADMISSION_MAX_ACTIVE_TURNS: "9",
+      AGY_ACP_ADMISSION_MAX_CONCURRENT_STARTS: "9"
+    });
+    expect(raised.enabled && raised.policy.maxActiveTurns).toBe(9);
+    expect(raised.enabled && raised.policy.maxConcurrentStarts).toBe(9);
+    expect(() => openController({ ...seatPolicy, maxActiveTurns: 9, maxConcurrentStarts: 9 })).not.toThrow();
+
+    for (const maxActiveTurns of [0, -1, 1.5]) {
       expect(() => openController({ ...seatPolicy, maxActiveTurns })).toThrow(/maxActiveTurns/);
     }
   });
