@@ -1,0 +1,24 @@
+name: Sync Forgejo mirror
+
+on:
+  push:
+
+jobs:
+  sync:
+    name: Ask Forgejo to pull from GitHub
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Trigger Forgejo mirror pull
+        run: |
+          curl -sS -o /dev/null -w "forgejo mirror-sync HTTP=%{http_code}\n" \
+            -X POST \
+            -H "Authorization: token ${FORGEJO_TOKEN}" \
+            -H "CF-Access-Client-Id: ${CF_ACCESS_CLIENT_ID}" \
+            -H "CF-Access-Client-Secret: ${CF_ACCESS_CLIENT_SECRET}" \
+            "https://github.mindstacklab.ai/api/v1/repos/tiezbro/paseo-agy-acp/mirror-sync"
+        env:
+          FORGEJO_TOKEN: ${{ secrets.FORGEJO_TOKEN }}
+          CF_ACCESS_CLIENT_ID: ${{ secrets.CF_ACCESS_CLIENT_ID }}
+          CF_ACCESS_CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
+          GIT_TERMINAL_PROMPT: "0"
