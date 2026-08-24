@@ -1,0 +1,25 @@
+name: Mirror to Forgejo
+
+on:
+  push:
+
+jobs:
+  mirror:
+    name: Push refs to Forgejo backup
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Mirror refs to Forgejo
+        run: |
+          git remote add forgejo https://github.mindstacklab.ai/tiezbro/paseo-agy-acp.git
+          git -c http.extraheader="Authorization: token ${FORGEJO_TOKEN}" \
+              -c http.version=HTTP/1.1 \
+              push --mirror forgejo
+        env:
+          FORGEJO_TOKEN: ${{ secrets.FORGEJO_TOKEN }}
+          GIT_TERMINAL_PROMPT: "0"
