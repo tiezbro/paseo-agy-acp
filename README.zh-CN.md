@@ -71,8 +71,26 @@ Client Protocol NDJSON。下表是**官方内核**通过该协议提供的能力
 | 在线 session 模式 | `default`、`auto_edit`、`yolo`（官方 **没有** plan 模式） |
 | 工具 | 文件编辑、shell/终端等，以 Google 实现为准 |
 | MCP | 官方 MCP 客户端；在 `session/new` 上声明 server |
-| 模型 | 当前登录的 Antigravity 账号目录里可用的 Google / Gemini / Claude 等 |
+| 模型 | 以官方内核实际公告的目录为准。当前公开 Registry 1.0.0 / RC01 构建只提供 Gemini；见下方缺陷说明。 |
 | 回合结束 | 官方 `end_turn` / stop reason |
+
+### 已知上游模型目录缺陷
+
+> **核验于 2026-08-28：** 公开的官方 Registry 构建（`antigravity-acp` 1.0.0 /
+> `agy_acp_server_20260818_01_RC01`）通过 `oauth-personal` 只公告 11 个 Gemini
+> 模型；同一账号即使能在 Antigravity IDE/CLI 中列出并使用 Claude 4.6 和
+> GPT-OSS 120B，ACP 里也不会出现。
+
+对官方内核的源码级检查表明，它的模型 parser 会明确跳过所有 ID 不以 `gemini`
+开头的模型。随后 `session/set_config_option` 和旧 `session/set_model` 都会在请求
+到达模型后端前，以本地 `-32602` 拒绝这些 ID。这不是 Paseo 过滤目录、模型 ID
+映射错误或缺少 client capability；更换 RPC 形态或设置 `AGY_ACP_DEFAULT_MODEL`
+也无法绕过。
+
+本适配器保留官方内核返回的实际可执行目录，不会向 UI 填入内核必然拒绝的假模型，
+也不会借历史 CLI 内核绕过该缺陷。因此，Claude 和 GPT-OSS 必须等待 Google 发布
+修正后的官方内核。源码级证据见
+[完整调查](docs/research/google-antigravity-acp-model-catalog-investigation.md)。
 
 工具质量、生图、模型目录、供应商 503/配额文案，由官方内核和 Google 后端负责。
 本产品只 **代理** 这层能力。
@@ -377,6 +395,8 @@ server、模式 `dangerously-skip-permissions` → 官方 `yolo`、小席位下�
 
 ## 已知问题
 
+- 当前公开官方 ACP 模型目录只提供 Gemini；见
+  [已知上游模型目录缺陷](#已知上游模型目录缺陷)。
 - 官方内核二进制必须本机已安装；本包装不会随包分发它。
 - 在 `AGY_ACP_ADMISSION_ENABLED`、`AGY_ACP_STATE_DIR`、`PASEO_AGENT_ID` 都合法
   之前，Admission 保持关闭。没有 agent id 的 discovery / `--login` 不会打开账本。

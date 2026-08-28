@@ -75,8 +75,28 @@ server and forwards Agent Client Protocol NDJSON. The table below is the
 | Live session modes | `default`, `auto_edit`, `yolo` (official has **no** plan mode) |
 | Tools | File edits, shell/terminal, and other Antigravity tools as Google implements them |
 | MCP | Official MCP client; servers are declared on `session/new` |
-| Models | Google / Gemini / Claude / other catalog entries the signed-in Antigravity account can use |
+| Models | Entries advertised by the official kernel. The current public Registry 1.0.0 / RC01 build is Gemini-only; see the defect below. |
 | Turn completion | Official `end_turn` / stop reasons |
+
+### Known upstream model-catalog defect
+
+> **Verified 2026-08-28:** the public official Registry build
+> (`antigravity-acp` 1.0.0 / `agy_acp_server_20260818_01_RC01`) exposes only 11
+> Gemini models through `oauth-personal`, even when the same account can list
+> and use Claude 4.6 and GPT-OSS 120B in the Antigravity IDE/CLI.
+
+Source-level inspection of the official kernel shows that its model parser
+explicitly skips every id that does not start with `gemini`. Both
+`session/set_config_option` and legacy `session/set_model` then reject those
+ids locally with `-32602`, before a request reaches the model backend. This is
+not a Paseo catalog filter, model-id mapping problem, or missing client
+capability. Changing RPC shape or `AGY_ACP_DEFAULT_MODEL` does not bypass it.
+
+This adapter preserves the executable catalog returned by the official kernel;
+it does not add UI-only models that the kernel will reject, and it does not
+route around the defect through the historical CLI kernel. Claude and GPT-OSS
+therefore require a corrected official kernel release. See the
+[source-level investigation](docs/research/google-antigravity-acp-model-catalog-investigation.md).
 
 Tool quality, image generation, model catalog, and provider 503/quota text are
 owned by the official kernel and Google's backend. This product **proxies**
@@ -404,6 +424,8 @@ by that canary.
 
 ## Known issues
 
+- The current public official ACP model catalog is Gemini-only; see
+  [Known upstream model-catalog defect](#known-upstream-model-catalog-defect).
 - The official kernel binary must already be installed; this package does not
   vendor it.
 - Admission is off until `AGY_ACP_ADMISSION_ENABLED`, `AGY_ACP_STATE_DIR`, and
