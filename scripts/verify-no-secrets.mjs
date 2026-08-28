@@ -25,6 +25,7 @@ const TEXT_EXTENSIONS = new Set([
   ".jsonl",
   ".md",
   ".mjs",
+  ".py",
   ".sh",
   ".sql",
   ".ts",

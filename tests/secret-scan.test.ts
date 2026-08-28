@@ -35,6 +35,20 @@ describe("secret scan validation seam", () => {
     expect(result.stderr).toContain("<builtin-fixture>/fixture.env:1 generic-sensitive-assignment");
     expect(result.stderr).not.toContain("fixture_not_live_secret");
   });
+
+  it("scans Python compatibility modules for secret-like assignments", () => {
+    const cleanRoot = createTemporaryRoot();
+    writeFileSync(
+      path.join(cleanRoot, "paseo_model_compat.py"),
+      "PASEO_API_TOKEN = \"0123456789abcdef0123456789abcdef\"\n"
+    );
+
+    const result = runScanner("--root", cleanRoot);
+
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("secret scan: FAIL");
+    expect(result.stderr).toContain("paseo_model_compat.py:1 generic-sensitive-assignment");
+  });
 });
 
 function createTemporaryRoot() {

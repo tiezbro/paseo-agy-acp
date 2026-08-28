@@ -26,11 +26,14 @@
   "license": "Apache-2.0",
   "bin": {
     "agy-acp": "dist/ACP Connector/main.js",
-    "agy-acp-prepare-state": "scripts/prepare-admission-state-dir.mjs"
+    "agy-acp-prepare-state": "scripts/prepare-admission-state-dir.mjs",
+    "agy-acp-prepare-official-kernel-compat": "scripts/prepare-official-kernel-compat.mjs"
   },
   "files": [
     "dist",
     "scripts/prepare-admission-state-dir.mjs",
+    "scripts/prepare-official-kernel-compat.mjs",
+    "assets/official-kernel-compat/rc01/paseo_model_compat.py",
     "README.md",
     "README.zh-CN.md",
     "CHANGELOG.md",
