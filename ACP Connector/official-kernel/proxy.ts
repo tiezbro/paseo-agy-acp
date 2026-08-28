@@ -18,6 +18,7 @@ import {
 import { rewriteMcpServers } from "./mcp-rewrite.js";
 import { rewriteModeFields } from "./mode-map.js";
 import { createNdjsonParser, encodeNdjson } from "./ndjson.js";
+import { augmentAvailableCommands, type AvailableCommand } from "./skill-commands.js";
 
 const INITIALIZE_METHOD = "initialize";
 const SESSION_NEW_METHOD = "session/new";
@@ -207,6 +208,31 @@ export class OfficialKernelProxy {
           }
         }
       }
+
+      const params = message.params as
+        | {
+            sessionId?: string;
+            update?: {
+              sessionUpdate?: string;
+              availableCommands?: AvailableCommand[];
+            };
+          }
+        | undefined;
+
+      if (params?.update?.sessionUpdate === "available_commands_update") {
+        const augmented = augmentAvailableCommands(params.update.availableCommands);
+        message = {
+          ...message,
+          params: {
+            ...params,
+            update: {
+              ...params.update,
+              availableCommands: augmented
+            }
+          }
+        };
+      }
+
       this.#writeClient(message);
       return;
     }
