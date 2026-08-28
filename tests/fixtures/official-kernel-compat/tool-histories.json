@@ -1,0 +1,162 @@
+{
+  "mixedHistory": {
+    "contents": [
+      {
+        "role": "model",
+        "parts": [
+          {
+            "functionCall": {
+              "args": { "path": "first.txt" },
+              "name": "read_file"
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "parts": [
+          {
+            "functionResponse": {
+              "name": "read_file",
+              "response": { "contents": "first" }
+            }
+          }
+        ]
+      },
+      {
+        "role": "model",
+        "parts": [
+          {
+            "functionCall": {
+              "args": { "path": "second.txt" },
+              "id": "acp-tool-2",
+              "name": "read_file"
+            }
+          },
+          {
+            "functionCall": {
+              "args": { "path": "third.txt" },
+              "name": "read_file"
+            }
+          },
+          {
+            "functionCall": {
+              "args": { "path": "notes.txt" },
+              "name": "write_file"
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "parts": [
+          {
+            "functionResponse": {
+              "id": "wrong-response-id",
+              "name": "write_file",
+              "response": { "contents": "written" }
+            }
+          },
+          {
+            "functionResponse": {
+              "name": "read_file",
+              "response": { "contents": "second" }
+            }
+          },
+          {
+            "functionResponse": {
+              "name": "read_file",
+              "response": { "contents": "third" }
+            }
+          },
+          {
+            "functionResponse": {
+              "name": "missing_call",
+              "response": { "contents": "unmatched" }
+            }
+          },
+          {
+            "functionResponse": {
+              "id": "preserve-unmatched-id",
+              "name": "also_missing",
+              "response": { "contents": "existing" }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "unmatchedResponseDoesNotReserveCallIds": {
+    "contents": [
+      {
+        "role": "user",
+        "parts": [
+          {
+            "functionResponse": {
+              "id": "acp-tool-1",
+              "name": "unmatched_tool",
+              "response": { "contents": "unmatched" }
+            }
+          }
+        ]
+      },
+      {
+        "role": "model",
+        "parts": [
+          {
+            "functionCall": {
+              "name": "later_tool"
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "parts": [
+          {
+            "functionResponse": {
+              "name": "later_tool",
+              "response": { "contents": "matched" }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "responseBeforeCall": {
+    "contents": [
+      {
+        "role": "user",
+        "parts": [
+          {
+            "functionResponse": {
+              "name": "delayed_tool",
+              "response": { "contents": "before" }
+            }
+          }
+        ]
+      },
+      {
+        "role": "model",
+        "parts": [
+          {
+            "functionCall": {
+              "name": "delayed_tool"
+            }
+          }
+        ]
+      },
+      {
+        "role": "user",
+        "parts": [
+          {
+            "functionResponse": {
+              "name": "delayed_tool",
+              "response": { "contents": "after" }
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
