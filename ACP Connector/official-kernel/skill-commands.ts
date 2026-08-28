@@ -42,50 +42,76 @@ function parseFrontmatter(content: string): { name?: string; description?: strin
   return { name, description };
 }
 
-function resolveSkillRoots(cwd?: string): string[] {
-  const roots = new Set<string>();
+export function resolveSkillRoots(cwd?: string): string[] {
+  const configuredRoots = new Set<string>();
   const home = homedir();
 
-  // 1. Check ~/.gemini/config/skills.json
-  const skillsJsonPath = path.join(home, ".gemini/config/skills.json");
-  if (existsSync(skillsJsonPath)) {
+  const readSkillsJson = (filePath: string, baseDir: string): void => {
+    if (!existsSync(filePath)) return;
     try {
-      const parsed = JSON.parse(readFileSync(skillsJsonPath, "utf-8")) as {
+      const parsed = JSON.parse(readFileSync(filePath, "utf-8")) as {
         entries?: Array<{ path: string }>;
       };
       if (Array.isArray(parsed.entries)) {
         for (const entry of parsed.entries) {
-          if (entry.path) {
-            const resolved = entry.path.startsWith("~/")
-              ? path.join(home, entry.path.slice(2))
-              : entry.path;
-            if (existsSync(resolved)) roots.add(resolved);
+          if (entry && typeof entry.path === "string" && entry.path.trim().length > 0) {
+            const trimmed = entry.path.trim();
+            let resolved: string;
+            if (trimmed.startsWith("/")) {
+              resolved = trimmed;
+            } else if (trimmed.startsWith("~/")) {
+              resolved = path.join(home, trimmed.slice(2));
+            } else {
+              resolved = path.resolve(baseDir, trimmed);
+            }
+            if (existsSync(resolved)) {
+              configuredRoots.add(resolved);
+            }
           }
         }
       }
     } catch {
       // Ignore JSON parse errors
     }
+  };
+
+  // 1. Workspace declared configs
+  if (cwd && existsSync(cwd)) {
+    readSkillsJson(path.join(cwd, ".agents/skills.json"), cwd);
+    readSkillsJson(path.join(cwd, "skills.json"), cwd);
   }
 
-  // 2. Default global paths
-  const defaultGlobal = [
-    path.join(home, ".codex/skills"),
+  // 2. Global declared config (~/.gemini/config/skills.json)
+  readSkillsJson(path.join(home, ".gemini/config/skills.json"), home);
+
+  // If user configured any directories, use them
+  if (configuredRoots.size > 0) {
+    if (cwd && existsSync(cwd)) {
+      const wsDefault = path.join(cwd, ".agents/skills");
+      if (existsSync(wsDefault)) configuredRoots.add(wsDefault);
+    }
+    return Array.from(configuredRoots);
+  }
+
+  // 3. Fallback: Antigravity default skill locations
+  const defaultRoots = new Set<string>();
+
+  if (cwd && existsSync(cwd)) {
+    const wsAgents = path.join(cwd, ".agents/skills");
+    const wsSkills = path.join(cwd, "skills");
+    if (existsSync(wsAgents)) defaultRoots.add(wsAgents);
+    if (existsSync(wsSkills)) defaultRoots.add(wsSkills);
+  }
+
+  const globalDefaults = [
+    path.join(home, ".gemini/config/skills"),
     path.join(home, ".agents/skills")
   ];
-  for (const dir of defaultGlobal) {
-    if (existsSync(dir)) roots.add(dir);
+  for (const dir of globalDefaults) {
+    if (existsSync(dir)) defaultRoots.add(dir);
   }
 
-  // 3. Workspace cwd paths if provided
-  if (cwd && existsSync(cwd)) {
-    const wsCodex = path.join(cwd, ".codex/skills");
-    const wsAgents = path.join(cwd, ".agents/skills");
-    if (existsSync(wsCodex)) roots.add(wsCodex);
-    if (existsSync(wsAgents)) roots.add(wsAgents);
-  }
-
-  return Array.from(roots);
+  return Array.from(defaultRoots);
 }
 
 export function discoverSkillCommands(cwd?: string): AvailableCommand[] {

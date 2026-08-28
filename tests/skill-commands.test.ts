@@ -4,7 +4,8 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   augmentAvailableCommands,
-  discoverSkillCommands
+  discoverSkillCommands,
+  resolveSkillRoots
 } from "../ACP Connector/official-kernel/skill-commands.js";
 
 const tempDirs: string[] = [];
@@ -22,32 +23,62 @@ function tempDir(prefix: string): string {
 }
 
 describe("Skill Commands Discovery", () => {
-  it("discovers skills from workspace skills directory", () => {
-    const ws = tempDir("ws-skills-");
-    const codexSkills = path.join(ws, ".codex/skills");
-    const skillA = path.join(codexSkills, "my-skill");
+  it("discovers skills from configured skills.json", () => {
+    const ws = tempDir("ws-custom-");
+    const customSkillDir = tempDir("custom-skill-target-");
+    const skillA = path.join(customSkillDir, "custom-declared-skill");
     mkdirSync(skillA, { recursive: true });
     writeFileSync(
       path.join(skillA, "SKILL.md"),
       `---
-name: my-skill
-description: Custom test skill
+name: custom-declared-skill
+description: Declared from custom skills.json
 ---
-# My Skill
+# Declared Skill
+`
+    );
+
+    // Create workspace skills.json pointing to customSkillDir
+    mkdirSync(path.join(ws, ".agents"), { recursive: true });
+    writeFileSync(
+      path.join(ws, ".agents/skills.json"),
+      JSON.stringify({
+        entries: [{ path: customSkillDir }]
+      })
+    );
+
+    const roots = resolveSkillRoots(ws);
+    expect(roots).toContain(customSkillDir);
+
+    const commands = discoverSkillCommands(ws);
+    const found = commands.find((c) => c.name === "custom-declared-skill");
+    expect(found).toBeDefined();
+    expect(found?.description).toBe("Declared from custom skills.json");
+  });
+
+  it("falls back to default Antigravity skill paths when unconfigured", () => {
+    const ws = tempDir("ws-default-");
+    const defaultWsSkills = path.join(ws, ".agents/skills/default-skill");
+    mkdirSync(defaultWsSkills, { recursive: true });
+    writeFileSync(
+      path.join(defaultWsSkills, "SKILL.md"),
+      `---
+name: default-skill
+description: Default location skill
+---
 `
     );
 
     const commands = discoverSkillCommands(ws);
-    const found = commands.find((c) => c.name === "my-skill");
+    const found = commands.find((c) => c.name === "default-skill");
     expect(found).toBeDefined();
-    expect(found?.description).toBe("Custom test skill");
+    expect(found?.description).toBe("Default location skill");
   });
 
   it("augments existing available commands without duplicating", () => {
-    const ws = tempDir("ws-skills-");
-    const codexSkills = path.join(ws, ".codex/skills");
-    const skillA = path.join(codexSkills, "plan");
-    const skillB = path.join(codexSkills, "extra-skill");
+    const ws = tempDir("ws-merge-");
+    const skillA = path.join(ws, ".agents/skills/plan");
+    const skillB = path.join(ws, ".agents/skills/extra-skill");
     mkdirSync(skillA, { recursive: true });
     mkdirSync(skillB, { recursive: true });
     writeFileSync(
