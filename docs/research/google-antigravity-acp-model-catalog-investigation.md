@@ -302,31 +302,35 @@ I3. 官方会逐步对齐 ACP 目录与 CLI/IDE（无任何承诺）。
 1. parser 过滤前的 CCPA raw 目录为 **14 项**，包括 `claude-sonnet-4-6`、`claude-opus-4-6-thinking`、`gpt-oss-120b-medium`。
 2. raw metadata 明确给出 `apiProvider`、`modelProvider`、`maxOutputTokens`、`thinkingBudget`、内部 `model` 与 `vertexModelId`。Claude 输出上限为 64000，GPT-OSS 为 32768。
 3. 仅删除 Gemini 前缀过滤并不足以工作：RC01 仍以 `GeminiAPIEndpoint` 生成请求，固定 `maxOutputTokens=65535`，工具使用 `parametersJsonSchema` 且 function call/response 没有关联 ID。
+4. 在独立副本中让 parser 只保留 raw 目录实际返回且兼容表支持的三个非 Gemini ID 后，`session/new` 稳定原生返回 14 项。把 `server.py` 恢复为官方 preimage 后，Claude 仍能选择并推理，证明 `_apply_session_model` 的动态目录校验已经足够，静态三模型白名单补丁是冗余的。
+5. GPT reasoning 与最终内容分别使用 `agent_thought_chunk` 和 `agent_message_chunk`；此前探针递归拼接所有 `text` 才造成“thought 混入最终答案”的假象。
 
 ### 最小兼容补丁
 
-- 允许 raw CCPA 已公告的三个模型 ID 通过 `_apply_session_model` 白名单。
+- 在 `model_selection.py` 中只允许 raw CCPA 已公告且本地兼容 profile 支持的三个非 Gemini ID 保留在原生目录；不增加 raw 目录不存在的模型。
 - 按 CCPA metadata clamp `generationConfig.maxOutputTokens`。
 - 将工具 schema 的 `parametersJsonSchema` 转为 `parameters`，递归移除 Gemini `Schema` proto 不接受的 `$schema`。
 - 为 `functionCall` / `functionResponse` 注入成对、确定性的 ID，使 Anthropic 转换能生成关联的 `tool_use` / `tool_result`。
 - 对 GPT-OSS 删除不兼容的 Gemini generation 字段，仅保留其 32768 输出上限；medium reasoning 已编码在目录 ID 中。
+- 保持官方 `server.py` 不变；不在 Paseo TypeScript proxy 中伪造 catalog overlay。
 
 ### 端到端结果
 
-| 模型 | 纯文本 | 工具回合 |
+| 模型 | 纯文本 | 工具 / session |
 |---|---|---|
-| Claude Sonnet 4.6 | `set_config_option → prompt → end_turn`，精确返回 `PATCHED_ACP_OK` | 调用 `view_file` 读取 prompt 中未知内容的隔离文件，精确返回 `TOOL_PROOF_9c4e7a31` |
-| Claude Opus 4.6 Thinking | `set_config_option → prompt → end_turn`，精确返回 `PATCHED_ACP_OK` | 未单独测试 |
-| GPT-OSS 120B Medium | `set_config_option → prompt → end_turn`，最终答案包含 `PATCHED_ACP_OK` | 调用工具并返回同一未知 marker；ACP stream 同时暴露其 thought 文本 |
+| Claude Sonnet 4.6 | 原生 14 项目录后 `set_config_option → prompt → end_turn`，精确返回 `PATCHED_ACP_OK` | 同一 session 连续两次 `view_file`，精确返回两个未知 marker；warm `session/resume` 后仍为 14 项、current model 保持 Claude，并再次完成工具回合 |
+| Claude Opus 4.6 Thinking | `set_config_option → prompt → end_turn`，精确返回 `PATCHED_ACP_OK` | 未单独测试工具 |
+| GPT-OSS 120B Medium | 原生 14 项目录后 `set_config_option → prompt → end_turn`，最终答案包含 `PATCHED_ACP_OK` | 同一 session 连续两次调用工具并返回两个未知 marker；thought/message ACP 事件分离正确 |
+| 不存在的伪模型 | N/A | `session/set_config_option` 仍返回本地 `-32602`，没有触达 backend |
 
-结论：账号与 CCPA backend 确实允许官方 ACP 路径执行三种模型；RC01 缺少的不只是目录曝光，还包括第三方 provider 的请求兼容层。该实验足以证明可修复性，但尚不等于完整生产验收。
+结论：账号与 CCPA backend 确实允许官方 ACP 路径执行三种模型；RC01 缺少的是目录过滤修正和第三方 provider 请求兼容层。native 14 项目录本身可用，不需要 adapter catalog overlay。该实验足以证明可修复性，但尚不等于完整生产验收。
 
 ## 10. 剩余未知 / 生产缺口
 
-1. **完整目录回传**：直接让 RC01 parser 返回 14 项时，隔离 `session/new` 曾超时；本次 E2E 保留官方 11 项初始目录，再直接选择 patched 白名单中的三方 ID。生产实现仍需定位该超时或在产品代理层安全叠加已验证可执行目录。
-2. **功能覆盖**：尚未验证多轮用户对话、取消、session resume/load、MCP、图片/音频、写工具权限、503/配额错误和 8 路并发。
-3. **协议转换完整性**：当前最小兼容层覆盖实测请求；复杂 JSON Schema、并行/重复同名工具调用及多工具历史仍需契约测试。
-4. **许可与产品策略**：技术成功不等于 Google 明确授权修改/分发专有 ACP 构件；过滤动机仍无第一方声明。
+1. **功能覆盖**：尚未完成冷进程 `session/load`、取消、MCP、图片/音频、写工具权限及真实 503/配额错误验收；warm `session/resume` 已通过。
+2. **协议转换完整性**：顺序多轮和重复同名工具已通过；复杂 JSON Schema、同一步并行/乱序同名工具仍需契约测试。
+3. **配置驱动并行与资源回收**：需按实际 Paseo parallel queue 与 Admission policy 组合测试，不能把默认值 8 当作上限；还需验证 cancel/timeout/503 后 seat、payload、cooldown、kernel child 和 process group 回收。
+4. **许可与产品策略**：技术成功不等于 Google 明确授权修改/分发专有 ACP 构件；过滤动机仍无第一方声明。公开仓库只能提供本地 orchestrator、自有兼容模块和 hash，不能分发 patched Google artifact。
 5. **dl.google.com 隐藏构建与更新时间表**：目录不可枚举，Registry 后续更新无公开承诺；唯一可观测信号是 registry 提交与 matrix 快照（§7-3）。
 6. **Enterprise / API-key / agent-platform 路径**：未逐一实跑；docs 表显示 Enterprise 本就不含第三方模型。
 
@@ -344,4 +348,4 @@ I3. 官方会逐步对齐 ACP 目录与 CLI/IDE（无任何承诺）。
 | 本机 `agy` 1.1.17 实测输出 | 14 项对照 |
 | [ACP Registry issue #554](https://github.com/agentclientprotocol/registry/issues/554) | 已上报的最小复现与隔离验证 follow-up |
 
-**隔离实验边界**：临时副本、patch 和探针位于 `/tmp/agy-acp-model-probe-20260828`；未部署、未修改原始安装或 daemon。仓库内除本报告外没有因实验新增代码或配置。
+**隔离实验边界**：临时副本、patch 和探针位于 `/tmp/agy-acp-model-probe-20260828` 与 `/tmp/agy-acp-model-probe-full-catalog`；未部署、未修改原始安装或 daemon。仓库内只更新本报告并新增开发计划，没有加入 runtime patch 或 Google 构件。
