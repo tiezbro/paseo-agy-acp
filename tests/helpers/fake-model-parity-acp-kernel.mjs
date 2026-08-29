@@ -17,6 +17,8 @@ let sessionNumber = 0;
 let authenticated = false;
 let cancellationPromptCount = 0;
 const pendingCancels = new Map();
+const sessionModels = new Map();
+const sessionHistory = new Map();
 
 function observe(value) {
   if (process.env.P4_FAKE_OBSERVATION === undefined) return;
@@ -25,7 +27,13 @@ function observe(value) {
 
 function observedRequest(message) {
   const observed = { method: message.method, args: process.argv.slice(2) };
-  if (message.method === "session/resume") {
+  if (message.method === "initialize") {
+    observed.params = {
+      protocolVersion: message.params?.protocolVersion,
+      clientInfo: message.params?.clientInfo,
+      clientCapabilities: message.params?.clientCapabilities
+    };
+  } else if (message.method === "session/resume" || message.method === "session/load") {
     observed.params = {
       sessionId: message.params?.sessionId,
       cwd: message.params?.cwd,
@@ -33,8 +41,25 @@ function observedRequest(message) {
     };
   } else if (message.method === "session/prompt") {
     observed.params = { sessionId: message.params?.sessionId };
+    const promptParts = observedMediaPromptShape(message.params);
+    if (promptParts !== undefined) observed.params.promptParts = promptParts;
   }
   return observed;
+}
+
+function observedMediaPromptShape(params) {
+  if (!Array.isArray(params?.prompt)) return undefined;
+  const parts = params.prompt
+    .filter((part) => part && typeof part === "object")
+    .map((part) => {
+      const observed = { type: part.type };
+      if ((part.type === "image" || part.type === "audio") && typeof part.mimeType === "string") {
+        observed.mimeType = part.mimeType;
+        observed.dataBytes = typeof part.data === "string" ? Buffer.from(part.data, "base64").byteLength : 0;
+      }
+      return observed;
+    });
+  return parts.some((part) => part.type === "image" || part.type === "audio") ? parts : undefined;
 }
 
 function write(message) {
@@ -55,10 +80,10 @@ function update(sessionId, sessionUpdate, text) {
   });
 }
 
-function configuration() {
+function configuration(sessionId) {
   return [{
     id: "model",
-    currentValue: currentModel,
+    currentValue: sessionModels.get(sessionId) ?? currentModel,
     options: models.map((value) => ({ value }))
   }];
 }
@@ -103,6 +128,22 @@ function initializeCapabilities() {
   if (behavior === "snake-resume-capability") {
     return { agent_capabilities: { session_capabilities: { resume: {} } } };
   }
+  if (behavior === "image-only-capability") {
+    return { agentCapabilities: { sessionCapabilities: { resume: {} }, promptCapabilities: { image: true } } };
+  }
+  if (behavior === "audio-only-capability") {
+    return { agentCapabilities: { sessionCapabilities: { resume: {} }, promptCapabilities: { audio: true } } };
+  }
+  if (behavior === "rc01-capabilities") {
+    return {
+      agentCapabilities: {
+        loadSession: true,
+        sessionCapabilities: { resume: {} },
+        promptCapabilities: { image: true, audio: true, embeddedContext: true },
+        mcpCapabilities: { http: true, sse: true }
+      }
+    };
+  }
   return { agentCapabilities: { sessionCapabilities: { resume: {} } } };
 }
 
@@ -112,6 +153,30 @@ function validResumeParams(params) {
     && typeof params.cwd === "string"
     && path.isAbsolute(params.cwd)
     && Array.isArray(params.mcpServers);
+}
+
+function validInitializeParams(params) {
+  return params !== null && typeof params === "object" && !Array.isArray(params)
+    && params.protocolVersion === 1
+    && params.clientInfo !== null && typeof params.clientInfo === "object" && !Array.isArray(params.clientInfo)
+    && typeof params.clientInfo.name === "string"
+    && typeof params.clientInfo.version === "string"
+    && params.clientCapabilities !== null && typeof params.clientCapabilities === "object"
+    && !Array.isArray(params.clientCapabilities);
+}
+
+function validLoadParams(params) {
+  return validResumeParams(params);
+}
+
+function hasValidMediaPrompt(params) {
+  const prompt = params?.prompt;
+  if (!Array.isArray(prompt)) return false;
+  return prompt.some((part) => part && typeof part === "object"
+    && (part.type === "image" || part.type === "audio")
+    && typeof part.mimeType === "string"
+    && typeof part.data === "string"
+    && Buffer.from(part.data, "base64").byteLength > 0);
 }
 
 function replyPrompt(message) {
@@ -142,6 +207,14 @@ function replyPrompt(message) {
     write({ jsonrpc: "2.0", id: message.id, error: { code: "QUOTA_EXHAUSTED", message: "quota unavailable" } });
     return;
   }
+  if (text.includes("P6_TIMEOUT_REQUEST") && behavior === "timeout-child") {
+    spawnHangingChild();
+    return;
+  }
+  if (text.includes("P6_MEDIA_REQUEST") && !hasValidMediaPrompt(message.params)) {
+    write({ jsonrpc: "2.0", id: message.id, error: { code: -32602, message: "invalid media prompt" } });
+    return;
+  }
   if (text.includes("P4_CANCEL_REQUEST")) {
     cancellationPromptCount += 1;
     if (behavior === "race-then-cancel" && cancellationPromptCount === 1) {
@@ -161,6 +234,9 @@ function replyPrompt(message) {
     update(sessionId, "tool_call_update");
   }
   const finalText = toolMarker(text) || expectedMarker(text);
+  const history = sessionHistory.get(sessionId) ?? [];
+  history.push(finalText);
+  sessionHistory.set(sessionId, history);
   const splitAt = Math.max(1, Math.floor(finalText.length / 2));
   update(sessionId, "agent_message_chunk", finalText.slice(0, splitAt));
   update(sessionId, "agent_message_chunk", finalText.slice(splitAt));
@@ -187,6 +263,10 @@ process.stdin.on("data", (chunk) => {
     if (message.method === "initialize") {
       if (behavior === "hang-child") {
         spawnHangingChild();
+        continue;
+      }
+      if (!validInitializeParams(message.params)) {
+        write({ jsonrpc: "2.0", id: message.id, error: { code: -32602, message: "invalid initialize parameters" } });
         continue;
       }
       write({
@@ -224,10 +304,13 @@ process.stdin.on("data", (chunk) => {
         continue;
       }
       sessionNumber += 1;
+      const sessionId = `fake-session-${sessionNumber}`;
+      sessionModels.set(sessionId, currentModel);
+      sessionHistory.set(sessionId, []);
       write({
         jsonrpc: "2.0",
         id: message.id,
-        result: { sessionId: `fake-session-${sessionNumber}`, configOptions: configuration() }
+        result: { sessionId, configOptions: configuration(sessionId) }
       });
       continue;
     }
@@ -239,8 +322,24 @@ process.stdin.on("data", (chunk) => {
       write({
         jsonrpc: "2.0",
         id: message.id,
-        result: { configOptions: configuration() }
+        result: { configOptions: configuration(message.params?.sessionId) }
       });
+      continue;
+    }
+    if (message.method === "session/load") {
+      if (!validLoadParams(message.params)) {
+        write({ jsonrpc: "2.0", id: message.id, error: { code: -32602, message: "invalid load parameters" } });
+        continue;
+      }
+      const sessionId = message.params.sessionId;
+      if (!sessionModels.has(sessionId)) {
+        write({ jsonrpc: "2.0", id: message.id, error: { code: -32002, message: "session not found" } });
+        continue;
+      }
+      for (const marker of sessionHistory.get(sessionId) ?? []) {
+        update(sessionId, "agent_message_chunk", marker);
+      }
+      write({ jsonrpc: "2.0", id: message.id, result: { configOptions: configuration(sessionId) } });
       continue;
     }
     if (message.method === "session/set_config_option") {
@@ -257,6 +356,9 @@ process.stdin.on("data", (chunk) => {
         });
       } else {
         currentModel = value;
+        if (typeof message.params?.sessionId === "string") {
+          sessionModels.set(message.params.sessionId, currentModel);
+        }
         write({ jsonrpc: "2.0", id: message.id, result: { currentValue: currentModel } });
       }
       continue;

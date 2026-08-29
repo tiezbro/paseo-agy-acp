@@ -21,6 +21,8 @@ const TERMINATE_GRACE_MS = 1_500;
 const SAFE_IDENTIFIER = /^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/;
 const SAFE_BUILD_ID = /^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$/;
 const SAFE_ERROR_CODE = /^[A-Z][A-Z0-9_.-]{0,63}$/;
+const TINY_IMAGE_PNG_BASE64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIW2Nk+M/wHwAF/gL+3MxZ8wAAAABJRU5ErkJggg==";
+const TINY_AUDIO_WAV_BASE64 = "UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA=";
 const OBSERVED_UPDATE_KINDS = Object.freeze([
   "agent_thought_chunk",
   "agent_message_chunk",
@@ -108,7 +110,7 @@ function parseProductAdapterEnvironment(environment) {
 
 function printUsage() {
   process.stdout.write(
-    "usage: node scripts/official-kernel-model-parity.mjs (--kernel PATH | --per-release-wrapper PATH | --stable-wrapper PATH | --direct-par PATH) [--live] [--tools] [--resume] [--cancel] [--invalid-model] [--authenticate]\n\nDefault mode verifies the native catalog through session/new using existing cached OAuth state. It sends no authenticate request and does not test unauthenticated access. Use --authenticate only for an explicit auth flow. Default request/overall timeouts are 180000ms/600000ms.\n"
+    "usage: node scripts/official-kernel-model-parity.mjs (--kernel PATH | --per-release-wrapper PATH | --stable-wrapper PATH | --direct-par PATH) [--live] [--tools] [--resume] [--cold-load] [--media] [--timeout] [--cancel] [--invalid-model] [--authenticate]\n\nDefault mode verifies the native catalog through session/new using existing cached OAuth state. It sends no authenticate request and does not test unauthenticated access. --cold-load and --media require --live and only run after their ACP capabilities are advertised. --timeout requires --live and passes only after a request timeout and process-group cleanup are both observed. Use --authenticate only for an explicit auth flow. Default request/overall timeouts are 180000ms/600000ms.\n"
   );
 }
 
@@ -151,6 +153,9 @@ function parseArguments(argv, environment) {
     live: false,
     tools: false,
     resume: false,
+    coldLoad: false,
+    media: false,
+    timeout: false,
     cancel: false,
     invalidModel: false,
     throughProduct: parseProductAdapterEnvironment(environment)
@@ -171,7 +176,18 @@ function parseArguments(argv, environment) {
     "build-id",
     "auth-method"
   ]);
-  const flags = new Set(["authenticate", "live", "tools", "resume", "cancel", "invalid-model", "help"]);
+  const flags = new Set([
+    "authenticate",
+    "live",
+    "tools",
+    "resume",
+    "cold-load",
+    "media",
+    "timeout",
+    "cancel",
+    "invalid-model",
+    "help"
+  ]);
 
   for (let index = 0; index < argv.length; index += 1) {
     const token = argv[index];
@@ -179,7 +195,12 @@ function parseArguments(argv, environment) {
     const name = token.slice(2);
     if (flags.has(name)) {
       if (name === "help") return { help: true };
-      options[name === "invalid-model" ? "invalidModel" : name] = true;
+      const optionName = name === "invalid-model"
+        ? "invalidModel"
+        : name === "cold-load"
+          ? "coldLoad"
+          : name;
+      options[optionName] = true;
       continue;
     }
     if (!valueOptions.has(name)) throw new HarnessError("invalid_arguments");
@@ -242,7 +263,7 @@ function parseArguments(argv, environment) {
   options.selectedModelIds = unique(options.selectedModelIds);
   if (options.expectedModelIds.length === 0) throw new HarnessError("invalid_arguments");
   if (!options.authenticate && options.authMethod !== undefined) throw new HarnessError("invalid_arguments");
-  if ((options.tools || options.resume || options.cancel) && !options.live) {
+  if ((options.tools || options.resume || options.coldLoad || options.media || options.timeout || options.cancel) && !options.live) {
     throw new HarnessError("live_flag_required");
   }
   return options;
@@ -256,6 +277,9 @@ function makeCoverage(options) {
       text: "not_run",
       tools: "not_run",
       warmResume: "not_run",
+      coldLoad: "not_run",
+      media: "not_run",
+      mcp: "not_run",
       invalidModel: "not_run",
       cancel: "not_run",
       timeout: "not_run",
@@ -268,6 +292,8 @@ function makeCoverage(options) {
       text: true,
       tools: true,
       warmResume: true,
+      coldLoad: true,
+      media: true,
       invalidModel: true,
       cancel: true,
       timeout: true,
@@ -276,11 +302,26 @@ function makeCoverage(options) {
       configuredStress: true
     },
     deferred: {
-      complexParallelToolSchemas: { covered: false, status: "not_run" },
-      mcpMedia: { covered: false, status: "not_run" },
-      real503Quota: { covered: false, status: "not_run" },
-      coldLoad: { covered: false, status: "not_run" },
-      productionRollback: { covered: false, status: "not_run", owner: "lifecycle_manual_packages" }
+      complexParallelToolSchemas: {
+        covered: false,
+        status: "deferred",
+        reason: "existing_profile_fixture_only"
+      },
+      mcp: {
+        covered: false,
+        status: "deferred",
+        reason: "standards_correct_local_server_not_pinned"
+      },
+      real503Quota: {
+        covered: false,
+        status: "deferred",
+        reason: "real_provider_failure_not_induced"
+      },
+      productionRollback: {
+        covered: false,
+        status: "deferred",
+        owner: "lifecycle_manual_packages"
+      }
     }
   };
 }
@@ -300,7 +341,17 @@ function makeReceipt(options) {
       unauthenticatedAccessTested: false,
       errorCode: null
     },
-    capabilities: { resumeRequested: Boolean(options?.resume), resumeAdvertised: false },
+    capabilities: {
+      resumeRequested: Boolean(options?.resume),
+      resumeAdvertised: false,
+      coldLoadRequested: Boolean(options?.coldLoad),
+      loadAdvertised: false,
+      mediaRequested: Boolean(options?.media),
+      imageAdvertised: false,
+      audioAdvertised: false,
+      mcpHttpAdvertised: false,
+      mcpSseAdvertised: false
+    },
     invalidModel: { attempted: Boolean(options?.invalidModel), assertedLocal: false, errorCode: null },
     cancellation: {
       attempted: Boolean(options?.cancel),
@@ -309,6 +360,34 @@ function makeReceipt(options) {
       cancelled: false,
       stopReason: null,
       durationMs: null
+    },
+    coldLoad: {
+      requested: Boolean(options?.coldLoad),
+      attempted: false,
+      status: "not_run",
+      reason: null,
+      historyReplayed: false,
+      sessionRetained: false,
+      currentModelMatched: false,
+      errorCode: null
+    },
+    media: {
+      requested: Boolean(options?.media),
+      attempted: false,
+      status: "not_run",
+      reason: null,
+      imageSent: false,
+      audioSent: false,
+      markerMatched: false,
+      stopReason: null,
+      errorCode: null
+    },
+    timeout: {
+      requested: Boolean(options?.timeout),
+      attempted: false,
+      status: "not_run",
+      timedOut: false,
+      processGroupCleaned: null
     },
     coverage: makeCoverage(options),
     timing: { totalMs: 0, initializeMs: null, sessionMs: null },
@@ -365,6 +444,25 @@ function advertisesResumeCapability(result) {
   const sessionCapabilities = agentCapabilities.sessionCapabilities ?? agentCapabilities.session_capabilities;
   if (!isRecord(sessionCapabilities)) return false;
   return isRecord(sessionCapabilities.resume);
+}
+
+function optionalCapabilities(result) {
+  if (!isRecord(result)) {
+    return { load: false, image: false, audio: false, mcpHttp: false, mcpSse: false };
+  }
+  const agentCapabilities = result.agentCapabilities ?? result.agent_capabilities;
+  if (!isRecord(agentCapabilities)) {
+    return { load: false, image: false, audio: false, mcpHttp: false, mcpSse: false };
+  }
+  const promptCapabilities = agentCapabilities.promptCapabilities ?? agentCapabilities.prompt_capabilities;
+  const mcpCapabilities = agentCapabilities.mcpCapabilities ?? agentCapabilities.mcp_capabilities;
+  return {
+    load: agentCapabilities.loadSession === true || agentCapabilities.load_session === true,
+    image: isRecord(promptCapabilities) && promptCapabilities.image === true,
+    audio: isRecord(promptCapabilities) && promptCapabilities.audio === true,
+    mcpHttp: isRecord(mcpCapabilities) && mcpCapabilities.http === true,
+    mcpSse: isRecord(mcpCapabilities) && mcpCapabilities.sse === true
+  };
 }
 
 function initializeTracker(sessionId, marker) {
@@ -573,11 +671,36 @@ class NdjsonKernelClient {
     }
   }
 
-  async close() {
-    if (this.closed) return;
+  processGroupAlive() {
+    const child = this.child;
+    if (child === undefined || child.pid === undefined || child.pid <= 0) return false;
+    if (process.platform === "win32") return child.exitCode === null && child.signalCode === null;
+    try {
+      process.kill(-child.pid, 0);
+      return true;
+    } catch (error) {
+      return error?.code !== "ESRCH";
+    }
+  }
+
+  async close(requireProcessGroupCleanup = false) {
+    if (this.closed) {
+      return { attempted: requireProcessGroupCleanup, confirmed: !this.processGroupAlive() };
+    }
     this.closed = true;
     const child = this.child;
-    if (child === undefined || this.exitPromise === undefined) return;
+    if (child === undefined || this.exitPromise === undefined) {
+      return { attempted: requireProcessGroupCleanup, confirmed: !this.processGroupAlive() };
+    }
+    if (requireProcessGroupCleanup) {
+      this.kill("SIGTERM");
+      await Promise.race([this.exitPromise, sleep(TERMINATE_GRACE_MS)]);
+      if (this.processGroupAlive()) {
+        this.kill("SIGKILL");
+        await Promise.race([this.exitPromise, sleep(EXIT_GRACE_MS)]);
+      }
+      return { attempted: true, confirmed: !this.processGroupAlive() };
+    }
     try {
       child.stdin.end();
     } catch {
@@ -590,6 +713,7 @@ class NdjsonKernelClient {
     }
     if (child.exitCode === null && child.signalCode === null) this.kill("SIGKILL");
     await Promise.race([this.exitPromise, sleep(EXIT_GRACE_MS)]);
+    return { attempted: false, confirmed: null };
   }
 
   kill(signal) {
@@ -693,6 +817,165 @@ async function runPrompt(client, sessionId, marker, prompt) {
     };
   } finally {
     client.untrack(tracker);
+  }
+}
+
+function makeMediaPrompt(marker, capabilities) {
+  return [
+    {
+      type: "text",
+      text: `Return this exact marker with no explanation: P4_EXPECT_MARKER=${marker} P6_MEDIA_REQUEST`
+    },
+    ...(capabilities.image
+      ? [{ type: "image", mimeType: "image/png", data: TINY_IMAGE_PNG_BASE64 }]
+      : []),
+    ...(capabilities.audio
+      ? [{ type: "audio", mimeType: "audio/wav", data: TINY_AUDIO_WAV_BASE64 }]
+      : [])
+  ];
+}
+
+function makeTimeoutPrompt(marker) {
+  return `P6_TIMEOUT_REQUEST P4_EXPECT_MARKER=${marker}`;
+}
+
+async function runPromptContent(client, sessionId, marker, prompt) {
+  const tracker = initializeTracker(sessionId, marker);
+  client.track(tracker);
+  try {
+    const response = await client.request("session/prompt", { sessionId, prompt });
+    return {
+      markerMatched: tracker.markerMatched,
+      stopReason: responseStopReason(response),
+      errorCode: extractResponseError(response),
+      updateCounts: { ...tracker.updateCounts, other: tracker.otherUpdates }
+    };
+  } finally {
+    client.untrack(tracker);
+  }
+}
+
+async function loadSession(client, sessionId, workspace, historyMarker, diagnostics) {
+  const tracker = initializeTracker(sessionId, historyMarker);
+  client.track(tracker);
+  try {
+    const response = await client.request("session/load", { sessionId, cwd: workspace, mcpServers: [] });
+    const errorCode = extractResponseError(response);
+    if (errorCode !== null) {
+      diagnostics.errorCodes.add(errorCode);
+      return { ok: false, historyReplayed: false, configuration: null, errorCode };
+    }
+    return {
+      ok: true,
+      historyReplayed: tracker.markerMatched,
+      configuration: nativeModelConfiguration(response.result),
+      errorCode: null
+    };
+  } finally {
+    client.untrack(tracker);
+  }
+}
+
+async function runColdLoadAcceptance(client, workspace, modelId, diagnostics) {
+  const result = {
+    historyReplayed: false,
+    sessionRetained: false,
+    currentModelMatched: false,
+    errorCode: null,
+    passed: false
+  };
+  const created = await createSession(client, workspace, diagnostics);
+  if (!created.configuration.modelIds.includes(modelId)) {
+    result.errorCode = "MODEL_NOT_IN_NATIVE_CATALOG";
+    return result;
+  }
+  const selection = await setModel(client, created.sessionId, modelId, diagnostics);
+  if (selection.errorCode !== null) {
+    result.errorCode = selection.errorCode;
+    return result;
+  }
+
+  const historyMarker = `P4_COLD_LOAD_${randomBytes(18).toString("hex")}`;
+  const seed = await runPrompt(client, created.sessionId, historyMarker, makePrompt(historyMarker, "text"));
+  if (seed.errorCode !== null) {
+    diagnostics.errorCodes.add(seed.errorCode);
+    result.errorCode = seed.errorCode;
+    return result;
+  }
+  if (!seed.markerMatched || seed.stopReason !== "end_turn") return result;
+
+  const loaded = await loadSession(client, created.sessionId, workspace, historyMarker, diagnostics);
+  if (!loaded.ok || loaded.configuration === null) {
+    result.errorCode = loaded.errorCode;
+    return result;
+  }
+  result.historyReplayed = loaded.historyReplayed;
+  result.currentModelMatched = loaded.configuration.currentModelId === modelId
+    && loaded.configuration.modelIds.includes(modelId);
+
+  const retainedMarker = `P4_COLD_RETAINED_${randomBytes(18).toString("hex")}`;
+  const retained = await runPrompt(client, created.sessionId, retainedMarker, makePrompt(retainedMarker, "text"));
+  if (retained.errorCode !== null) {
+    diagnostics.errorCodes.add(retained.errorCode);
+    result.errorCode = retained.errorCode;
+    return result;
+  }
+  result.sessionRetained = retained.markerMatched && retained.stopReason === "end_turn";
+  result.passed = result.historyReplayed && result.sessionRetained && result.currentModelMatched;
+  return result;
+}
+
+async function runMediaAcceptance(client, workspace, modelId, capabilities, diagnostics) {
+  const result = {
+    imageSent: false,
+    audioSent: false,
+    markerMatched: false,
+    stopReason: null,
+    errorCode: null,
+    passed: false
+  };
+  const created = await createSession(client, workspace, diagnostics);
+  if (!created.configuration.modelIds.includes(modelId)) {
+    result.errorCode = "MODEL_NOT_IN_NATIVE_CATALOG";
+    return result;
+  }
+  const selection = await setModel(client, created.sessionId, modelId, diagnostics);
+  if (selection.errorCode !== null) {
+    result.errorCode = selection.errorCode;
+    return result;
+  }
+  const marker = `P4_MEDIA_${randomBytes(18).toString("hex")}`;
+  const prompt = makeMediaPrompt(marker, capabilities);
+  result.imageSent = capabilities.image;
+  result.audioSent = capabilities.audio;
+  const turn = await runPromptContent(client, created.sessionId, marker, prompt);
+  result.markerMatched = turn.markerMatched;
+  result.stopReason = turn.stopReason;
+  if (turn.errorCode !== null) {
+    diagnostics.errorCodes.add(turn.errorCode);
+    result.errorCode = turn.errorCode;
+    return result;
+  }
+  result.passed = result.markerMatched && result.stopReason === "end_turn";
+  return result;
+}
+
+async function runTimeoutAcceptance(client, workspace, modelId, diagnostics) {
+  const created = await createSession(client, workspace, diagnostics);
+  if (!created.configuration.modelIds.includes(modelId)) return { timedOut: false };
+  const selection = await setModel(client, created.sessionId, modelId, diagnostics);
+  if (selection.errorCode !== null) {
+    diagnostics.errorCodes.add(selection.errorCode);
+    return { timedOut: false };
+  }
+  const marker = `P4_TIMEOUT_${randomBytes(18).toString("hex")}`;
+  try {
+    const turn = await runPrompt(client, created.sessionId, marker, makeTimeoutPrompt(marker));
+    if (turn.errorCode !== null) diagnostics.errorCodes.add(turn.errorCode);
+    return { timedOut: false };
+  } catch (error) {
+    if (error instanceof HarnessError && error.kind === "request_timeout") return { timedOut: true };
+    throw error;
   }
 }
 
@@ -867,13 +1150,15 @@ async function execute(options, receipt, environment) {
   const client = new NdjsonKernelClient(launchFor(options, environment), options.requestTimeoutMs, diagnostics);
   const startedAt = Date.now();
   const overallTimer = setTimeout(() => client.fail(new HarnessError("overall_timeout")), options.overallTimeoutMs);
+  let requireProcessGroupCleanup = false;
+  let processGroupCleaned = null;
   try {
     await client.start();
     const initializeStartedAt = Date.now();
     const initialized = await client.request("initialize", {
       protocolVersion: 1,
       clientInfo: { name: "paseo-model-parity", version: "p4" },
-      capabilities: {}
+      clientCapabilities: {}
     });
     receipt.timing.initializeMs = Date.now() - initializeStartedAt;
     const initializeErrorCode = extractResponseError(initialized);
@@ -886,6 +1171,12 @@ async function execute(options, receipt, environment) {
       : "unknown";
     if (receipt.buildId === "unknown") receipt.buildId = kernelBuildId;
     receipt.capabilities.resumeAdvertised = advertisesResumeCapability(initialized.result);
+    const optional = optionalCapabilities(initialized.result);
+    receipt.capabilities.loadAdvertised = optional.load;
+    receipt.capabilities.imageAdvertised = optional.image;
+    receipt.capabilities.audioAdvertised = optional.audio;
+    receipt.capabilities.mcpHttpAdvertised = optional.mcpHttp;
+    receipt.capabilities.mcpSseAdvertised = optional.mcpSse;
     if (options.resume && !receipt.capabilities.resumeAdvertised) {
       throw new HarnessError("resume_capability_missing");
     }
@@ -945,10 +1236,94 @@ async function execute(options, receipt, environment) {
       receipt.coverage.run.text = modelsPassed ? "passed" : "failed";
       if (options.tools) receipt.coverage.run.tools = modelsPassed ? "passed" : "failed";
       if (options.resume) receipt.coverage.run.warmResume = modelsPassed ? "passed" : "failed";
-      receipt.coverage.run.thoughtSeparation = receipt.models.some(
+      const thoughtSeparationObserved = receipt.models.some(
         (model) => model.updates.agent_thought_chunk > 0 && model.messageMarkerMatched
-      ) ? "passed" : "not_observed";
+      );
+      receipt.coverage.run.thoughtSeparation = thoughtSeparationObserved ? "passed" : "deferred";
+      if (!thoughtSeparationObserved) {
+        receipt.coverage.deferred.thoughtSeparation = {
+          covered: false,
+          status: "deferred",
+          reason: "no_thought_update_observed"
+        };
+      }
       if (!modelsPassed) throw new HarnessError("model_acceptance_failed");
+    }
+
+    const lifecycleModelId = options.selectedModelIds[0] ?? options.expectedModelIds[0];
+    if (options.coldLoad) {
+      if (!receipt.capabilities.loadAdvertised) {
+        receipt.coldLoad.status = "deferred";
+        receipt.coldLoad.reason = "load_session_not_advertised";
+        receipt.coverage.run.coldLoad = "deferred";
+      } else {
+        receipt.coldLoad.attempted = true;
+        receipt.coldLoad.status = "attempted";
+        receipt.coverage.run.coldLoad = "attempted";
+        try {
+          const coldLoad = await runColdLoadAcceptance(client, workspace, lifecycleModelId, diagnostics);
+          receipt.coldLoad.historyReplayed = coldLoad.historyReplayed;
+          receipt.coldLoad.sessionRetained = coldLoad.sessionRetained;
+          receipt.coldLoad.currentModelMatched = coldLoad.currentModelMatched;
+          receipt.coldLoad.errorCode = coldLoad.errorCode;
+          if (!coldLoad.passed) throw new HarnessError("cold_load_failed");
+          receipt.coldLoad.status = "passed";
+          receipt.coverage.run.coldLoad = "passed";
+        } catch (error) {
+          receipt.coldLoad.status = "failed";
+          receipt.coverage.run.coldLoad = "failed";
+          throw error;
+        }
+      }
+    }
+
+    if (options.media) {
+      if (!receipt.capabilities.imageAdvertised && !receipt.capabilities.audioAdvertised) {
+        receipt.media.status = "deferred";
+        receipt.media.reason = "image_audio_not_advertised";
+        receipt.coverage.run.media = "deferred";
+      } else {
+        receipt.media.attempted = true;
+        receipt.media.status = "attempted";
+        receipt.coverage.run.media = "attempted";
+        try {
+          const media = await runMediaAcceptance(client, workspace, lifecycleModelId, {
+            image: receipt.capabilities.imageAdvertised,
+            audio: receipt.capabilities.audioAdvertised
+          }, diagnostics);
+          receipt.media.imageSent = media.imageSent;
+          receipt.media.audioSent = media.audioSent;
+          receipt.media.markerMatched = media.markerMatched;
+          receipt.media.stopReason = media.stopReason;
+          receipt.media.errorCode = media.errorCode;
+          if (!media.passed) throw new HarnessError("media_acceptance_failed");
+          receipt.media.status = "passed";
+          receipt.coverage.run.media = "passed";
+        } catch (error) {
+          receipt.media.status = "failed";
+          receipt.coverage.run.media = "failed";
+          throw error;
+        }
+      }
+    }
+
+    if (options.timeout) {
+      requireProcessGroupCleanup = true;
+      receipt.timeout.attempted = true;
+      receipt.timeout.status = "attempted";
+      receipt.coverage.run.timeout = "attempted";
+      receipt.coverage.run.processCleanup = "attempted";
+      try {
+        const timeout = await runTimeoutAcceptance(client, workspace, lifecycleModelId, diagnostics);
+        receipt.timeout.timedOut = timeout.timedOut;
+        if (!timeout.timedOut) throw new HarnessError("timeout_not_confirmed");
+        receipt.timeout.status = "passed";
+        receipt.coverage.run.timeout = "passed";
+      } catch (error) {
+        receipt.timeout.status = "failed";
+        receipt.coverage.run.timeout = "failed";
+        throw error;
+      }
     }
 
     if (options.cancel) {
@@ -969,8 +1344,17 @@ async function execute(options, receipt, environment) {
     if (receipt.authentication.errorCode === null && diagnostics.sessionCreateErrorCode !== null) {
       receipt.authentication.errorCode = diagnostics.sessionCreateErrorCode;
     }
-    await client.close();
+    const cleanup = await client.close(requireProcessGroupCleanup);
+    if (requireProcessGroupCleanup) {
+      processGroupCleaned = cleanup.confirmed === true;
+      receipt.timeout.processGroupCleaned = processGroupCleaned;
+      if (!processGroupCleaned) receipt.timeout.status = "failed";
+      receipt.coverage.run.processCleanup = processGroupCleaned ? "passed" : "failed";
+    }
     rmSync(workspace, { recursive: true, force: true });
+  }
+  if (requireProcessGroupCleanup && processGroupCleaned !== true) {
+    throw new HarnessError("process_cleanup_unconfirmed");
   }
 }
 

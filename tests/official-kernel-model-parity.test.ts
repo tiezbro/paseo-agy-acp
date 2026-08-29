@@ -71,7 +71,15 @@ function fakeWrapper(options: { readonly extension?: string; readonly wrapperMan
 function observations(filename: string): Array<{
   method?: string;
   args?: string[];
-  params?: { sessionId?: string; cwd?: string; mcpServers?: unknown };
+  params?: {
+    sessionId?: string;
+    cwd?: string;
+    mcpServers?: unknown;
+    protocolVersion?: number;
+    clientInfo?: { name?: string; version?: string };
+    clientCapabilities?: unknown;
+    promptParts?: Array<{ type?: string; mimeType?: string; dataBytes?: number }>;
+  };
 }> {
   if (!existsSync(filename)) return [];
   return readFileSync(filename, "utf8")
@@ -80,7 +88,15 @@ function observations(filename: string): Array<{
     .map((line) => JSON.parse(line) as {
       method?: string;
       args?: string[];
-      params?: { sessionId?: string; cwd?: string; mcpServers?: unknown };
+      params?: {
+        sessionId?: string;
+        cwd?: string;
+        mcpServers?: unknown;
+        protocolVersion?: number;
+        clientInfo?: { name?: string; version?: string };
+        clientCapabilities?: unknown;
+        promptParts?: Array<{ type?: string; mimeType?: string; dataBytes?: number }>;
+      };
     });
 }
 
@@ -211,7 +227,13 @@ describe("official kernel model parity acceptance harness", () => {
         scope: "single_run_not_plan_5_2_completion",
         run: { catalog: "passed", text: "not_run", configuredStress: "not_run" },
         deterministicFakeSuite: { catalog: true, timeout: true, configuredStress: true },
-        deferred: { real503Quota: { covered: false, status: "not_run" } }
+        deferred: {
+          real503Quota: {
+            covered: false,
+            status: "deferred",
+            reason: "real_provider_failure_not_induced"
+          }
+        }
       }
     });
     expect(result.stdout).not.toContain("fake-session-");
@@ -230,6 +252,9 @@ describe("official kernel model parity acceptance harness", () => {
     expect(help.stdout).toContain("cached OAuth state");
     expect(help.stdout).toContain("does not test unauthenticated access");
     expect(help.stdout).toContain("180000ms/600000ms");
+    expect(help.stdout).toContain("--cold-load");
+    expect(help.stdout).toContain("--media");
+    expect(help.stdout).toContain("--timeout");
   });
 
   it("accumulates split final chunks while keeping thought content out of the receipt", () => {
@@ -399,6 +424,158 @@ describe("official kernel model parity acceptance harness", () => {
     }
   });
 
+  it("uses exact advertised cold-load and media ACP shapes without placing media contents in the receipt", () => {
+    const fake = fakeWrapper();
+    const result = runHarness("--kernel", fake.target, [
+      "--live",
+      "--cold-load",
+      "--media",
+      "--model",
+      "claude-sonnet-4-6"
+    ], {
+      P4_FAKE_BEHAVIOR: "rc01-capabilities",
+      P4_FAKE_OBSERVATION: fake.observationPath
+    });
+
+    expect(result.status).toBe(0);
+    expect(result.receipt).toMatchObject({
+      ok: true,
+      capabilities: {
+        coldLoadRequested: true,
+        loadAdvertised: true,
+        mediaRequested: true,
+        imageAdvertised: true,
+        audioAdvertised: true
+      },
+      coldLoad: {
+        requested: true,
+        attempted: true,
+        status: "passed",
+        historyReplayed: true,
+        sessionRetained: true,
+        currentModelMatched: true,
+        errorCode: null
+      },
+      media: {
+        requested: true,
+        attempted: true,
+        status: "passed",
+        imageSent: true,
+        audioSent: true,
+        markerMatched: true,
+        errorCode: null
+      },
+      coverage: {
+        run: { coldLoad: "passed", media: "passed", mcp: "not_run" },
+        deferred: {
+          mcp: {
+            covered: false,
+            status: "deferred",
+            reason: "standards_correct_local_server_not_pinned"
+          }
+        }
+      }
+    });
+    expect(result.stdout).not.toContain("fake-session-");
+    expect(result.stdout).not.toContain("P6_MEDIA_REQUEST");
+    expect(result.stdout).not.toContain("iVBOR");
+
+    const observed = observations(fake.observationPath);
+    const initialize = observed.find((entry) => entry.method === "initialize");
+    expect(initialize?.params).toEqual({
+      protocolVersion: 1,
+      clientInfo: { name: "paseo-model-parity", version: "p4" },
+      clientCapabilities: {}
+    });
+    const loadIndex = observed.findIndex((entry) => entry.method === "session/load");
+    expect(loadIndex).toBeGreaterThan(-1);
+    const load = observed[loadIndex];
+    expect(load?.params).toEqual({
+      sessionId: expect.any(String),
+      cwd: expect.any(String),
+      mcpServers: []
+    });
+    expect(path.isAbsolute(load?.params?.cwd ?? "")).toBe(true);
+    const postLoadPrompt = observed.slice(loadIndex + 1).find((entry) => entry.method === "session/prompt");
+    expect(postLoadPrompt?.params).toEqual({ sessionId: load?.params?.sessionId });
+
+    const mediaPrompt = observed.find((entry) => entry.params?.promptParts !== undefined);
+    expect(mediaPrompt?.params?.promptParts).toEqual([
+      { type: "text" },
+      { type: "image", mimeType: "image/png", dataBytes: expect.any(Number) },
+      { type: "audio", mimeType: "audio/wav", dataBytes: expect.any(Number) }
+    ]);
+    for (const part of mediaPrompt?.params?.promptParts?.slice(1) ?? []) {
+      expect(part.dataBytes).toBeGreaterThan(0);
+    }
+  });
+
+  it("defers unsupported optional cold-load and media paths without sending their methods or media blocks", () => {
+    const fake = fakeWrapper();
+    const result = runHarness("--kernel", fake.target, [
+      "--live",
+      "--cold-load",
+      "--media",
+      "--model",
+      "claude-sonnet-4-6"
+    ], { P4_FAKE_OBSERVATION: fake.observationPath });
+
+    expect(result.status).toBe(0);
+    expect(result.receipt).toMatchObject({
+      ok: true,
+      coldLoad: {
+        requested: true,
+        attempted: false,
+        status: "deferred",
+        reason: "load_session_not_advertised"
+      },
+      media: {
+        requested: true,
+        attempted: false,
+        status: "deferred",
+        reason: "image_audio_not_advertised"
+      },
+      coverage: { run: { coldLoad: "deferred", media: "deferred" } }
+    });
+    const observed = observations(fake.observationPath);
+    expect(observed.map((entry) => entry.method)).not.toContain("session/load");
+    expect(observed.some((entry) => entry.params?.promptParts !== undefined)).toBe(false);
+  });
+
+  it("sends only the individually advertised image or audio content block", () => {
+    for (const mediaCase of [
+      { behavior: "image-only-capability", image: true, audio: false, type: "image", mimeType: "image/png" },
+      { behavior: "audio-only-capability", image: false, audio: true, type: "audio", mimeType: "audio/wav" }
+    ]) {
+      const fake = fakeWrapper();
+      const result = runHarness("--kernel", fake.target, [
+        "--live",
+        "--media",
+        "--model",
+        "claude-sonnet-4-6"
+      ], {
+        P4_FAKE_BEHAVIOR: mediaCase.behavior,
+        P4_FAKE_OBSERVATION: fake.observationPath
+      });
+
+      expect(result.status).toBe(0);
+      expect(result.receipt).toMatchObject({
+        capabilities: { imageAdvertised: mediaCase.image, audioAdvertised: mediaCase.audio },
+        media: {
+          status: "passed",
+          imageSent: mediaCase.image,
+          audioSent: mediaCase.audio,
+          markerMatched: true
+        }
+      });
+      const mediaPrompt = observations(fake.observationPath).find((entry) => entry.params?.promptParts !== undefined);
+      expect(mediaPrompt?.params?.promptParts).toEqual([
+        { type: "text" },
+        { type: mediaCase.type, mimeType: mediaCase.mimeType, dataBytes: expect.any(Number) }
+      ]);
+    }
+  });
+
   it("retries a cancellation race once in a fresh session and still requires cancellation", () => {
     const fake = fakeWrapper();
     const raced = runHarness("--kernel", fake.target, [
@@ -448,7 +625,15 @@ describe("official kernel model parity acceptance harness", () => {
       expect(result.status).toBe(1);
       expect(result.receipt).toMatchObject({
         diagnostics: { failure: "model_acceptance_failed", errorCodes: [errorCode] },
-        coverage: { deferred: { real503Quota: { covered: false, status: "not_run" } } }
+        coverage: {
+          deferred: {
+            real503Quota: {
+              covered: false,
+              status: "deferred",
+              reason: "real_provider_failure_not_induced"
+            }
+          }
+        }
       });
       expect(result.stdout).not.toContain("upstream unavailable");
       expect(result.stdout).not.toContain("quota unavailable");
@@ -523,6 +708,57 @@ describe("official kernel model parity acceptance harness", () => {
     expect(cleanup.receipt).toMatchObject({ diagnostics: { failure: "request_timeout" } });
     const childPid = Number(readFileSync(childPidPath, "utf8"));
     expect(await waitForProcessExit(childPid)).toBe(true);
+  });
+
+  it("passes optional timeout acceptance only after request timeout and process-group cleanup are both observed", async () => {
+    const fake = fakeWrapper();
+    const childPidPath = path.join(fake.root, "timeout-child.pid");
+    const result = runHarness("--kernel", fake.target, [
+      "--live",
+      "--timeout",
+      "--model",
+      "claude-sonnet-4-6",
+      "--request-timeout-ms",
+      "150",
+      "--overall-timeout-ms",
+      "2000"
+    ], {
+      P4_FAKE_BEHAVIOR: "timeout-child",
+      P4_FAKE_CHILD_PID_FILE: childPidPath
+    });
+
+    expect(result.status).toBe(0);
+    expect(result.receipt).toMatchObject({
+      ok: true,
+      timeout: {
+        requested: true,
+        attempted: true,
+        status: "passed",
+        timedOut: true,
+        processGroupCleaned: true
+      },
+      coverage: { run: { timeout: "passed", processCleanup: "passed" } }
+    });
+    expect(result.stdout).not.toContain("P6_TIMEOUT_REQUEST");
+    const childPid = Number(readFileSync(childPidPath, "utf8"));
+    expect(await waitForProcessExit(childPid)).toBe(true);
+
+    const respondsTooSoon = fakeWrapper();
+    const failed = runHarness("--kernel", respondsTooSoon.target, [
+      "--live",
+      "--timeout",
+      "--model",
+      "claude-sonnet-4-6",
+      "--request-timeout-ms",
+      "150"
+    ]);
+    expect(failed.status).toBe(1);
+    expect(failed.receipt).toMatchObject({
+      ok: false,
+      timeout: { status: "failed" },
+      coverage: { run: { timeout: "failed" } },
+      diagnostics: { failure: "timeout_not_confirmed" }
+    });
   });
 });
 
