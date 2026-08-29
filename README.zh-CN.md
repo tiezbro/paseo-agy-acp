@@ -204,6 +204,17 @@ opt-in 是 **本机、显式** 的：
 `claude-opus-4-6-thinking`、`gpt-oss-120b-medium` —— 文本、顺序工具、warm
 resume。你的账号仍须在 raw CCPA 目录里拥有这些 id。
 
+本机 opt-in 之后，同一台主机上的 Paseo 活回合（Yolo）。仍是同一套官方内核；
+npm **不**分发 Google 的 `.par`。
+
+**Claude Opus 4.6 (Thinking)** — hello 回合，5s：
+
+![Paseo composer：Claude Opus 4.6 Thinking，Yolo，hello 回合完成](docs/evidence/evidence-claude-opus-46-thinking.png)
+
+**GPT-OSS 120B (Medium)** — hello 回合，4s：
+
+![Paseo composer：GPT-OSS 120B Medium，Yolo，回合完成](docs/evidence/evidence-gpt-oss-120b-medium.png)
+
 请在自己的环境测试 Claude 与 GPT-OSS（单个 agent 和一次开多个）。模型缺失、
 回合失败或工具异常，请 [开 Issue](https://github.com/tiezbro/paseo-agy-acp/issues)。
 我们会按反馈做优化和修复。

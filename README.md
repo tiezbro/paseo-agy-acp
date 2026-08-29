@@ -209,6 +209,17 @@ Maintainer-host checks with live entitlement: `claude-sonnet-4-6`,
 `claude-opus-4-6-thinking`, `gpt-oss-120b-medium` — text, sequential tools,
 warm resume. Your account must still list those ids in raw CCPA.
 
+Live Paseo turns on that host after local opt-in (Yolo). Same official kernel;
+npm still does **not** ship Google's `.par`.
+
+**Claude Opus 4.6 (Thinking)** — hello turn, 5s:
+
+![Paseo composer: Claude Opus 4.6 Thinking, Yolo, completed hello turn](docs/evidence/evidence-claude-opus-46-thinking.png)
+
+**GPT-OSS 120B (Medium)** — hello turn, 4s:
+
+![Paseo composer: GPT-OSS 120B Medium, Yolo, completed turn](docs/evidence/evidence-gpt-oss-120b-medium.png)
+
 Please test Claude and GPT-OSS on your machine (one agent and several). If a
 model is missing, a turn fails, or tools misbehave,
 [open an Issue](https://github.com/tiezbro/paseo-agy-acp/issues). We will use
