@@ -2,6 +2,34 @@
 
 All notable changes to `paseo-agy-acp` are recorded here.
 
+## 2.2.0.0 - 2026-08-29
+
+### Added
+
+- Local **opt-in** compatibility on the **official** Antigravity ACP kernel so
+  entitled Claude 4.6 and GPT-OSS 120B sessions can complete through Paseo.
+  Gemini-family models stay the stock official path until an operator prepares
+  and points `PASEO_AGY_ACP_OFFICIAL_BIN` at the stable wrapper
+  (`agy-acp-kernel-compat-active`).
+- `agy-acp-prepare-official-kernel-compat` lifecycle (`prepare` / `verify` /
+  `activate` / `status` / `rollback` / `cleanup`), RC01 pin checks, and
+  `paseo_model_compat.py` request transforms (tool schema, tool-call ids,
+  GPT-OSS generation config; Gemini/unknown identity).
+- Isolated acceptance harness coverage (catalog, text, tools, warm resume,
+  capability-gated load/media/timeout) and an operator
+  [runbook](docs/operations/official-kernel-compat-runbook.md).
+- Sanitized maintainer-host production evidence
+  ([P7](docs/operations/official-kernel-compat-p7-production-evidence.md)):
+  catalog 14, live text/tools; official RC01 active cancel not confirmed;
+  real 503/quota not induced.
+
+### Unchanged
+
+- Execution kernel remains official `agy_acp_server`. npm still does **not**
+  ship Google's proprietary `.par` or runfiles. Admission defaults stay
+  **8 / 8 / 2s** (tested default, not a product ceiling). No daemon restart
+  is required for new provider processes to read an updated launcher.
+
 ## 2.1.0.0 - 2026-08-23
 
 ### Changed

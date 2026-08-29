@@ -49,7 +49,7 @@ export async function runOfficialLogin(environment: NodeJS.ProcessEnv = process.
   try {
     const initialized = await request("initialize", {
       protocolVersion: 1,
-      clientInfo: { name: "agy-acp", version: "2.1.0.0" },
+      clientInfo: { name: "agy-acp", version: "2.2.0.0" },
       capabilities: {}
     });
     if (isJsonRpcFailure(initialized)) {

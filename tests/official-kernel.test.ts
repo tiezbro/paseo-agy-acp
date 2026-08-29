@@ -129,10 +129,10 @@ describe("official kernel adapters", () => {
   it("overlays product identity onto the official initialize payload", () => {
     const overlaid = overlayProductIdentity(
       { protocolVersion: 1, agentInfo: { name: "antigravity-acp", version: "rc01" } },
-      "2.1.0.0"
+      "2.2.0.0"
     );
     expect(overlaid).toMatchObject({
-      agentInfo: { name: PRODUCT_AGENT_NAME, version: "2.1.0.0" }
+      agentInfo: { name: PRODUCT_AGENT_NAME, version: "2.2.0.0" }
     });
   });
 
@@ -208,7 +208,7 @@ describe("official kernel proxy", () => {
       stdin,
       stdout,
       env,
-      version: "2.1.0.0"
+      version: "2.2.0.0"
     });
     const started = proxy.start();
     const collected = collect(stdout);
@@ -242,7 +242,7 @@ describe("official kernel proxy", () => {
         send({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: 1 } });
         const initialized = await waitFor((message) => "id" in message && message.id === 1);
         expect(initialized).toMatchObject({
-          result: { agentInfo: { name: "agy-acp", version: "2.1.0.0" } }
+          result: { agentInfo: { name: "agy-acp", version: "2.2.0.0" } }
         });
 
         send({
@@ -312,7 +312,7 @@ describe("official kernel proxy", () => {
       );
       const initialized = await collected.waitFor((message) => "id" in message && message.id === 1);
       expect(initialized).toMatchObject({
-        result: { agentInfo: { name: "agy-acp", version: "2.1.0.0" } }
+        result: { agentInfo: { name: "agy-acp", version: "2.2.0.0" } }
       });
     } finally {
       child.stdin.end();
