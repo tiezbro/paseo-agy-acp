@@ -25,9 +25,9 @@ Registry id `antigravity-acp`），再补上 Generic ACP 本身给不了的 Pase
 daemon 上下文、session 模式映射、MCP 改写、产品身份，以及账户级 Admission
 队列——让 Paseo 主控可以一次委派多个 Antigravity agent，而不把启动打成风暴。
 
-**2.2.0.0** 仍使用同一套官方 ACP 内核。它增加一层明确的 **本机 opt-in**
+**2.2.0.0** 仍使用同一套官方 ACP 内核。它只增加一层明确的 **本机 opt-in**
 兼容：有资格的 Claude 4.6 与 GPT-OSS 120B 可以在这条路径上跑完回合。
-未 opt-in 时，Gemini 系仍是官方路径的默认行为。
+如果未 opt-in，官方路径默认只支持 Gemini 系模型。
 
 > **非 Paseo 官方支持。非 Google 官方支持。** 社区维护产品，使用风险自负。
 
@@ -42,49 +42,7 @@ daemon 上下文、session 模式映射、MCP 改写、产品身份，以及账�
 - MCP `http` 到官方 `sse` 的改写
 - 稳定产品身份
 - 面向多 agent 委派的账户级 Admission 队列
-- 官方 ACP 路径上的 Gemini 系模型
-- 可选的本机兼容，使 Claude 4.6 与 GPT-OSS 120B 走同一套官方内核（在你的机器上 prepare）
-
-## Claude 4.6 与 GPT-OSS：在官方 ACP 内核上
-
-内核就是 Google 官方 Antigravity ACP 服务器。**2.2.0.0 没有换内核**，只是把
-本产品与这套内核之间、面向非 Gemini 模型的请求处理做对、做稳。
-
-**官方 ACP 默认路径。** Gemini 系模型可以在本适配器里完成初始化、流式输出和
-工具调用。把 `PASEO_AGY_ACP_OFFICIAL_BIN` 指到官方 wrapper，就是这条目录和
-请求路径。这是默认、也是未 opt-in 时的支持面。
-
-**局限。** 有资格的 Antigravity 账号在 IDE 里已经能看到 Claude 4.6 和
-GPT-OSS 120B。但在本产品使用的官方 ACP 路径上，这两个家族还不能当作可工作
-集合：请求形态（JSON Schema / `$schema`、工具调用 ID、GPT generation config）
-是按 Gemini 对齐的。目录项可能出现，也可能被内核以 `-32602` 拒绝，取决于
-构建和账号；无论哪种，未 opt-in 时 Claude / GPT-OSS 经 Paseo 都不稳定。
-
-**我们做了哪些调整（同一套官方内核，本机 opt-in）。**
-
-- 对本机已安装的官方 RC01 构件做 pin（hash 校验；不匹配则 fail closed）。
-- **只在本机**解开。npm 和 git **不**分发 Google 专有 `.par` 或 runfiles。
-- 加载小型兼容模块（`paseo_model_compat.py`）以及调用它所需的最小 marker：
-  只保留同时出现在 live CCPA 目录 **和** 本地 profile 里的模型；转换工具
-  schema、配对工具 ID、处理 GPT-OSS generation config。Gemini 与未知 id 走
-  identity，不加变换。
-- 独立 wrapper。生产必须把 `PASEO_AGY_ACP_OFFICIAL_BIN` 指到 **stable**
-  wrapper（`agy-acp-kernel-compat-active`），不要用 per-release 冒烟路径。
-
-维护者主机在具备 raw CCPA 资格时核验过：`claude-sonnet-4-6`、
-`claude-opus-4-6-thinking`、`gpt-oss-120b-medium` —— 文本、顺序工具、warm
-resume。你的账号仍须在 raw CCPA 目录里拥有这些 id。
-
-**请在自己的环境测试，并把问题告诉我们。** 这是社区维护，不是 Google 或
-Paseo 的官方补丁。请试 Claude 与 GPT-OSS（单个 agent 和一次开多个）。若模型
-缺失、回合失败、工具异常，或任何不稳定，请
-[开 GitHub Issue](https://github.com/tiezbro/paseo-agy-acp/issues)。我们会按
-反馈做优化和修复。
-
-操作步骤：[官方内核本机兼容 runbook](docs/operations/official-kernel-compat-runbook.md)。
-
-我们这边仍未闭合：官方 RC01 的 **active cancel** 未确认；真实后端上的
-**503 / 配额** 未做诱导验证。请不要假定这两项已经解决。
+- 本机 opt-in 后可跑 Claude 4.6 与 GPT-OSS 120B；未 opt-in 则只支持 Gemini 系
 
 ## 适合谁
 
@@ -128,9 +86,8 @@ node 'dist/ACP Connector/main.js'
 源码 checkout 下，把 Paseo 的 Generic ACP provider 指向 `node`，并把
 `dist/ACP Connector/main.js` 作为参数。打包安装时会暴露 `agy-acp`、
 `agy-acp-prepare-state` 和 `agy-acp-prepare-official-kernel-compat`。
-Claude / GPT-OSS 需要在 `npm run build` 之后按
-[兼容 runbook](docs/operations/official-kernel-compat-runbook.md) 操作；
-默认 wrapper 仍是官方路径。
+Claude / GPT-OSS 见 [§1](#1-官方-agy-acp-内核能力) 和
+[runbook](docs/operations/official-kernel-compat-runbook.md)。
 
 ## 关于
 
@@ -139,9 +96,8 @@ Claude / GPT-OSS 需要在 `npm run build` 之后按
 
 | 亮点 | 为什么重要 |
 |---|---|
-| **官方 ACP 内核** | 原生 Agent Client Protocol / NDJSON：OAuth、会话生命周期、流式输出、工具、MCP、登录账号的模型目录。 |
+| **官方 ACP 内核** | 原生 ACP / NDJSON。未 opt-in 时官方路径只支持 Gemini；本机 opt-in 后，有资格的 Claude 4.6 与 GPT-OSS 120B 可以跑完回合。 |
 | **开箱即用的 Paseo 适配** | daemon `appendSystemPrompt`、Paseo 已在用的 mode id、以及 MCP `http` server，都会改写成官方内核认识的形态，Generic ACP agent 不用再贴一层胶水。 |
-| **Claude / GPT-OSS（opt-in）** | 在 **同一套** 官方内核上做本机兼容，让有资格的 Claude 4.6 与 GPT-OSS 120B 能跑完回合。未 prepare、未把 `PASEO_AGY_ACP_OFFICIAL_BIN` 指到 stable wrapper 之前默认关闭。 |
 | **突发委派更稳健** | 账户级持久 Admission 队列给 `session/prompt` 限速，Paseo 主控可以一次派出很多 Antigravity agent，不会让每个 turn 同时砸到内核上。 |
 | **生产实测默认值** | 默认 **8 个共享席位 / 8 路同时启动 / 2 秒间隔**，来自真实 Paseo 派发（含 10 agent 突发）和隔离压测。整数 **≥ 1** 可以继续试更高并发；本仓库 **不编** 一个产品上限。 |
 | **失败即关闭** | 非法环境变量、policy 分叉、无法证明的写入一律 fail closed。排队超时、取消、内核错误仍然能区分。 |
@@ -177,15 +133,18 @@ Client Protocol NDJSON。下表是**官方内核**通过该协议提供的能力
 | 在线 session 模式 | `default`、`auto_edit`、`yolo`（官方 **没有** plan 模式） |
 | 工具 | 文件编辑、shell/终端等，以 Google 实现为准 |
 | MCP | 官方 MCP 客户端；在 `session/new` 上声明 server |
-| 模型 | 官方路径上的 Gemini 系。[本机 opt-in 兼容](#claude-46-与-gpt-oss在官方-acp-内核上) 上的 Claude 4.6 与 GPT-OSS 120B。 |
+| 模型 | 未 opt-in：只支持 Gemini 系。本机 opt-in：有资格的 Claude 4.6 与 GPT-OSS 120B（[§2](#2-我们为-paseo-做了哪些适配)）。 |
 | 回合结束 | 官方 `end_turn` / stop reason |
 
-### 官方目录与本机兼容
+### 模型
 
-默认适配器 **不会** 向 UI 填入官方内核必然拒绝的假模型。Gemini 系是官方路径上的
-可工作集合。Claude 4.6 与 GPT-OSS 120B 需要
-[2.2.0.0 本机 opt-in](#claude-46-与-gpt-oss在官方-acp-内核上)。
-操作细节见 [runbook](docs/operations/official-kernel-compat-runbook.md)。
+未 opt-in 时，官方 ACP 路径**默认只支持 Gemini 系模型**。Antigravity IDE 里
+有资格的账号已经能看到 Claude 4.6 与 GPT-OSS 120B；在这条 ACP 路径上，请求
+仍按 Gemini 对齐（JSON Schema、工具 ID、GPT generation config），所以它们
+不是默认可工作集合。
+
+本机 opt-in（同一套官方内核）见 [§2](#2-我们为-paseo-做了哪些适配)。
+操作步骤：[runbook](docs/operations/official-kernel-compat-runbook.md)。
 
 工具质量、生图、供应商 503/配额文案，由官方内核和 Google 后端负责。
 本产品只 **代理** 这层能力。
@@ -206,10 +165,40 @@ Client Protocol NDJSON。下表是**官方内核**通过该协议提供的能力
 | 6 | 空白回合守卫 | 官方 `end_turn` 且 **没有任何** 可见助手/工具输出时，改成 JSON-RPC 错误（`-32000`），避免 Paseo 当成空成功回合。 |
 | 7 | 隔离 Admission 账本 | 官方内核队列状态在 `$AGY_ACP_STATE_DIR/official-kernel`，不与历史账本混用。 |
 | 8 | 单一内核 | `PASEO_AGY_ACP_KERNEL=legacy` 和 `--legacy-kernel` 直接失败。官方内核是唯一 ACP 执行路径。 |
-| 9 | 本机模型兼容（opt-in） | 在官方内核上 prepare/activate 本地 wrapper，让有资格的 Claude 4.6 与 GPT-OSS 120B 使用请求转换。默认关闭。 |
+| 9 | 本机模型兼容（opt-in） | 同一套官方内核：本机解开 + 请求转换，让有资格的 Claude 4.6 与 GPT-OSS 120B 跑完回合。未 opt-in 则关闭。 |
 
 `PASEO_HOME` 可选；未设置或为空时回退到 `~/.paseo`。Paseo 通常会给 ACP
 provider 进程提供 `PASEO_AGENT_ID`（以及 `PASEO_AGENT_CWD`）。
+
+### 本机 opt-in：Claude 4.6 与 GPT-OSS 120B
+
+**2.2.0.0 仍使用同一套官方 ACP 内核。** 它只增加这一层。如果未 opt-in，
+官方路径默认只支持 Gemini 系模型。
+
+opt-in 是 **本机、显式** 的：
+
+1. 对本机已安装的官方 RC01 构件做 pin（hash 校验；不匹配则 fail closed）。
+2. **只在本机**解开。npm 和 git **不**分发 Google 的 `.par` 或 runfiles。
+3. 加载 `paseo_model_compat.py`：只保留同时出现在 live CCPA 目录 **和** 本地
+   profile 里的模型；转换工具 JSON Schema（`$schema`、`parameters`）、配对
+   工具 ID、处理 GPT-OSS generation config。Gemini 与未知 id 走 identity，
+   不加变换。
+4. `prepare` → `verify` → lifecycle `activate`，再把
+   `PASEO_AGY_ACP_OFFICIAL_BIN` 指到 **stable** wrapper
+   （`agy-acp-kernel-compat-active` / `status.stableWrapperPath`）。不要把
+   生产指到 per-release 冒烟 wrapper。
+
+命令：`agy-acp-prepare-official-kernel-compat`（或
+`node ./scripts/prepare-official-kernel-compat.mjs`）。完整参数、JSON 字段和
+回滚见 [runbook](docs/operations/official-kernel-compat-runbook.md)。
+
+维护者主机在具备 raw CCPA 资格时核验过：`claude-sonnet-4-6`、
+`claude-opus-4-6-thinking`、`gpt-oss-120b-medium` —— 文本、顺序工具、warm
+resume。你的账号仍须在 raw CCPA 目录里拥有这些 id。
+
+请在自己的环境测试 Claude 与 GPT-OSS（单个 agent 和一次开多个）。模型缺失、
+回合失败或工具异常，请 [开 Issue](https://github.com/tiezbro/paseo-agy-acp/issues)。
+我们会按反馈做优化和修复。
 
 ---
 
@@ -487,14 +476,12 @@ server、模式 `dangerously-skip-permissions` → 官方 `yolo`、小席位下�
 排队、空白回合拒绝。
 
 `2.1.0.0` 在隔离环境 `127.0.0.1:6768` 上证明了产品代理 + 官方内核 + daemon
-上下文。**2.2.0.0** 增加官方内核上的本机兼容；见
-[Claude 4.6 与 GPT-OSS](#claude-46-与-gpt-oss在官方-acp-内核上)。
+上下文。
 
 ## 已知问题
 
-- 官方 ACP 默认路径是 Gemini 系；Claude / GPT-OSS 需要
-  [本机 opt-in 兼容](#claude-46-与-gpt-oss在官方-acp-内核上)。
-  请在自己的环境测试，并 [开 Issue](https://github.com/tiezbro/paseo-agy-acp/issues)。
+- opt-in 之后请自行测试 Claude 4.6 与 GPT-OSS 120B，不稳定就
+  [开 Issue](https://github.com/tiezbro/paseo-agy-acp/issues)，我们据此优化和修复。
 - 官方 RC01 的 active cancel 在我们的 harness 里未确认；真实 503/配额未对
   线上后端做诱导验证。
 - 官方内核二进制必须本机已安装；本包装不会随包分发它。

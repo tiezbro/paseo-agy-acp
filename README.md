@@ -27,10 +27,10 @@ mode mapping, MCP rewrite, product identity, and an account-wide Admission
 queue so the Paseo main controller can delegate many Antigravity agents without
 a startup stampede.
 
-**2.2.0.0** keeps that same official ACP kernel. It adds an explicit **local
-opt-in** compatibility layer so entitled Claude 4.6 and GPT-OSS 120B sessions
-can complete on this path. Gemini-family models remain the stock official
-behavior until you opt in.
+**2.2.0.0** still uses the same official ACP kernel. It only adds an explicit
+**local opt-in** compatibility layer: entitled Claude 4.6 and GPT-OSS 120B can
+complete turns on this path. If you do not opt in, the official path supports
+Gemini-family models only by default.
 
 > **Not official Paseo support. Not official Google support.**
 > Community-maintained product. Use at your own risk.
@@ -47,31 +47,7 @@ Generic ACP bridge does not provide:
 - MCP `http` to official `sse` rewrite
 - stable product identity
 - burst-safe account-wide Admission queue for multi-agent delegation
-- Gemini-family models on the stock official ACP path
-- optional local compatibility for Claude 4.6 and GPT-OSS 120B (same official kernel; prepared on your machine)
-
-## Claude 4.6 and GPT-OSS on the official ACP kernel
-
-The kernel is Google's official Antigravity ACP server. **2.2.0.0 does not replace it.** It tightens how this product talks to that kernel for models beyond Gemini.
-
-**Stock official ACP path (default).** Gemini-family models initialize, stream, and use tools through this adapter. Point `PASEO_AGY_ACP_OFFICIAL_BIN` at the official wrapper and you get that catalog and request path. This is the supported default.
-
-**Limitation.** Entitled Antigravity accounts can already see Claude 4.6 and GPT-OSS 120B in the Antigravity IDE. On the stock official ACP path this product uses, those families do not complete as a working set: request shaping (JSON Schema / `$schema`, tool-call ids, GPT generation config) is aligned to Gemini. Catalog entries may appear or fail closed (`-32602`) depending on the kernel build and account; either way, Claude and GPT-OSS are not reliable through Paseo until you opt in below.
-
-**What we adjusted (same official kernel, local opt-in).**
-
-- Pin the official RC01 artifacts already on the machine (hash-checked; fail closed on mismatch).
-- Unpack them **only locally**. npm and git do **not** ship Google's proprietary `.par` or runfiles.
-- Load a small compatibility module (`paseo_model_compat.py`) plus the minimum markers needed to call it: keep models that are both in the live CCPA catalog **and** in the local profile; transform tool schemas, pair tool ids, and apply GPT-OSS generation config. Gemini and unknown ids stay on an identity path.
-- Spawn an independent wrapper. Production must set `PASEO_AGY_ACP_OFFICIAL_BIN` to the **stable** wrapper (`agy-acp-kernel-compat-active`), not a per-release smoke path.
-
-Maintainer-host checks with live entitlement: `claude-sonnet-4-6`, `claude-opus-4-6-thinking`, `gpt-oss-120b-medium` — text, sequential tools, warm resume. Your account must still list those ids in raw CCPA.
-
-**Please test this on your machine and tell us what breaks.** This is community-maintained, not a Google or Paseo official patch. Try Claude and GPT-OSS (single agent and several at once). If a model is missing, a turn fails, tools misbehave, or anything feels unstable, [open a GitHub Issue](https://github.com/tiezbro/paseo-agy-acp/issues). We will use that feedback to prioritize fixes.
-
-Operator steps: [Official kernel local compatibility runbook](docs/operations/official-kernel-compat-runbook.md).
-
-Still open in our checks: official RC01 **active cancel** was not confirmed; live provider **503 / quota** was not induced against real backends. Do not assume those are solved.
+- local opt-in for Claude 4.6 and GPT-OSS 120B; without it, Gemini-family only
 
 ## Who this is for
 
@@ -116,9 +92,9 @@ node 'dist/ACP Connector/main.js'
 For a source checkout, point Paseo's Generic ACP provider at `node` with
 `dist/ACP Connector/main.js` as the argument. Packaged installs expose
 `agy-acp`, `agy-acp-prepare-state`, and
-`agy-acp-prepare-official-kernel-compat`. Claude / GPT-OSS need the
-[compatibility runbook](docs/operations/official-kernel-compat-runbook.md)
-after `npm run build`; the default wrapper stays the stock official path.
+`agy-acp-prepare-official-kernel-compat`. Claude / GPT-OSS: see
+[§1](#1-official-agy-acp-kernel-capabilities) and the
+[runbook](docs/operations/official-kernel-compat-runbook.md).
 
 ## About
 
@@ -127,9 +103,8 @@ does the model work; this repo makes that kernel **safe and complete for Paseo**
 
 | Highlight | Why it matters |
 |---|---|
-| **Official ACP kernel** | Native Agent Client Protocol over NDJSON: OAuth, session lifecycle, streaming, tools, MCP, and the signed-in model catalog. |
+| **Official ACP kernel** | Native ACP over NDJSON. Without opt-in the official path supports Gemini only. Local opt-in adds entitled Claude 4.6 and GPT-OSS 120B. |
 | **Paseo-ready out of the box** | Daemon `appendSystemPrompt`, mode ids Paseo already sends, and MCP `http` servers are rewritten so Generic ACP agents can talk to Antigravity without extra glue. |
-| **Claude / GPT-OSS (opt-in)** | Local compatibility on the **same** official kernel so entitled Claude 4.6 and GPT-OSS 120B sessions can complete. Off until you prepare and point `PASEO_AGY_ACP_OFFICIAL_BIN` at the stable wrapper. |
 | **Burst-safe delegation** | An account-wide durable Admission queue paces `session/prompt` so Paseo's main controller can dispatch many Antigravity agents without every turn hitting the kernel at once. |
 | **Production-tested defaults** | Default **8 shared seats / 8 concurrent starts / 2s interval**, from live Paseo dispatch (including a 10-agent burst) plus isolated stress. Integers **≥ 1** can probe higher; this repo does **not** invent a product ceiling. |
 | **Fail-closed operations** | Bad env, policy splits, and unprovable writes fail closed. Queue timeout, cancel, and kernel errors stay distinguishable. |
@@ -166,15 +141,19 @@ server and forwards Agent Client Protocol NDJSON. The table below is the
 | Live session modes | `default`, `auto_edit`, `yolo` (official has **no** plan mode) |
 | Tools | File edits, shell/terminal, and other Antigravity tools as Google implements them |
 | MCP | Official MCP client; servers are declared on `session/new` |
-| Models | Gemini-family on the stock official path. Claude 4.6 and GPT-OSS 120B via [local opt-in compatibility](#claude-46-and-gpt-oss-on-the-official-acp-kernel). |
+| Models | Without opt-in: Gemini-family only. With local opt-in: entitled Claude 4.6 and GPT-OSS 120B ([§2](#2-paseo-adaptations)). |
 | Turn completion | Official `end_turn` / stop reasons |
 
-### Stock catalog vs local compatibility
+### Models
 
-The default adapter does **not** invent catalog entries the official kernel
-will reject. Gemini-family models are the stock working set. Claude 4.6 and
-GPT-OSS 120B on this product need the [2.2.0.0 local opt-in](#claude-46-and-gpt-oss-on-the-official-acp-kernel).
-Details for operators: [runbook](docs/operations/official-kernel-compat-runbook.md).
+Without opt-in, the official ACP path supports **Gemini-family models only**.
+The Antigravity IDE can already list Claude 4.6 and GPT-OSS 120B for entitled
+accounts; on this ACP path those requests are still shaped for Gemini (JSON
+Schema, tool-call ids, GPT generation config), so they are not a default
+working set.
+
+Local opt-in (same official kernel) is [§2](#2-paseo-adaptations). Operator
+steps: [runbook](docs/operations/official-kernel-compat-runbook.md).
 
 Tool quality, image generation, and provider 503/quota text are owned by the
 official kernel and Google's backend. This product **proxies** that surface.
@@ -196,11 +175,36 @@ this repository exists.
 | 6 | Blank-turn guard | Official `end_turn` with **no** visible assistant/tool output is returned as a JSON-RPC error (`-32000`) instead of an empty successful turn. |
 | 7 | Isolated Admission ledger | Official-kernel queue state lives under `$AGY_ACP_STATE_DIR/official-kernel`, separate from any historical ledger. |
 | 8 | Single kernel | `PASEO_AGY_ACP_KERNEL=legacy` and `--legacy-kernel` fail closed. Official is the only ACP execution path. |
-| 9 | Local model compatibility (opt-in) | On the official kernel, prepare/activate a local wrapper so entitled Claude 4.6 and GPT-OSS 120B sessions use request transforms. Off by default. |
+| 9 | Local model compatibility (opt-in) | Same official kernel: local unpack + request transforms so entitled Claude 4.6 and GPT-OSS 120B can complete turns. Off until you opt in. |
 
 `PASEO_HOME` is optional and falls back to `~/.paseo` when unset or empty.
 Paseo typically provides `PASEO_AGENT_ID` (and `PASEO_AGENT_CWD`) to ACP
 provider processes.
+
+### Local opt-in: Claude 4.6 and GPT-OSS 120B
+
+**2.2.0.0 still uses the same official ACP kernel.** It only adds this layer.
+If you do not opt in, the official path supports Gemini-family models only.
+
+Opt-in is **local** and **explicit**:
+
+1. Pin the official RC01 artifacts already on the machine (hash-checked; mismatch fail-closes).
+2. Unpack them **only on this host**. npm and git do **not** ship Google's `.par` or runfiles.
+3. Load `paseo_model_compat.py`: keep models that are both in the live CCPA catalog **and** in the local profile; transform tool JSON Schema (`$schema`, `parameters`), pair tool-call ids, apply GPT-OSS generation config. Gemini and unknown ids stay identity (no extra transform).
+4. `prepare` → `verify` → lifecycle `activate`, then set `PASEO_AGY_ACP_OFFICIAL_BIN` to the **stable** wrapper (`agy-acp-kernel-compat-active` / `status.stableWrapperPath`). Do not point production at the per-release smoke wrapper.
+
+Commands: `agy-acp-prepare-official-kernel-compat` (or
+`node ./scripts/prepare-official-kernel-compat.mjs`). Exact flags, JSON keys,
+and rollback: [runbook](docs/operations/official-kernel-compat-runbook.md).
+
+Maintainer-host checks with live entitlement: `claude-sonnet-4-6`,
+`claude-opus-4-6-thinking`, `gpt-oss-120b-medium` — text, sequential tools,
+warm resume. Your account must still list those ids in raw CCPA.
+
+Please test Claude and GPT-OSS on your machine (one agent and several). If a
+model is missing, a turn fails, or tools misbehave,
+[open an Issue](https://github.com/tiezbro/paseo-agy-acp/issues). We will use
+that to prioritize fixes.
 
 ---
 
@@ -497,14 +501,13 @@ declared as `http`, mode `dangerously-skip-permissions` → official `yolo`,
 Admission queue under a small seat cap, blank-turn rejection.
 
 `2.1.0.0` isolated canary on `127.0.0.1:6768` proved the product proxy +
-official kernel + daemon context. **2.2.0.0** adds local official-kernel
-compatibility; see [Claude 4.6 and GPT-OSS](#claude-46-and-gpt-oss-on-the-official-acp-kernel).
+official kernel + daemon context.
 
 ## Known issues
 
-- Stock official ACP path is Gemini-family; Claude / GPT-OSS need
-  [local opt-in compatibility](#claude-46-and-gpt-oss-on-the-official-acp-kernel).
-  Please test on your machine and [file issues](https://github.com/tiezbro/paseo-agy-acp/issues).
+- Please test Claude 4.6 and GPT-OSS 120B after opt-in and
+  [file issues](https://github.com/tiezbro/paseo-agy-acp/issues) if anything is
+  unstable. We will use that to prioritize fixes.
 - Official RC01 active cancel was not confirmed in our harness; live 503/quota
   was not induced against real backends.
 - The official kernel binary must already be installed; this package does not
