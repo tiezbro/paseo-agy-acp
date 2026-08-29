@@ -33,6 +33,22 @@ rl.on("line", (line) => {
   }
 
   if (message.method === "session/new") {
+    if (message.params?.emitAvailableCommands) {
+      write({
+        jsonrpc: "2.0",
+        method: "session/update",
+        params: {
+          sessionId: "session-official-1",
+          update: {
+            sessionUpdate: "available_commands_update",
+            availableCommands: [
+              { name: "plan", description: "Plan mode" },
+              { name: "logout", description: "Log out" }
+            ]
+          }
+        }
+      });
+    }
     write({
       jsonrpc: "2.0",
       id: message.id,

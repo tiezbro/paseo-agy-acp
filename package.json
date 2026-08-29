@@ -45,7 +45,7 @@
     "package.json"
   ],
   "scripts": {
-    "build": "node scripts/clean-dist.mjs && tsc && chmod +x 'dist/ACP Connector/main.js'",
+    "build": "node scripts/clean-dist.mjs && tsc",
     "typecheck": "tsc -p tsconfig.test.json",
     "test": "npm run typecheck && npm run build && vitest run",
     "validate:architecture": "node scripts/verify-import-boundaries.mjs",

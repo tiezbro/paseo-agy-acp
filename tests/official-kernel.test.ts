@@ -292,6 +292,61 @@ describe("official kernel proxy", () => {
     );
   });
 
+  it("augments available commands with workspace skills and excludes user-invocable: false", async () => {
+    const ws = tempDir("paseo-official-ws-skills-");
+    const skillA = path.join(ws, ".agents/skills/ws-skill");
+    mkdirSync(skillA, { recursive: true });
+    writeFileSync(
+      path.join(skillA, "SKILL.md"),
+      `---\nname: ws-skill\ndescription: "Workspace skill description"\n---\n`
+    );
+
+    const skillHidden = path.join(ws, ".agents/skills/hidden-skill");
+    mkdirSync(skillHidden, { recursive: true });
+    writeFileSync(
+      path.join(skillHidden, "SKILL.md"),
+      `---\nname: hidden-skill\ndescription: "Hidden skill"\nuser-invocable: false\n---\n`
+    );
+
+    await withProxy(async ({ send, waitFor }) => {
+      send({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: 1 } });
+      await waitFor((message) => "id" in message && message.id === 1);
+
+      send({
+        jsonrpc: "2.0",
+        id: 2,
+        method: "session/new",
+        params: {
+          cwd: ws,
+          emitAvailableCommands: true
+        }
+      });
+      await waitFor((message) => "id" in message && message.id === 2);
+
+      const update = (await waitFor(
+        (message) =>
+          "method" in message &&
+          message.method === "session/update" &&
+          (message.params as { update?: { sessionUpdate?: string } } | undefined)?.update
+            ?.sessionUpdate === "available_commands_update"
+      )) as {
+        params?: {
+          update?: {
+            availableCommands?: Array<{ name: string; description: string }>;
+          };
+        };
+      };
+
+      const commands = update.params?.update?.availableCommands ?? [];
+      expect(commands.find((c) => c.name === "plan")?.description).toBe("Plan mode");
+      expect(commands.find((c) => c.name === "logout")?.description).toBe("Log out");
+      expect(commands.find((c) => c.name === "ws-skill")?.description).toBe(
+        "Workspace skill description"
+      );
+      expect(commands.find((c) => c.name === "hidden-skill")).toBeUndefined();
+    });
+  });
+
   it("lets the packaged CLI talk to the official kernel through the product proxy", async () => {
     chmodSync(fakeOfficialAgent, 0o755);
     const child = spawn(process.execPath, [builtCli], {

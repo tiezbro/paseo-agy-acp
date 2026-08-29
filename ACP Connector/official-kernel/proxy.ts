@@ -2,7 +2,7 @@ import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import type { Readable, Writable } from "node:stream";
 import { TurnClaim } from "../acp/session/turn-scheduler.js";
 import { createOfficialAdmission, issueAdmittedOfficialPromptWrite } from "./admission-fence.js";
-import { extractPromptText, extractSessionId, injectPaseoContext } from "./context.js";
+import { extractCwd, extractPromptText, extractSessionId, injectPaseoContext } from "./context.js";
 import { blankTurnError, sessionUpdateShowsVisibleOutput, shouldRejectBlankTurn } from "./errors.js";
 import { overlayProductIdentity } from "./identity.js";
 import {
@@ -22,6 +22,8 @@ import { augmentAvailableCommands, type AvailableCommand } from "./skill-command
 
 const INITIALIZE_METHOD = "initialize";
 const SESSION_NEW_METHOD = "session/new";
+const SESSION_LOAD_METHOD = "session/load";
+const SESSION_RESUME_METHOD = "session/resume";
 const SESSION_PROMPT_METHOD = "session/prompt";
 const SESSION_SET_MODE_METHOD = "session/set_mode";
 const SESSION_SET_CONFIG_METHOD = "session/set_config_option";
@@ -31,6 +33,7 @@ const SESSION_UPDATE_METHOD = "session/update";
 interface PendingClientRequest {
   method: string;
   sessionId?: string;
+  cwd?: string;
   sawVisibleOutput: boolean;
   resolve: (message: JsonRpcMessage) => void;
 }
@@ -50,6 +53,7 @@ export class OfficialKernelProxy {
   readonly #version: string;
   readonly #pending = new Map<JsonRpcId, PendingClientRequest>();
   readonly #claims = new Map<string, TurnClaim>();
+  readonly #sessionCwds = new Map<string, string>();
   readonly #env: NodeJS.ProcessEnv;
   readonly #admission;
   #closed = false;
@@ -128,6 +132,15 @@ export class OfficialKernelProxy {
     let params = request.params;
     if (request.method === SESSION_NEW_METHOD) {
       params = rewriteMcpServers(rewriteModeFields(params));
+    } else if (
+      request.method === SESSION_LOAD_METHOD ||
+      request.method === SESSION_RESUME_METHOD
+    ) {
+      const sessionId = extractSessionId(params);
+      const cwd = extractCwd(params);
+      if (sessionId && cwd) {
+        this.#sessionCwds.set(sessionId, cwd);
+      }
     } else if (request.method === SESSION_SET_MODE_METHOD || request.method === SESSION_SET_CONFIG_METHOD) {
       params = rewriteModeFields(params);
     } else if (request.method === SESSION_PROMPT_METHOD) {
@@ -189,6 +202,7 @@ export class OfficialKernelProxy {
       this.#pending.set(id, {
         method,
         sessionId: extractSessionId(params),
+        cwd: extractCwd(params),
         sawVisibleOutput: false,
         resolve
       });
@@ -220,7 +234,19 @@ export class OfficialKernelProxy {
         | undefined;
 
       if (params?.update?.sessionUpdate === "available_commands_update") {
-        const augmented = augmentAvailableCommands(params.update.availableCommands);
+        let cwd = sessionId ? this.#sessionCwds.get(sessionId) : undefined;
+        if (!cwd) {
+          for (const pending of this.#pending.values()) {
+            if (pending.cwd) {
+              cwd = pending.cwd;
+              if (sessionId) {
+                this.#sessionCwds.set(sessionId, cwd);
+              }
+              break;
+            }
+          }
+        }
+        const augmented = augmentAvailableCommands(params.update.availableCommands, cwd);
         message = {
           ...message,
           params: {
@@ -248,6 +274,16 @@ export class OfficialKernelProxy {
       if (pending.method === INITIALIZE_METHOD && isJsonRpcSuccess(message)) {
         outbound = { ...message, result: overlayProductIdentity(message.result, this.#version) };
       } else if (
+        (pending.method === SESSION_NEW_METHOD ||
+          pending.method === SESSION_LOAD_METHOD ||
+          pending.method === SESSION_RESUME_METHOD) &&
+        isJsonRpcSuccess(message)
+      ) {
+        const sessionId = extractSessionId(message.result) ?? pending.sessionId;
+        if (sessionId && pending.cwd) {
+          this.#sessionCwds.set(sessionId, pending.cwd);
+        }
+      } else if (
         pending.method === SESSION_PROMPT_METHOD &&
         isJsonRpcSuccess(message) &&
         shouldRejectBlankTurn(message.result, pending.sawVisibleOutput)
@@ -262,3 +298,4 @@ export class OfficialKernelProxy {
     this.#writeClient(message);
   }
 }
+

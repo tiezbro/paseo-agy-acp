@@ -48,3 +48,11 @@ export function extractSessionId(params: unknown): string | undefined {
       ? params.session_id
       : undefined;
 }
+
+export function extractCwd(params: unknown): string | undefined {
+  if (!isRecord(params)) return undefined;
+  return typeof params.cwd === "string" && params.cwd.trim().length > 0
+    ? params.cwd.trim()
+    : undefined;
+}
+
