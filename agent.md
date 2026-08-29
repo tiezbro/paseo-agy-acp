@@ -35,7 +35,7 @@ git log -1 --format=%B   # must show no Cursor trailer
 
 ## If it already landed on `main`
 
-Rewrite the commit, then `git push --force-with-lease forgejo main`. GitHub is the Forgejo **push mirror**.
+Rewrite the commit, then `git push --force-with-lease origin main`. Forgejo is a read-only pull mirror and will follow via GitHub Action **Sync Forgejo mirror**. Do not push `forgejo`.
 
 **Never** toggle the GitHub repo public ↔ private to hide a contributor. That deletes stars and forks.
 
@@ -49,11 +49,17 @@ If GitHub’s **Contributors** sidebar still shows `cursoragent` after the trail
 6. Re-run `gh repo edit --description "..."` (About is metadata; this switch must not leave the old blurb).
 7. Confirm `mentionableUsers` is only `tiezbro` and the live HTML has zero `cursoragent`.
 
-Do not use a visibility toggle. Do not `git push origin` unless asked.
+Do not use a visibility toggle.
 
 ## Push
 
-Push to `forgejo` only (`ssh://git@192.168.6.10:222/tiezbro/paseo-agy-acp.git`). Do not `git push origin` unless the maintainer explicitly asks.
+The writable primary is GitHub `origin` (`https://github.com/tiezbro/paseo-agy-acp.git`). Forgejo (`ssh://git@192.168.6.10:222/tiezbro/paseo-agy-acp.git`) is a read-only **pull mirror**. A `main` push to `origin` runs GitHub Action **Sync Forgejo mirror**, which asks Forgejo to pull.
+
+Push `origin`. Do not push `forgejo` — the mirror rejects writes.
+
+```bash
+git push origin main
+```
 
 ## GitHub About
 

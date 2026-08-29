@@ -11,6 +11,6 @@ After every `git commit`, run `git log -1 --format=%B`. If you see `Co-authored-
 
 Never add a `Co-authored-by` line for Cursor, Cursor Agent, or cursoragent.
 
-If a Cursor-trailer commit already reached `main`: rewrite it and force-push **forgejo only**. Never toggle GitHub visibility to hide contributors (that deletes stars and forks).
+If a Cursor-trailer commit already reached `main`: rewrite it and force-push **origin** (`git push --force-with-lease origin main`). Never toggle GitHub visibility to hide contributors (that deletes stars and forks).
 
-Push to the `forgejo` remote. GitHub is the mirror.
+Push `origin` (GitHub). Forgejo is the read-only pull mirror.
