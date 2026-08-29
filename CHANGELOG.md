@@ -2,6 +2,15 @@
 
 All notable changes to `paseo-agy-acp` are recorded here.
 
+## 2.2.0 - 2026-08-29
+
+### Changed
+
+- npm-publishable semver: `2.2.0` is the same product as GitHub tag
+  `v2.2.0.0`. Install with `npx -y paseo-agy-acp@2.2.0`. The package `bin`
+  includes a `paseo-agy-acp` alias so `npx` can infer the CLI. npm still does
+  **not** ship Google's `.par`.
+
 ## 2.2.0.0 - 2026-08-29
 
 ### Added

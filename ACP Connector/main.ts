@@ -18,7 +18,7 @@ const version = packageJson.version ?? "0.0.0";
 if (argv.includes("--version")) {
   process.stdout.write(`${version}\n`);
 } else if (argv.includes("--login")) {
-  const code = await runOfficialLogin(process.env);
+  const code = await runOfficialLogin(process.env, version);
   process.exit(code);
 } else {
   try {

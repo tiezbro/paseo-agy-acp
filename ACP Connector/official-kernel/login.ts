@@ -9,7 +9,10 @@ import { spawnOfficialKernel } from "./spawn.js";
 
 const AUTHENTICATE_TIMEOUT_MS = 10 * 60_000;
 
-export async function runOfficialLogin(environment: NodeJS.ProcessEnv = process.env): Promise<number> {
+export async function runOfficialLogin(
+  environment: NodeJS.ProcessEnv = process.env,
+  version = "0.0.0"
+): Promise<number> {
   process.stderr.write(
     "Starting official Antigravity ACP login (authenticate methodId=oauth-personal).\n"
   );
@@ -49,7 +52,7 @@ export async function runOfficialLogin(environment: NodeJS.ProcessEnv = process.
   try {
     const initialized = await request("initialize", {
       protocolVersion: 1,
-      clientInfo: { name: "agy-acp", version: "2.2.0.0" },
+      clientInfo: { name: "agy-acp", version },
       capabilities: {}
     });
     if (isJsonRpcFailure(initialized)) {

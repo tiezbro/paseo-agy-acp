@@ -1,6 +1,6 @@
 {
   "name": "paseo-agy-acp",
-  "version": "2.2.0.0",
+  "version": "2.2.0",
   "description": "Paseo product ACP adapter that proxies the official Google Antigravity ACP kernel (NDJSON) with Admission and daemon context",
   "type": "module",
   "author": {
@@ -25,9 +25,13 @@
   "types": "dist/ACP Connector/agent.d.ts",
   "license": "Apache-2.0",
   "bin": {
+    "paseo-agy-acp": "dist/ACP Connector/main.js",
     "agy-acp": "dist/ACP Connector/main.js",
     "agy-acp-prepare-state": "scripts/prepare-admission-state-dir.mjs",
     "agy-acp-prepare-official-kernel-compat": "scripts/prepare-official-kernel-compat.mjs"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "files": [
     "dist",

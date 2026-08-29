@@ -5,7 +5,7 @@
 **Paseo × Antigravity — official ACP kernel, Paseo-ready product adapter**
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](./LICENSE)
-[![Version](https://img.shields.io/badge/version-2.2.0.0-blue?style=flat-square)](./package.json)
+[![Version](https://img.shields.io/badge/version-2.2.0-blue?style=flat-square)](./package.json)
 [![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen?style=flat-square)](#)
 [![ACP](https://img.shields.io/badge/ACP-NDJSON%20v1-8A2BE2?style=flat-square)](https://agentclientprotocol.com)
 
@@ -27,7 +27,7 @@ mode mapping, MCP rewrite, product identity, and an account-wide Admission
 queue so the Paseo main controller can delegate many Antigravity agents without
 a startup stampede.
 
-**2.2.0.0** still uses the same official ACP kernel. It only adds an explicit
+**2.2.0** (GitHub tag `v2.2.0.0`) still uses the same official ACP kernel. It only adds an explicit
 **local opt-in** compatibility layer: entitled Claude 4.6 and GPT-OSS 120B can
 complete turns on this path. If you do not opt in, the official path supports
 Gemini-family models only by default.
@@ -72,29 +72,26 @@ ACP kernel. The `--login` step below completes official OAuth (`authenticate` /
 `oauth-personal`). Set `PASEO_AGY_ACP_OFFICIAL_BIN` when your official kernel is
 not at the maintainer host's pinned default path.
 
-```bash
-git clone https://github.com/tiezbro/paseo-agy-acp.git
-cd paseo-agy-acp
-npm ci
-npm run build
+The npm package is `paseo-agy-acp@2.2.0` (same product as GitHub `v2.2.0.0`;
+npm requires 3-part semver). It does **not** ship Google's `.par`.
 
+```bash
 export PASEO_AGY_ACP_OFFICIAL_BIN="/absolute/path/to/agy_acp_server.par-or-wrapper"
-node 'dist/ACP Connector/main.js' --login
+npx -y paseo-agy-acp@2.2.0 --login
 
 export AGY_ACP_STATE_DIR="$HOME/.local/state/paseo-agy-acp/default"
 install -d -m 700 "$AGY_ACP_STATE_DIR"
-node scripts/prepare-admission-state-dir.mjs "$AGY_ACP_STATE_DIR"
+npx -y --package=paseo-agy-acp@2.2.0 agy-acp-prepare-state "$AGY_ACP_STATE_DIR"
 export AGY_ACP_ADMISSION_ENABLED=true
 
-node 'dist/ACP Connector/main.js'
+npx -y paseo-agy-acp@2.2.0
 ```
 
-For a source checkout, point Paseo's Generic ACP provider at `node` with
-`dist/ACP Connector/main.js` as the argument. Packaged installs expose
-`agy-acp`, `agy-acp-prepare-state`, and
-`agy-acp-prepare-official-kernel-compat`. Claude / GPT-OSS: see
-[§1](#1-official-agy-acp-kernel-capabilities) and the
-[runbook](docs/operations/official-kernel-compat-runbook.md).
+Point Paseo's Generic ACP provider at `npx` (see [Paseo provider config](#paseo-provider-config)).
+Claude / GPT-OSS: see [§1](#1-official-agy-acp-kernel-capabilities) and the
+[runbook](docs/operations/official-kernel-compat-runbook.md). Source checkout
+(`git clone` + `npm ci` + `npm run build`) remains available under
+[Install](#install).
 
 ## About
 
@@ -183,7 +180,7 @@ provider processes.
 
 ### Local opt-in: Claude 4.6 and GPT-OSS 120B
 
-**2.2.0.0 still uses the same official ACP kernel.** It only adds this layer.
+**2.2.0 still uses the same official ACP kernel.** It only adds this layer.
 If you do not opt in, the official path supports Gemini-family models only.
 
 Opt-in is **local** and **explicit**:
@@ -385,6 +382,18 @@ capacity cooldown. Package entrypoints stay inside `ACP Connector/`.
 
 ## Install
 
+Preferred (after this version is on npmjs):
+
+```bash
+npx -y paseo-agy-acp@2.2.0 --login
+```
+
+Bins: `paseo-agy-acp` / `agy-acp` (ACP proxy), `agy-acp-prepare-state`,
+`agy-acp-prepare-official-kernel-compat`. First `npx` may compile
+`better-sqlite3` (needs a local C++ toolchain).
+
+Source checkout:
+
 ```bash
 git clone https://github.com/tiezbro/paseo-agy-acp.git
 cd paseo-agy-acp
@@ -396,16 +405,14 @@ npm test
 ```bash
 # ACP initialize smoke (requires the official binary)
 printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":1}}' \
-  | node 'dist/ACP Connector/main.js'
+  | npx -y paseo-agy-acp@2.2.0
 ```
 
 Login (official kernel OAuth):
 
 ```bash
-node 'dist/ACP Connector/main.js' --login
+npx -y paseo-agy-acp@2.2.0 --login
 ```
-
-The published bin names are `agy-acp` and `agy-acp-prepare-state`.
 
 ## Environment
 
@@ -445,7 +452,7 @@ One official kernel child per connector process. Admission coordinates
   "providers": {
     "antigravity": {
       "type": "acp",
-      "command": "agy-acp",
+      "command": ["npx", "-y", "paseo-agy-acp@2.2.0"],
       "env": {
         "PASEO_AGY_ACP_OFFICIAL_BIN": "/home/YOU/.local/opt/agy-acp-server-agy_acp_server_20260818_01_RC01/agy-acp-server-canary",
         "AGY_ACP_ADMISSION_ENABLED": "true",
@@ -473,16 +480,14 @@ Configure the Paseo daemon to add an ACP provider for Google Antigravity.
 1. Read Paseo config ($PASEO_HOME/config.json or ~/.paseo/config.json).
 2. Add or update providers.antigravity:
    - type: "acp"
-   - command: "agy-acp" (or node with the full path below)
-   - args: when command is node, ["/path/to/paseo-agy-acp/dist/ACP Connector/main.js"]
+   - command: ["npx", "-y", "paseo-agy-acp@2.2.0"]
    - env.PASEO_AGY_ACP_OFFICIAL_BIN: local official kernel wrapper (agy-acp-server-canary or agy_acp_server.par)
    - env.AGY_ACP_ADMISSION_ENABLED: "true"
    - env.AGY_ACP_STATE_DIR: absolute owner-only directory (mode 0700)
-3. If agy-acp is not installed: cd paseo-agy-acp && npm ci && npm run build
-4. Prepare Admission state: agy-acp-prepare-state "$AGY_ACP_STATE_DIR"
-5. Login once: node 'dist/ACP Connector/main.js' --login
-6. Restart the Paseo daemon.
-7. Verify: create a test agent with provider "antigravity", send a simple prompt.
+3. Prepare Admission state: npx -y --package=paseo-agy-acp@2.2.0 agy-acp-prepare-state "$AGY_ACP_STATE_DIR"
+4. Login once: npx -y paseo-agy-acp@2.2.0 --login
+5. Restart the Paseo daemon.
+6. Verify: create a test agent with provider "antigravity", send a simple prompt.
 ~~~
 
 ## Verification

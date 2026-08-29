@@ -5,7 +5,7 @@
 **Paseo × Antigravity — 官方 ACP 内核，面向 Paseo 的产品适配器**
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](./LICENSE)
-[![Version](https://img.shields.io/badge/version-2.2.0.0-blue?style=flat-square)](./package.json)
+[![Version](https://img.shields.io/badge/version-2.2.0-blue?style=flat-square)](./package.json)
 [![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen?style=flat-square)](#)
 [![ACP](https://img.shields.io/badge/ACP-NDJSON%20v1-8A2BE2?style=flat-square)](https://agentclientprotocol.com)
 
@@ -25,7 +25,7 @@ Registry id `antigravity-acp`），再补上 Generic ACP 本身给不了的 Pase
 daemon 上下文、session 模式映射、MCP 改写、产品身份，以及账户级 Admission
 队列——让 Paseo 主控可以一次委派多个 Antigravity agent，而不把启动打成风暴。
 
-**2.2.0.0** 仍使用同一套官方 ACP 内核。它只增加一层明确的 **本机 opt-in**
+**2.2.0**（GitHub tag `v2.2.0.0`）仍使用同一套官方 ACP 内核。它只增加一层明确的 **本机 opt-in**
 兼容：有资格的 Claude 4.6 与 GPT-OSS 120B 可以在这条路径上跑完回合。
 如果未 opt-in，官方路径默认只支持 Gemini 系模型。
 
@@ -66,28 +66,25 @@ daemon 上下文、session 模式映射、MCP 改写、产品身份，以及账�
 `--login` 步骤会完成官方 OAuth（`authenticate` / `oauth-personal`）。如果官方内核
 不在维护者主机的默认 pin 路径，请设置 `PASEO_AGY_ACP_OFFICIAL_BIN`。
 
-```bash
-git clone https://github.com/tiezbro/paseo-agy-acp.git
-cd paseo-agy-acp
-npm ci
-npm run build
+npm 包是 `paseo-agy-acp@2.2.0`（与 GitHub `v2.2.0.0` 同一产品；npm 要求三段
+semver）。**不**分发 Google 的 `.par`。
 
+```bash
 export PASEO_AGY_ACP_OFFICIAL_BIN="/absolute/path/to/agy_acp_server.par-or-wrapper"
-node 'dist/ACP Connector/main.js' --login
+npx -y paseo-agy-acp@2.2.0 --login
 
 export AGY_ACP_STATE_DIR="$HOME/.local/state/paseo-agy-acp/default"
 install -d -m 700 "$AGY_ACP_STATE_DIR"
-node scripts/prepare-admission-state-dir.mjs "$AGY_ACP_STATE_DIR"
+npx -y --package=paseo-agy-acp@2.2.0 agy-acp-prepare-state "$AGY_ACP_STATE_DIR"
 export AGY_ACP_ADMISSION_ENABLED=true
 
-node 'dist/ACP Connector/main.js'
+npx -y paseo-agy-acp@2.2.0
 ```
 
-源码 checkout 下，把 Paseo 的 Generic ACP provider 指向 `node`，并把
-`dist/ACP Connector/main.js` 作为参数。打包安装时会暴露 `agy-acp`、
-`agy-acp-prepare-state` 和 `agy-acp-prepare-official-kernel-compat`。
+把 Paseo Generic ACP provider 指到 `npx`（见 [Paseo Provider 配置](#paseo-provider-配置)）。
 Claude / GPT-OSS 见 [§1](#1-官方-agy-acp-内核能力) 和
-[runbook](docs/operations/official-kernel-compat-runbook.md)。
+[runbook](docs/operations/official-kernel-compat-runbook.md)。源码 checkout
+（`git clone` + `npm ci` + `npm run build`）仍在 [安装](#安装)。
 
 ## 关于
 
@@ -172,7 +169,7 @@ provider 进程提供 `PASEO_AGENT_ID`（以及 `PASEO_AGENT_CWD`）。
 
 ### 本机 opt-in：Claude 4.6 与 GPT-OSS 120B
 
-**2.2.0.0 仍使用同一套官方 ACP 内核。** 它只增加这一层。如果未 opt-in，
+**2.2.0 仍使用同一套官方 ACP 内核。** 它只增加这一层。如果未 opt-in，
 官方路径默认只支持 Gemini 系模型。
 
 opt-in 是 **本机、显式** 的：
@@ -361,6 +358,18 @@ paseo-agy-acp/
 
 ## 安装
 
+推荐（本版本上架 npmjs 之后）：
+
+```bash
+npx -y paseo-agy-acp@2.2.0 --login
+```
+
+命令：`paseo-agy-acp` / `agy-acp`（ACP 代理）、`agy-acp-prepare-state`、
+`agy-acp-prepare-official-kernel-compat`。第一次 `npx` 可能要编译
+`better-sqlite3`（本机需要 C++ 工具链）。
+
+源码 checkout：
+
 ```bash
 git clone https://github.com/tiezbro/paseo-agy-acp.git
 cd paseo-agy-acp
@@ -372,16 +381,14 @@ npm test
 ```bash
 # ACP initialize 冒烟（需要官方二进制）
 printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":1}}' \
-  | node 'dist/ACP Connector/main.js'
+  | npx -y paseo-agy-acp@2.2.0
 ```
 
 登录（官方内核 OAuth）：
 
 ```bash
-node 'dist/ACP Connector/main.js' --login
+npx -y paseo-agy-acp@2.2.0 --login
 ```
-
-随包发布的 bin 名是 `agy-acp` 和 `agy-acp-prepare-state`。
 
 ## 环境变量
 
@@ -421,7 +428,7 @@ Paseo / Generic ACP 客户端
   "providers": {
     "antigravity": {
       "type": "acp",
-      "command": "agy-acp",
+      "command": ["npx", "-y", "paseo-agy-acp@2.2.0"],
       "env": {
         "PASEO_AGY_ACP_OFFICIAL_BIN": "/home/YOU/.local/opt/agy-acp-server-agy_acp_server_20260818_01_RC01/agy-acp-server-canary",
         "AGY_ACP_ADMISSION_ENABLED": "true",
@@ -448,16 +455,14 @@ Configure the Paseo daemon to add an ACP provider for Google Antigravity.
 1. Read Paseo config ($PASEO_HOME/config.json or ~/.paseo/config.json).
 2. Add or update providers.antigravity:
    - type: "acp"
-   - command: "agy-acp" (or node with the full path below)
-   - args: when command is node, ["/path/to/paseo-agy-acp/dist/ACP Connector/main.js"]
+   - command: ["npx", "-y", "paseo-agy-acp@2.2.0"]
    - env.PASEO_AGY_ACP_OFFICIAL_BIN: local official kernel wrapper (agy-acp-server-canary or agy_acp_server.par)
    - env.AGY_ACP_ADMISSION_ENABLED: "true"
    - env.AGY_ACP_STATE_DIR: absolute owner-only directory (mode 0700)
-3. If agy-acp is not installed: cd paseo-agy-acp && npm ci && npm run build
-4. Prepare Admission state: agy-acp-prepare-state "$AGY_ACP_STATE_DIR"
-5. Login once: node 'dist/ACP Connector/main.js' --login
-6. Restart the Paseo daemon.
-7. Verify: create a test agent with provider "antigravity", send a simple prompt.
+3. Prepare Admission state: npx -y --package=paseo-agy-acp@2.2.0 agy-acp-prepare-state "$AGY_ACP_STATE_DIR"
+4. Login once: npx -y paseo-agy-acp@2.2.0 --login
+5. Restart the Paseo daemon.
+6. Verify: create a test agent with provider "antigravity", send a simple prompt.
 ~~~
 
 ## 验证
