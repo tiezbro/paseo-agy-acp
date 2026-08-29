@@ -67,7 +67,7 @@ child.stderr.on("data", (chunk) => stderr.push(chunk));
 try {
   const initialized = await request(1, "initialize", {
     protocolVersion: 1,
-    clientInfo: { name: "official-kernel-smoke", version: "2.2.0" },
+    clientInfo: { name: "official-kernel-smoke", version: "2.2.1" },
     capabilities: {}
   });
   if (initialized.error) throw new Error(`initialize failed: ${JSON.stringify(initialized.error)}`);
@@ -75,8 +75,8 @@ try {
   if (agentInfo.name !== "agy-acp") {
     throw new Error(`expected product identity agy-acp, got ${JSON.stringify(agentInfo)}`);
   }
-  if (agentInfo.version !== "2.2.0") {
-    throw new Error(`expected version 2.2.0, got ${agentInfo.version}`);
+  if (agentInfo.version !== "2.2.1") {
+    throw new Error(`expected version 2.2.1, got ${agentInfo.version}`);
   }
 
   const created = await request(2, "session/new", {

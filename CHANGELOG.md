@@ -2,6 +2,21 @@
 
 All notable changes to `paseo-agy-acp` are recorded here.
 
+## 2.2.1 - 2026-08-29
+
+### Changed
+
+- GitHub tags match npm 3-part semver from this release (`v2.2.1` =
+  `paseo-agy-acp@2.2.1`). Historical tag `v2.2.0.0` remains the 2.2.0 line.
+- README (EN/ZH): `npx` launches this proxy only. Paseo, a locally installed
+  official kernel, and `PASEO_AGY_ACP_OFFICIAL_BIN` remain required. The npm
+  tarball now ships that copy.
+
+### Unchanged
+
+- Same official ACP kernel, same local Claude/GPT-OSS opt-in, same Admission
+  defaults as 2.2.0.
+
 ## 2.2.0 - 2026-08-29
 
 ### Changed
