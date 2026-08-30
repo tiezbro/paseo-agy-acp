@@ -33,15 +33,42 @@ rl.on("line", (line) => {
   }
 
   if (message.method === "session/new") {
-    write({
-      jsonrpc: "2.0",
-      id: message.id,
-      result: {
-        sessionId: "session-official-1",
-        mcpServers: message.params?.mcpServers ?? [],
-        modeId: message.params?.modeId
-      }
-    });
+    const sessionId =
+      typeof message.params?.testSessionId === "string"
+        ? message.params.testSessionId
+        : "session-official-1";
+    if (message.params?.emitAvailableCommands) {
+      write({
+        jsonrpc: "2.0",
+        method: "session/update",
+        params: {
+          sessionId,
+          update: {
+            sessionUpdate: "available_commands_update",
+            availableCommands: [
+              { name: "plan", description: "Plan mode" },
+              { name: "logout", description: "Log out" }
+            ]
+          }
+        }
+      });
+    }
+    const respond = () =>
+      write({
+        jsonrpc: "2.0",
+        id: message.id,
+        result: {
+          sessionId,
+          mcpServers: message.params?.mcpServers ?? [],
+          modeId: message.params?.modeId
+        }
+      });
+    const delayMs = message.params?.testResponseDelayMs;
+    if (typeof delayMs === "number" && delayMs > 0) {
+      setTimeout(respond, delayMs);
+    } else {
+      respond();
+    }
     return;
   }
 
