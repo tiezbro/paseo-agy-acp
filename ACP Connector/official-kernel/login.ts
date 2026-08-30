@@ -16,22 +16,27 @@ export async function runOfficialLogin(
   process.stderr.write(
     "Starting official Antigravity ACP login (authenticate methodId=oauth-personal).\n"
   );
-  const child = spawnOfficialKernel(environment);
+  // The official kernel prints the OAuth URL as ordinary stdout text. Its
+  // stdout is a pipe here, so force Python to flush that prompt immediately.
+  const child = spawnOfficialKernel({ ...environment, PYTHONUNBUFFERED: "1" });
   const pending = new Map<JsonRpcId, (message: JsonRpcMessage) => void>();
   let nextId = 1;
 
-  const parse = createNdjsonParser((message) => {
-    if ("method" in message && !("id" in message)) {
-      const params = "params" in message ? message.params : undefined;
-      process.stderr.write(`${summarizeAuthUpdate(message.method, params)}\n`);
-      return;
-    }
-    if ("id" in message && pending.has(message.id)) {
-      const settle = pending.get(message.id);
-      pending.delete(message.id);
-      settle?.(message);
-    }
-  });
+  const parse = createNdjsonParser(
+    (message) => {
+      if ("method" in message && !("id" in message)) {
+        const params = "params" in message ? message.params : undefined;
+        process.stderr.write(`${summarizeAuthUpdate(message.method, params)}\n`);
+        return;
+      }
+      if ("id" in message && pending.has(message.id)) {
+        const settle = pending.get(message.id);
+        pending.delete(message.id);
+        settle?.(message);
+      }
+    },
+    (line) => process.stderr.write(`${line}\n`)
+  );
   child.stdout.on("data", parse);
 
   const request = (method: string, params: unknown): Promise<JsonRpcMessage> => {
