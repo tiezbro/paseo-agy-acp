@@ -1,452 +1,135 @@
 <div align="center">
 
-# 🔌 paseo-agy-acp
+# paseo-agy-acp
 
-**面向 Paseo 的适配器，跑在 Google 官方 Antigravity ACP 内核前面**
+**Google 官方 Antigravity ACP 内核面向 Paseo 的可靠产品适配器**
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](./LICENSE)
 [![Version](https://img.shields.io/badge/version-2.3.0-blue?style=flat-square)](./package.json)
 [![npm](https://img.shields.io/npm/v/paseo-agy-acp?style=flat-square)](https://www.npmjs.com/package/paseo-agy-acp)
-[![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen?style=flat-square)](#)
+[![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen?style=flat-square)](./package.json)
 [![ACP](https://img.shields.io/badge/ACP-NDJSON%20v1-8A2BE2?style=flat-square)](https://agentclientprotocol.com)
 
-</div>
-
-<div align="center">
-
-[🇺🇸 English](./README.md) | [🇨🇳 中文](./README.zh-CN.md)
+[English](./README.md) | [中文](./README.zh-CN.md) | [Changelog](./CHANGELOG.md)
 
 </div>
 
----
+<!-- readme:positioning -->
+## 这个产品是什么
 
-`paseo-agy-acp` 是面向 Paseo 的 Google Antigravity ACP 产品。从 **2.1.0.0** 起，
-它以薄层 NDJSON 代理运行 Google 官方 Antigravity ACP 内核（`agy_acp_server` /
-Registry id `antigravity-acp`），再补上 Generic ACP 本身给不了的 Paseo 行为：
-daemon 上下文、session 模式映射、MCP 改写、产品身份，以及账户级 Admission
-队列——让 Paseo 主控可以一次委派多个 Antigravity agent，而不把启动打成风暴。
+`paseo-agy-acp` 是 Paseo 与 Google 官方 Antigravity ACP 内核之间的产品适配层。
+认证、模型、工具、MCP 和推理仍由官方内核负责；本适配器补齐 Paseo 多 agent
+可靠运行所需要的上下文、协议兼容、并发治理、skill discovery 和失败语义。
 
-**2.2** 仍使用同一套官方 ACP 内核。它只增加一层明确的 **本机 opt-in**
-兼容：有资格的 Claude 4.6 与 GPT-OSS 120B 可以在这条路径上跑完回合。
-如果未 opt-in，官方路径默认只支持 Gemini 系模型。
+它不是第二个 Antigravity 实现，也不重新分发 Google 的专有内核。npm 包只包含
+这个 Apache-2.0 代理；官方内核需要单独在本机安装和认证。
 
-**2.3.0** 新增可由用户调用的 skill slash command 提示，支持 Gemini、Agents、
-Codex、用户配置和 workspace roots。原生 ACP 命令保持不变，workspace skills
-按 session cwd 隔离，并发创建 session 时不会跨 workspace 混入命令提示。
+> 社区维护项目。非 Paseo 官方支持，非 Google 官方支持。
 
-> **非 Paseo 官方支持。非 Google 官方支持。** 社区维护产品，使用风险自负。
+<!-- readme:value -->
+## 为什么需要 paseo-agy-acp
 
-## 30 秒摘要
+ACP 提供协议，但一条可用于生产的 Paseo provider 仍需要协议之外的产品行为：
 
-如果你在 Paseo 里使用 Google Antigravity，`paseo-agy-acp` 给 Paseo 提供一条
-接入 Google 官方 Antigravity ACP 内核的产品化路径。模型工作仍然由官方内核完成，
-本仓库补上 Generic ACP 桥本身不提供的 Paseo 侧行为：
+| 需求 | 直接连接 Generic ACP | 使用 `paseo-agy-acp` |
+|---|---|---|
+| 官方执行链 | 可以启动 ACP server | OAuth、模型、工具、MCP 和推理继续留在 Google 官方内核 |
+| Paseo 上下文 | 没有产品级保证 | 将 Paseo daemon 与 workspace/agent context 注入官方 prompt |
+| Modes 与 MCP | 客户端和内核数据形态可能不同 | 映射 Paseo modes，并把 MCP `http` 声明改写为官方 `sse` 形态 |
+| 多 agent 突发 | 多个 prompt 可能同时打入内核 | 使用跨 connector 共享的账户级持久 Admission 队列 |
+| Slash command discovery | 官方命令更新不包含本地 skills | 加入可由用户调用的 Gemini、Agents、Codex、配置和 workspace skills |
+| 空白回合 | 无输出的 `end_turn` 可能看起来成功 | 返回明确 JSON-RPC 错误，避免记录静默成功 |
+| 额外授权模型 | 官方 ACP 默认走 Gemini 系路径 | 为有资格的 Claude 4.6 与 GPT-OSS 120B 提供显式本机兼容 runbook |
+| 产品身份 | 跟随底层 server | 向 Paseo 暴露稳定的 `agy-acp` / `paseo-agy-acp` 身份 |
 
-- daemon 上下文注入
-- session 模式映射
-- MCP `http` 到官方 `sse` 的改写
-- 稳定产品身份
-- 面向 ACP slash command 提示的本地与 workspace skill discovery
-- 面向多 agent 委派的账户级 Admission 队列
-- 本机 opt-in 后可跑 Claude 4.6 与 GPT-OSS 120B；未 opt-in 则只支持 Gemini 系
+### 多 agent 稳定性
 
-## 适合谁
+Paseo 主控可以一次委派多个 Antigravity agent。Admission 允许主控保留这种批量
+派发能力，同时让超额 turn 排队，而不是一起写入 `agy_acp_server`。使用同一状态
+目录的所有 connector 共享账户席位，回合完成、失败或取消后释放。
 
-适合你，如果：
+实测默认策略是 **8 个 active turns / 8 路同时启动 / 最少 2 秒启动间隔**。
+这些是可调整的运行默认值，不是对 Google 产品上限的声明。启用后的非法配置会
+fail closed。
 
-- 你运行 Paseo
-- 你本机已经安装并登录 Google Antigravity
-- 你想通过 Generic ACP 使用 Antigravity
-- 你会一次委派多个 agent，希望启动突发被限速而不是同时砸到内核上
-- 你想在官方 ACP 内核上通过 Paseo 使用 Claude 4.6 或 GPT-OSS 120B（本机 opt-in）
+### Skill discovery
 
-可能不适合你，如果：
+适配器将原生 ACP 命令与配置目录及默认 Gemini、Agents、Codex、workspace roots
+中的 `SKILL.md` 元数据合并。同名时原生命令优先，workspace skills 优先于全局
+skills，`user-invocable: false` 不会出现在 slash command 提示中。Discovery 按
+session cwd 隔离，并发 workspace 不会互相泄漏命令元数据。
 
-- 你不使用 Paseo
-- 你想要一个独立的 Antigravity 替代品
-- 你期待这个包重新分发 Google 的专有内核
+### 模型边界
 
+未修改的官方 ACP 路径默认以 Gemini 系模型为工作集合。已获得 Claude 4.6 或
+GPT-OSS 120B 资格的账号，可以按
+[官方内核兼容 runbook](docs/operations/official-kernel-compat-runbook.md)
+显式启用本机兼容生命周期。推理仍由同一套官方内核和 Google backend 负责；本仓库
+不打包也不替换它们。
+
+<!-- readme:architecture -->
+## 架构与职责
+
+```text
+Paseo / Generic ACP client
+  -> paseo-agy-acp 产品适配器
+       身份 | daemon context | mode map | MCP rewrite
+       skill hints | blank-turn guard | 可选 Admission fence
+  -> 官方 agy_acp_server（ACP v1 over NDJSON）
+       OAuth | 模型 | 工具 | MCP | 推理
+```
+
+| 层 | 职责 | 许可证边界 |
+|---|---|---|
+| Paseo | Agent 生命周期、workspace、委派和 provider 配置 | Paseo 项目 |
+| `paseo-agy-acp` | Paseo 专用 ACP 适配与 Admission | Apache-2.0；发布到 npm |
+| 官方 `agy_acp_server` | 认证、模型目录、工具、MCP 和推理 | Google 专有软件；只在本机安装 |
+
+每个 connector 进程运行一个官方内核子进程。Admission 是可选项，但当一个
+Antigravity 账号服务多个并发 Paseo agent 时建议启用。
+
+<!-- readme:requirements -->
+## 环境要求
+
+- 支持 Generic ACP provider 的 **Paseo**
+- **Node.js 22 或更新版本**
+- 本机已安装的官方 Antigravity ACP kernel wrapper 或 `.par`
+- 可以完成官方 `oauth-personal` 的 Antigravity 账号
+- 启用 Admission 时，系统需支持 Linux 文件 owner 与 mode
+
+除非官方内核已经位于维护者主机默认 pin 路径，否则必须设置
+`PASEO_AGY_ACP_OFFICIAL_BIN`。若它直接指向 `.par`，适配器会从该文件所在目录
+启动并提供所需 uid。
+
+<!-- readme:quickstart -->
 ## 快速开始
 
-前提：**Paseo**、**Node.js >= 22**，以及本机已安装的官方 Antigravity ACP 内核
-（本包装 **不会** 安装 Google 的 `.par`）。`--login` 完成官方 OAuth
-（`authenticate` / `oauth-personal`）。把 `PASEO_AGY_ACP_OFFICIAL_BIN` 指到你的
-内核 wrapper 或 `.par`（除非已在维护者主机默认 pin 路径，否则必填）。
-
-npm 包 `paseo-agy-acp@2.3.0` 是 **代理**。`npx` 只拉起这个代理，**不能**代替
-Antigravity 或 Paseo。
+### 1. 指定官方内核并完成认证
 
 ```bash
-export PASEO_AGY_ACP_OFFICIAL_BIN="/absolute/path/to/agy_acp_server.par-or-wrapper"
+export PASEO_AGY_ACP_OFFICIAL_BIN="/absolute/path/to/agy-acp-server-wrapper-or.par"
 npx -y paseo-agy-acp@2.3.0 --login
-
-export AGY_ACP_STATE_DIR="$HOME/.local/state/paseo-agy-acp/default"
-install -d -m 700 "$AGY_ACP_STATE_DIR"
-npx -y --package=paseo-agy-acp@2.3.0 agy-acp-prepare-state "$AGY_ACP_STATE_DIR"
-export AGY_ACP_ADMISSION_ENABLED=true
 ```
 
-再把 Paseo Generic ACP 的 `command` 指到 npx（见
-[Paseo Provider 配置](#paseo-provider-配置)）。下面这一行 **不是** 独立聊天程序，
-而是 Paseo spawn 的 stdio ACP 服务：
+OAuth 由官方内核完成。Token 保留在内核自己的状态中，本适配器不会打印。
 
-```bash
-npx -y paseo-agy-acp@2.3.0
-```
+### 2. 准备 Admission 状态
 
-Claude / GPT-OSS 见 [§1](#1-官方-agy-acp-内核能力) 和
-[runbook](docs/operations/official-kernel-compat-runbook.md)。源码 checkout
-（`git clone` + `npm ci` + `npm run build`）见 [安装](#安装)。
-
-## 关于
-
-本仓库是 **产品适配器**，不是第二个 Antigravity。模型工作由内核完成；本仓库
-补上 Generic ACP 桥本身不提供的 Paseo 侧行为。
-
-| 亮点 | 为什么重要 |
-|---|---|
-| **官方 ACP 内核** | 原生 ACP / NDJSON。未 opt-in 时官方路径只支持 Gemini；本机 opt-in 后，有资格的 Claude 4.6 与 GPT-OSS 120B 可以跑完回合。 |
-| **Paseo 侧胶水** | daemon `appendSystemPrompt`、Paseo 已在用的 mode id、以及 MCP `http` server，都会改写成官方内核认识的形态，Generic ACP agent 不用再写一层适配。仍须安装 Paseo、官方内核，并把 `command` 指到本代理。 |
-| **突发委派更稳健** | 账户级持久 Admission 队列给 `session/prompt` 限速，Paseo 主控可以一次派出很多 Antigravity agent，不会让每个 turn 同时砸到内核上。 |
-| **生产实测默认值** | 默认 **8 个共享席位 / 8 路同时启动 / 2 秒间隔**，来自真实 Paseo 派发（含 10 agent 突发）和隔离压测。整数 **≥ 1** 可以继续试更高并发；本仓库 **不编** 一个产品上限。 |
-| **失败即关闭** | 非法环境变量、policy 分叉、无法证明的写入一律 fail closed。排队超时、取消、内核错误仍然能区分。 |
-| **空白回合守卫** | 官方 `end_turn` 且没有任何可见助手/工具输出时，改成 JSON-RPC 错误，避免 Paseo 记成静默成功。 |
-| **许可证分层清楚** | 本仓库保持 **Apache-2.0**。官方内核是专有软件：只 **spawn** 你本机已安装的二进制；npm **不** 附带约 1.5GiB 的 `.par`。 |
-
-```text
-Paseo Generic ACP (NDJSON)
-  → paseo-agy-acp 产品代理
-      身份 · daemon 上下文 · 模式映射 · MCP 改写 · Admission 围栏
-  → 官方 agy_acp_server (NDJSON)
-```
-
-| 层 | 许可证 | 我们怎么做 |
-|---|---|---|
-| **本仓库**（代理、Admission、Paseo 上下文） | **Apache-2.0** | **保持 Apache-2.0，不改开源协议。** |
-| **官方 ACP 内核**（`agy_acp_server.par` / `antigravity-acp`） | **专有软件** | 只 spawn 本机内核，不分发。 |
-| **ACP 协议 / `@agentclientprotocol/sdk`** | 独立的 Apache-2.0 生态 | 官方 NDJSON 代理运行时不依赖它。 |
-
----
-
-## 1. 官方 `agy-acp` 内核能力
-
-本产品 **不重新实现** Antigravity。它拉起 Google 原生 ACP 服务器，转发 Agent
-Client Protocol NDJSON。下表是**官方内核**通过该协议提供的能力。
-
-| 范围 | 官方内核提供什么 |
-|---|---|
-| 协议 | 原生 **ACP v1 / NDJSON** |
-| 鉴权 | `authenticate`，`methodId=oauth-personal`（内核内 OAuth） |
-| 会话生命周期 | `initialize`、`session/new`、`session/prompt`、`session/cancel`、`session/set_mode`、`session/set_config_option` |
-| 流式输出 | `session/update`：助手文本、思考、工具调用 / 工具更新 |
-| 在线 session 模式 | `default`、`auto_edit`、`yolo`（官方 **没有** plan 模式） |
-| 工具 | 文件编辑、shell/终端等，以 Google 实现为准 |
-| MCP | 官方 MCP 客户端；在 `session/new` 上声明 server |
-| 模型 | 未 opt-in：只支持 Gemini 系。本机 opt-in：有资格的 Claude 4.6 与 GPT-OSS 120B（[§2](#2-我们为-paseo-做了哪些适配)）。 |
-| 回合结束 | 官方 `end_turn` / stop reason |
-
-### 模型
-
-未 opt-in 时，官方 ACP 路径**默认只支持 Gemini 系模型**。Antigravity IDE 里
-有资格的账号已经能看到 Claude 4.6 与 GPT-OSS 120B；在这条 ACP 路径上，请求
-仍按 Gemini 对齐（JSON Schema、工具 ID、GPT generation config），所以它们
-不是默认可工作集合。
-
-本机 opt-in（同一套官方内核）见 [§2](#2-我们为-paseo-做了哪些适配)。
-操作步骤：[runbook](docs/operations/official-kernel-compat-runbook.md)。
-
-工具质量、生图、供应商 503/配额文案，由官方内核和 Google 后端负责。
-本产品只 **代理** 这层能力。
-
----
-
-## 2. 我们为 Paseo 做了哪些适配
-
-下面这些才是本仓库存在的理由：**Paseo 侧**加在官方内核之上的适配。
-
-| # | 适配 | 做什么 |
-|---|---|---|
-| 1 | 产品身份 | `initialize` 的 `agentInfo` 叠加为 `agy-acp` / `paseo-agy-acp`，Paseo 看到的是稳定产品名。 |
-| 2 | Daemon 上下文桥 | 设置了 `PASEO_AGENT_ID` 时，把 Paseo daemon 的 `appendSystemPrompt` 注入官方 `session/prompt`，工作区/agent 上下文才能到达 Antigravity。 |
-| 3 | Session 模式映射 | 把 Paseo / 旧 id 映射到官方在线模式：`accept-edits` → `auto_edit`，`dangerously-skip-permissions` → `yolo`，`plan` → `default`。 |
-| 4 | MCP `http` → `sse` | Paseo 常给出 `type: "http"` 加 header 对象；官方内核要 `sse` 和 `{name,value}` 数组。代理在 `session/new` 上改写。 |
-| 5 | Admission 围栏 | 启用 Admission 时，官方 `session/prompt` **写入前**先占账户级持久席位，回合结束/失败/取消再释放。 |
-| 6 | 空白回合守卫 | 官方 `end_turn` 且 **没有任何** 可见助手/工具输出时，改成 JSON-RPC 错误（`-32000`），避免 Paseo 当成空成功回合。 |
-| 7 | 隔离 Admission 账本 | 官方内核队列状态在 `$AGY_ACP_STATE_DIR/official-kernel`，不与历史账本混用。 |
-| 8 | 单一内核 | `PASEO_AGY_ACP_KERNEL=legacy` 和 `--legacy-kernel` 直接失败。官方内核是唯一 ACP 执行路径。 |
-| 9 | 本机模型兼容（opt-in） | 同一套官方内核：本机解开 + 请求转换，让有资格的 Claude 4.6 与 GPT-OSS 120B 跑完回合。未 opt-in 则关闭。 |
-
-`PASEO_HOME` 可选；未设置或为空时回退到 `~/.paseo`。Paseo 通常会给 ACP
-provider 进程提供 `PASEO_AGENT_ID`（以及 `PASEO_AGENT_CWD`）。
-
-### 本机 opt-in：Claude 4.6 与 GPT-OSS 120B
-
-**2.2 仍使用同一套官方 ACP 内核。** 它只增加这一层。如果未 opt-in，
-官方路径默认只支持 Gemini 系模型。
-
-opt-in 是 **本机、显式** 的：
-
-1. 对本机已安装的官方 RC01 构件做 pin（hash 校验；不匹配则 fail closed）。
-2. **只在本机**解开。npm 和 git **不**分发 Google 的 `.par` 或 runfiles。
-3. 加载 `paseo_model_compat.py`：只保留同时出现在 live CCPA 目录 **和** 本地
-   profile 里的模型；转换工具 JSON Schema（`$schema`、`parameters`）、配对
-   工具 ID、处理 GPT-OSS generation config。Gemini 与未知 id 走 identity，
-   不加变换。
-4. `prepare` → `verify` → lifecycle `activate`，再把
-   `PASEO_AGY_ACP_OFFICIAL_BIN` 指到 **stable** wrapper
-   （`agy-acp-kernel-compat-active` / `status.stableWrapperPath`）。不要把
-   生产指到 per-release 冒烟 wrapper。
-
-命令：`agy-acp-prepare-official-kernel-compat`（或
-`node ./scripts/prepare-official-kernel-compat.mjs`）。完整参数、JSON 字段和
-回滚见 [runbook](docs/operations/official-kernel-compat-runbook.md)。
-
-维护者主机在具备 raw CCPA 资格时核验过：`claude-sonnet-4-6`、
-`claude-opus-4-6-thinking`、`gpt-oss-120b-medium` —— 文本、顺序工具、warm
-resume。你的账号仍须在 raw CCPA 目录里拥有这些 id。
-
-本机 opt-in 之后，同一台主机上的 Paseo 活回合（Yolo）。仍是同一套官方内核；
-npm **不**分发 Google 的 `.par`。
-
-**Claude Opus 4.6 (Thinking)** — hello 回合，5s：
-
-![Paseo composer：Claude Opus 4.6 Thinking，Yolo，hello 回合完成](docs/evidence/evidence-claude-opus-46-thinking.png)
-
-**GPT-OSS 120B (Medium)** — hello 回合，4s：
-
-![Paseo composer：GPT-OSS 120B Medium，Yolo，回合完成](docs/evidence/evidence-gpt-oss-120b-medium.png)
-
-请在自己的环境测试 Claude 与 GPT-OSS（单个 agent 和一次开多个）。模型缺失、
-回合失败或工具异常，请 [开 Issue](https://github.com/tiezbro/paseo-agy-acp/issues)。
-我们会按反馈做优化和修复。
-
----
-
-## 3. 为什么需要 Admission 队列
-
-### 背景
-
-Paseo 是 **主控**。它会 **一次委派很多个 Antigravity agent**。这种突发下，
-高并发曾经把回合挂死：助手气泡一直空着、进程卡住，或 ACP **Internal Error
-`-32603`**。当时的 **3+1**（3 个共享席位、1 路同时启动、启动间隔 2 秒）是给
-那种故障 **止血**用的，不是测出来的官方 ACP 上限。
-
-换成官方内核后，生产环境实测默认 **8 个共享席位 / 8 路同时启动 / 2 秒间隔**，
-包括一次 10 个 Antigravity agent 的派发，没有复现旧的挂死。隔离环境
-`127.0.0.1:6768` 上 6 路 yolo 压测同样没有复现。官方 ACP **仍未**被证明无限
-并发。**8 是实测默认值，不是已经公布的产品上限。**
-
-### 原理
-
-```text
-Paseo 主控
-  一次委派多个 Antigravity agent
-            |
-            v
-  账户级持久 Admission 队列
-            |
-     共享 active 席位（默认 8）
-     限速同时启动（默认 8，间隔 ≥ 2s）
-            |
-     官方 session/prompt 写入
-            |
-     回合结束 / 失败 / 取消后释放席位
-```
-
-多出来的 turn **在队列里等**，而不是一起打到 `agy_acp_server` 上。队列按最早
-可调度者排队，并带 agent fairness，跨 connector 进程持久，非法环境变量失败
-关闭（非整数、`< 1`、启动间隔 `< 2000ms`）。共用同一状态目录的多个 Paseo
-agent 共用一份账户席位池，不会各自再乘一倍并发。
-
-### 优势
-
-队列不是为了把 Paseo 永久锁在 8 个 agent。它是为了让 **Paseo 主控委派
-Antigravity 更稳健**：
-
-- 主控仍然可以一次派出一批；
-- 超出席位的工作排队，而不是把官方内核打满；
-- 席位是账户级的，跨进程、跨重启仍然一致；
-- 排队超时 / 取消 / 内核错误仍然能和崩溃区分开；
-- 可以把席位/启动整数调到 **≥ 1** 去试更高并发，测到结果欢迎反馈。
-
-所以换成官方内核之后，Admission 仍然留在产品里。
-
----
-
-## Admission Controller v2
-
-Admission 是上面这套队列的落地实现：持久席位、启动限速、故障恢复、typed
-terminal。通过环境变量 **显式启用**（`AGY_ACP_ADMISSION_ENABLED=true`，加上
-绝对路径 `AGY_ACP_STATE_DIR` 和合法 `PASEO_AGENT_ID`）。只要 Paseo 会委派
-不止一个 Antigravity agent，就建议打开。
-
-### 启用 Admission
-
-每个 Antigravity 账号准备一个 owner-only 状态目录，并跑随包发布的预检：
+单 agent 可以不启用 Admission；多 agent 委派建议启用。
 
 ```bash
 export AGY_ACP_STATE_DIR="$HOME/.local/state/paseo-agy-acp/account-name"
 install -d -m 700 "$AGY_ACP_STATE_DIR"
-agy-acp-prepare-state "$AGY_ACP_STATE_DIR"
-export AGY_ACP_ADMISSION_ENABLED=true
+npx -y --package=paseo-agy-acp@2.3.0 \
+  agy-acp-prepare-state "$AGY_ACP_STATE_DIR"
 ```
 
-预检会以 `0700` 创建缺失目录，并核验类型、owner 和精确权限。已经存在的宽权限
-目录会被 **拒绝**，不会静默改权。确认路径和归属后执行
-`chmod 700 -- "$AGY_ACP_STATE_DIR"`，再重新跑预检。Admission key 与 SQLite
-文件以 `0600` 创建。
+每个 Antigravity 账号使用一个 owner-only 状态目录。预检会创建或验证目录，并拒绝
+已经存在的宽权限路径。
 
-官方内核队列写在 `$AGY_ACP_STATE_DIR/official-kernel` 下，不会和历史账本混用。
+### 3. 配置 Paseo provider
 
-### 默认与保守 policy
-
-| 规则 | 默认 | 覆盖 |
-|---|---:|---|
-| 共享 active 席位 | **8**（实测） | `AGY_ACP_ADMISSION_MAX_ACTIVE_TURNS`，整数 **≥ 1** |
-| 同时启动路数 | **8**（实测） | `AGY_ACP_ADMISSION_MAX_CONCURRENT_STARTS`，整数 **≥ 1** |
-| 最小启动间隔 | **2000 ms** | `AGY_ACP_ADMISSION_MIN_START_INTERVAL_MS`，整数 **≥ 2000** |
-| 最长排队时间 | 30 分钟 | `AGY_ACP_ADMISSION_QUEUE_TIMEOUT_MS`，整数 `1`–`1800000` |
-| 容量 cooldown | 30 秒 | `AGY_ACP_ADMISSION_CAPACITY_COOLDOWN_MS`，整数 **≥ 30000** |
-
-使用同一状态目录的所有本地 connector、session 和模型共享这些账号席位。队列按
-oldest-eligible 调度并带 agent fairness。可信的 provider 容量故障只暂停受影响
-的 provider/model。排队超时会在同一事务中取消请求并删除加密 prompt。
-
-覆盖值失败即关闭：非整数、`< 1`、启动间隔低于 2000 ms 都不会启动。本仓库
-**不公布**产品上限；把整数调大去试，测到结果欢迎反馈。
-
-更紧的历史 3+1（可选，**不是**推荐默认）：
-
-```bash
-AGY_ACP_ADMISSION_MAX_ACTIVE_TURNS=3
-AGY_ACP_ADMISSION_MAX_CONCURRENT_STARTS=1
-```
-
-soft drain 可以降低席位，而不杀死进行中的工作、不丢弃排队请求。
-
-### 持久化、dispatch 与恢复
-
-本地实现使用 `shared-admission-queue` **schema v3**。持久 policy
-（`policy_state` / `policy_fingerprint`）、queued owner、带 suspect metadata 的
-lease（给 runtime reaper 用）以及 `schema_migrations` 都在同一份 SQLite 账本里。
-额外的 delivery-authority 表仍然 fail closed。
-
-每个启用 Admission 的 runtime opener 都会在 startup recovery 前 claim 或核验
-这份持久 policy。第二个 connector 对同一目录使用 **不同** policy 时直接失败
-关闭，不会形成只存在于进程内的 policy 分叉。
-
-空闲 session 不占席位，也不保留常驻 turn 进程。获得席位的 turn 走一次 fenced
-的 `session/prompt` 写入；无法证明的写入进入 `dispatch_ambiguous` 或
-`recovery_required`，绝不静默重放。Heartbeat、owner 身份和 runtime reaper 只
-在 owner 被证实退出时回收容量。关闭 session 会取消尚未开始的排队请求；已经
-运行的 turn 走 connector 取消路径（`session/cancel`）。
-
-Admission **不会**再做第二套 live 输出、outbox、ACK、terminal replay 或手工
-requeue API。官方 session 历史仍由 ACP Connector / 内核负责。
-
-### 设计 authority 与实现边界
-
-当前 authority 是 confirmed Scheme 与已接受的 Stage 2 artifacts（见下方
-[权威文档](#权威文档v2000-closeout)）。旧 Admission design 文件只作为
-historical input。
-
-仓库严格只有两个源码功能区：
-
-```text
-paseo-agy-acp/
-|-- ACP Connector/          ACP NDJSON 代理、官方内核 spawn、Paseo 上下文
-`-- Admission Controller/   持久席位、队列、策略、启动间隔、恢复
-```
-
-`ACP Connector/` 负责协议、身份、模式/MCP 改写、内核 spawn，以及围在
-`session/prompt` 上的 Admission。`Admission Controller/` 只负责共享席位池、
-持久队列、策略账本、lease、reaper 和 capacity cooldown。package 入口仍在
-`ACP Connector/` 内。
-
----
-
-## 环境要求
-
-- **Node.js >= 22**
-- 本机已安装 **官方 Antigravity ACP 内核**。维护者主机默认 pin：
-
-  `~/.local/opt/agy-acp-server-agy_acp_server_20260818_01_RC01/agy-acp-server-canary`
-
-  用 `PASEO_AGY_ACP_OFFICIAL_BIN` 覆盖。如果路径就是 `.par` 本身，进程会
-  `cd` 到该目录并以 `--uid=` 启动（没有可用 group 的主机，例如 `nogroup`，
-  必须带 `--uid=`）。
-
-- 已完成官方 `authenticate`（`methodId=oauth-personal`）。令牌留在内核自己的
-  状态里，本仓库不会打印。
-
-## 安装
-
-`npx` 安装并运行 **本代理**。它不会安装 Paseo，也不会安装 Google 内核。适配器
-请用 npm，不要默认 `git clone`。
-
-```bash
-# 经代理做官方 OAuth（本机必须已有官方内核）
-npx -y paseo-agy-acp@2.3.0 --login
-```
-
-命令：`paseo-agy-acp` / `agy-acp`（ACP 代理）、`agy-acp-prepare-state`、
-`agy-acp-prepare-official-kernel-compat`。第一次 `npx` 可能要编译
-`better-sqlite3`（本机需要 C++ 工具链）。
-
-源码 checkout（开发用）：
-
-```bash
-git clone https://github.com/tiezbro/paseo-agy-acp.git
-cd paseo-agy-acp
-npm ci
-npm run build
-npm test
-```
-
-```bash
-# ACP initialize 冒烟（需要官方二进制）
-printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":1}}' \
-  | npx -y paseo-agy-acp@2.3.0
-```
-
-登录（官方内核 OAuth）：
-
-```bash
-npx -y paseo-agy-acp@2.3.0 --login
-```
-
-## 环境变量
-
-| 变量 | 作用 |
-|---|---|
-| `PASEO_AGY_ACP_OFFICIAL_BIN` | 官方内核 wrapper 或 `.par` 路径 |
-| `PASEO_AGENT_ID` | 启用 daemon 上下文 + Admission agent 绑定 |
-| `PASEO_HOME` | 可选 Paseo home；缺省 `~/.paseo` |
-| `AGY_ACP_ADMISSION_ENABLED` | `true` / `1` 时把 prompt 围进 Admission |
-| `AGY_ACP_STATE_DIR` | Admission 状态目录（官方运行时用下面的 `official-kernel/`） |
-| `AGY_ACP_ADMISSION_MAX_ACTIVE_TURNS` | 共享 active 席位。整数 **≥ 1**。默认 **8**（实测）。 |
-| `AGY_ACP_ADMISSION_MAX_CONCURRENT_STARTS` | 同时启动路数。整数 **≥ 1**。默认 **8**（实测）。 |
-| `AGY_ACP_ADMISSION_MIN_START_INTERVAL_MS` | 最小启动间隔。默认 **2000**；低于 2000 失败关闭。 |
-| `AGY_ACP_ADMISSION_QUEUE_TIMEOUT_MS` | 最长排队。默认 30 分钟；上限 1800000。 |
-| `AGY_ACP_ADMISSION_CAPACITY_COOLDOWN_MS` | 可信容量故障后的 provider/model cooldown。默认 30000；最小 30000。 |
-
-`PASEO_AGY_ACP_KERNEL=legacy` 和 `--legacy-kernel` 失败关闭。
-
-## 架构
-
-```text
-Paseo / Generic ACP 客户端
-  └─ paseo-agy-acp (agy-acp)
-       ├─ 产品代理：身份、daemon 上下文、模式映射、MCP 改写
-       ├─ session/prompt 上的 Admission 围栏（可选，建议打开）
-       └─ 官方 agy_acp_server (NDJSON)
-            └─ Antigravity 账号、工具、MCP、模型
-```
-
-每个 connector 进程一个官方内核子进程。Admission 通过持久账本协调这些进程之间的
-**账户级**席位。
-
-## Paseo Provider 配置
+在 `$PASEO_HOME/config.json` 或 `~/.paseo/config.json` 中增加或更新 provider：
 
 ```json
 {
@@ -455,7 +138,7 @@ Paseo / Generic ACP 客户端
       "type": "acp",
       "command": ["npx", "-y", "paseo-agy-acp@2.3.0"],
       "env": {
-        "PASEO_AGY_ACP_OFFICIAL_BIN": "/home/YOU/.local/opt/agy-acp-server-agy_acp_server_20260818_01_RC01/agy-acp-server-canary",
+        "PASEO_AGY_ACP_OFFICIAL_BIN": "/absolute/path/to/agy-acp-server-wrapper-or.par",
         "AGY_ACP_ADMISSION_ENABLED": "true",
         "AGY_ACP_STATE_DIR": "/home/YOU/.local/state/paseo-agy-acp/account-name"
       }
@@ -464,109 +147,95 @@ Paseo / Generic ACP 客户端
 }
 ```
 
-`command` 是 Paseo **拉起本代理** 的方式。`PASEO_AGY_ACP_OFFICIAL_BIN` 必须指向
-本机已安装的内核。`command` 为 `node` 时，`args` 传
-`["/path/to/paseo-agy-acp/dist/ACP Connector/main.js"]`。
-Paseo 会给 provider 进程提供 `PASEO_AGENT_ID`。
+Paseo 会向 provider 进程提供 `PASEO_AGENT_ID` 和 `PASEO_AGENT_CWD`。只有在明确
+需要不受 Admission 约束的单 agent 运行时，才省略两个 Admission 变量。
 
-改完 provider 后重启 Paseo daemon，空闲的 Antigravity agent 才会换到新二进制。
+### 4. 重启并验证
 
-## 初始化 Prompt
+重启 Paseo daemon，创建 provider 为 `antigravity` 的 agent，选择受支持模式并
+发送一个简单 prompt。`npx` 启动的是 Paseo 使用的 stdio ACP server，不是独立
+聊天程序。
 
-贴到任意 Paseo agent，用来安装或修复 Antigravity provider：
+<!-- readme:configuration -->
+## 配置
 
-~~~
-Configure the Paseo daemon to add an ACP provider for Google Antigravity.
+### 必要环境变量
 
-1. Confirm a local official Antigravity ACP kernel is installed (this package does not vendor it).
-2. Read Paseo config ($PASEO_HOME/config.json or ~/.paseo/config.json).
-3. Add or update providers.antigravity:
-   - type: "acp"
-   - command: ["npx", "-y", "paseo-agy-acp@2.3.0"]  (spawns the proxy, not the Google kernel)
-   - env.PASEO_AGY_ACP_OFFICIAL_BIN: local official kernel wrapper (agy-acp-server-canary or agy_acp_server.par)
-   - env.AGY_ACP_ADMISSION_ENABLED: "true"
-   - env.AGY_ACP_STATE_DIR: absolute owner-only directory (mode 0700)
-4. Prepare Admission state: npx -y --package=paseo-agy-acp@2.3.0 agy-acp-prepare-state "$AGY_ACP_STATE_DIR"
-5. Login once: npx -y paseo-agy-acp@2.3.0 --login
-6. Restart the Paseo daemon.
-7. Verify: create a test agent with provider "antigravity", send a simple prompt.
-~~~
+| 变量 | 作用 |
+|---|---|
+| `PASEO_AGY_ACP_OFFICIAL_BIN` | 官方 kernel wrapper 或 `.par` 的绝对路径 |
+| `PASEO_HOME` | 可选 Paseo home；默认 `~/.paseo` |
+| `AGY_ACP_ADMISSION_ENABLED` | `true` / `1` 启用 prompt fence |
+| `AGY_ACP_STATE_DIR` | 一个账号共享的 owner-only 绝对状态目录 |
 
-## 验证
+高级席位、启动限速、排队超时、cooldown、权限、恢复和 policy 变更流程见
+[Admission 运维](docs/operations/admission.md)。
+
+### Mode 映射
+
+| Paseo 或旧 id | 官方在线 mode |
+|---|---|
+| `default` | `default` |
+| `accept-edits` | `auto_edit` |
+| `dangerously-skip-permissions` | `yolo` |
+| `plan` | `default`（官方内核没有 plan mode） |
+
+`PASEO_AGY_ACP_KERNEL=legacy` 和 `--legacy-kernel` 会 fail closed。官方内核是唯一
+执行路径。
+
+### Skill roots
+
+Discovery 从 workspace `.agents/skills.json` 或 `skills.json`，以及全局
+`~/.gemini/config/skills.json` 读取配置目录。默认 roots 覆盖 workspace
+Agents/Codex 目录和全局 Gemini/Agents/Codex 目录。每个 skill 目录需要包含带
+可用 name 与 description frontmatter 的 `SKILL.md`。
+
+<!-- readme:operations -->
+## 运维与故障排查
+
+- 官方内核必须已在本机安装；`npx` 只安装代理。
+- npm 首次运行可能编译 `better-sqlite3`，需要本机 C++ 工具链。
+- 修改 provider command、环境变量或内核路径后要重启 Paseo。
+- 已启用 Admission 但 identity 缺失、状态权限不安全或 policy 非法时，系统拒绝启动，
+  不会静默变成 unfenced 运行。
+- 工具质量、生图、backend 配额与 provider 错误文案仍由官方内核和 Google backend
+  负责。
+- 可复现升级或回滚应在 provider command 中固定三段 npm 版本，然后重启 Paseo。
+
+当前运维入口：
+
+- [Admission 运维](docs/operations/admission.md)
+- [Claude / GPT-OSS 本机兼容](docs/operations/official-kernel-compat-runbook.md)
+- [npm Trusted Publishing](docs/operations/npm-publishing.md)
+- [Changelog](CHANGELOG.md)
+- [GitHub Releases](https://github.com/tiezbro/paseo-agy-acp/releases)
+- [Issue tracker](https://github.com/tiezbro/paseo-agy-acp/issues)
+
+详细实现与研究记录保留在 `docs/design/`、`docs/evidence/` 和 `docs/research/`；它们
+不是发布历史或安装说明。
+
+<!-- readme:development -->
+## 开发
 
 ```bash
-# 冒烟（需要官方二进制）
-printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":1}}' \
-  | node 'dist/ACP Connector/main.js'
-
-# 完整测试
-npm test
+git clone https://github.com/tiezbro/paseo-agy-acp.git
+cd paseo-agy-acp
+npm ci
+npm run validate
 ```
 
-金丝雀清单：真实 Paseo agent 上的 daemon 上下文、多回合、以 `http` 声明的 MCP
-server、模式 `dangerously-skip-permissions` → 官方 `yolo`、小席位下的 Admission
-排队、空白回合拒绝。
-
-`2.1.0.0` 在隔离环境 `127.0.0.1:6768` 上证明了产品代理 + 官方内核 + daemon
-上下文。
-
-## 已知问题
-
-- opt-in 之后请自行测试 Claude 4.6 与 GPT-OSS 120B，不稳定就
-  [开 Issue](https://github.com/tiezbro/paseo-agy-acp/issues)，我们据此优化和修复。
-- 官方 RC01 的 active cancel 在我们的 harness 里未确认；真实 503/配额未对
-  线上后端做诱导验证。
-- 官方内核二进制必须本机已安装；本包装不会随包分发它。`npx` 只拉起代理。
-- 在 `AGY_ACP_ADMISSION_ENABLED`、`AGY_ACP_STATE_DIR`、`PASEO_AGENT_ID` 都合法
-  之前，Admission 保持关闭。没有 agent id 的 discovery / `--login` 不会打开账本。
-- 官方 ACP 没有 plan 模式；Paseo 的 `plan` 映射到 `default`。
-- 生图和线上 503 文案由官方内核负责。本适配器 **不声称** 已在此重新验证这些能力。
-- 当 `PASEO_AGENT_ID` 指向正在运行的 Paseo agent 时，裸 prompt 测试可能看到
-  被前置的 daemon 上下文：
+官方内核 smoke 还需要 `PASEO_AGY_ACP_OFFICIAL_BIN`：
 
 ```bash
-env -u PASEO_AGENT_ID -u PASEO_HOME npm test
+node scripts/official-kernel-smoke.mjs
 ```
 
-## 升级 / 回滚
+<!-- readme:license -->
+## 许可证与免责声明
 
-若 Paseo `command` 走 npx，改 npm 版本钉（例如 `paseo-agy-acp@2.3.0`）并重启
-daemon。这是打包安装的升级/回滚路径。
+适配器源码使用 [Apache-2.0](LICENSE)。官方 Antigravity 内核不包含在本项目中，
+并继续受 [Google Antigravity 条款](https://antigravity.google/terms) 约束。本社区
+项目只 spawn 你在本机安装的内核，不重新实现、不重新授权、不重新分发该软件。
 
-源码 checkout：
-
-```bash
-# 升级
-git pull && npm ci && npm run build && npm test
-
-# 回滚
-git checkout <rev> && npm ci && npm run build && npm test
-```
-
-改 `command` 或内核路径后重启 daemon。Admission policy 变更（例如 3+1 → 8/8）
-时，如果持久 fingerprint 会把新 policy 失败关闭，请换一个 **全新** 的
-`AGY_ACP_STATE_DIR`。
-
-## 权威文档（v2.0.0.0 closeout）
-
-- [confirmed Scheme](/home/tiezbro/projects/MAACS/docs/maacs-paseo-agy-acp-confirmed-scheme.md)
-- [Stage 2 handoff](docs/design/v2.0.0.0-stage2-handoff.md)
-- [503 feasibility](docs/design/v2.0.0.0-stage2-503-feasibility.md)
-- [ACP source map](docs/design/v2.0.0.0-stage2-acp-source-map.md)
-- [Admission source map](docs/design/v2.0.0.0-stage2-admission-source-map.md)
-- [Architecture](docs/design/v2.0.0.0-stage2-architecture.md)
-- [Domain model](docs/design/v2.0.0.0-stage2-domain-model.md)
-- [Test contracts](docs/design/v2.0.0.0-stage2-test-contracts.md)
-- [Specification](docs/design/v2.0.0.0-stage2-spec.md)
-
-→ [本地技术说明](./docs/PASEO_LOCAL_CHANGES.md)
-
-## 免责声明
-
-官方内核受 [Google Antigravity 条款](https://antigravity.google/terms) 约束。
-本产品只 spawn 该内核，不重新实现、不分发该二进制。
-
-面向 Antigravity 的第三方工具可能违反上述条款并导致账号风险。优先使用官方 API
-密钥。建议只用测试/备用账号。
-
-**按现状提供，无担保。使用风险自负。**
+第三方使用可能带来账号或服务风险。应使用经过授权的账号与官方凭据。本软件按现状
+提供，不作任何担保。

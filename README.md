@@ -1,477 +1,149 @@
 <div align="center">
 
-# 🔌 paseo-agy-acp
+# paseo-agy-acp
 
-**Paseo adapter in front of Google's official Antigravity ACP kernel**
+**Reliable Paseo adapter for Google's official Antigravity ACP kernel**
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](./LICENSE)
 [![Version](https://img.shields.io/badge/version-2.3.0-blue?style=flat-square)](./package.json)
 [![npm](https://img.shields.io/npm/v/paseo-agy-acp?style=flat-square)](https://www.npmjs.com/package/paseo-agy-acp)
-[![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen?style=flat-square)](#)
+[![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen?style=flat-square)](./package.json)
 [![ACP](https://img.shields.io/badge/ACP-NDJSON%20v1-8A2BE2?style=flat-square)](https://agentclientprotocol.com)
 
-</div>
-
-<div align="center">
-
-[🇺🇸 English](./README.md) | [🇨🇳 中文](./README.zh-CN.md)
+[English](./README.md) | [中文](./README.zh-CN.md) | [Changelog](./CHANGELOG.md)
 
 </div>
 
----
+<!-- readme:positioning -->
+## What this product is
 
-`paseo-agy-acp` is the Paseo-facing ACP product for Google Antigravity. From
-**2.1.0.0** it runs Google's official Antigravity ACP kernel (`agy_acp_server` /
-Registry id `antigravity-acp`) as a thin NDJSON proxy, then adds the Paseo
-behavior that Generic ACP does not provide on its own: daemon context, session
-mode mapping, MCP rewrite, product identity, and an account-wide Admission
-queue so the Paseo main controller can delegate many Antigravity agents without
-a startup stampede.
+`paseo-agy-acp` is the product adapter between Paseo and Google's official
+Antigravity ACP kernel. Authentication, models, tools, MCP, and inference stay
+inside the official kernel. This adapter adds the context, compatibility,
+concurrency control, skill discovery, and failure semantics required for
+reliable Paseo multi-agent operation.
 
-**2.2** still uses the same official ACP kernel. It only adds an explicit
-**local opt-in** compatibility layer: entitled Claude 4.6 and GPT-OSS 120B can
-complete turns on this path. If you do not opt in, the official path supports
-Gemini-family models only by default.
+It is not a second Antigravity implementation and does not redistribute
+Google's proprietary kernel. The npm package contains only this Apache-2.0
+proxy; you install and authenticate the official kernel separately.
 
-**2.3.0** adds slash command hints for user-invocable skills discovered from
-Gemini, Agents, Codex, configured, and workspace roots. Native ACP commands stay
-intact, workspace skills remain scoped to their session cwd, and concurrent
-session creation cannot mix command hints between workspaces.
+> Community maintained. Not official Paseo support and not official Google
+> support.
 
-> **Not official Paseo support. Not official Google support.**
-> Community-maintained product. Use at your own risk.
+<!-- readme:value -->
+## Why paseo-agy-acp
 
-## 30-second summary
+ACP provides the protocol. A production Paseo provider still needs product
+behavior around that protocol:
 
-If you use Paseo with Google Antigravity, `paseo-agy-acp` gives Paseo a
-product-ready path to Google's official Antigravity ACP kernel. It keeps the
-model work inside the official kernel and adds the Paseo-side behavior that a
-Generic ACP bridge does not provide:
+| Need | Direct generic ACP connection | `paseo-agy-acp` |
+|---|---|---|
+| Official execution chain | Can start an ACP server | Keeps OAuth, models, tools, MCP, and inference in Google's official kernel |
+| Paseo context | No product-specific guarantee | Injects Paseo daemon and workspace/agent context into official prompts |
+| Modes and MCP | Client and kernel shapes may differ | Maps Paseo modes and rewrites MCP `http` declarations to the official `sse` shape |
+| Multi-agent bursts | Prompts can reach the kernel together | Uses one durable, account-wide Admission queue across connector processes |
+| Slash command discovery | Official command updates omit local skills | Adds user-invocable Gemini, Agents, Codex, configured, and workspace skills |
+| Empty turns | An output-free `end_turn` can look successful | Returns an explicit JSON-RPC error instead of recording silent success |
+| Additional entitled models | Official ACP defaults to the Gemini-family path | Offers an explicit local compatibility runbook for entitled Claude 4.6 and GPT-OSS 120B |
+| Product identity | Follows the underlying server | Exposes stable `agy-acp` / `paseo-agy-acp` identity to Paseo |
 
-- daemon context injection
-- session mode mapping
-- MCP `http` to official `sse` rewrite
-- stable product identity
-- local and workspace skill discovery for ACP slash command hints
-- burst-safe account-wide Admission queue for multi-agent delegation
-- local opt-in for Claude 4.6 and GPT-OSS 120B; without it, Gemini-family only
+### Multi-agent stability
 
-## Who this is for
+Paseo controllers can delegate several Antigravity agents at once. Admission
+lets the controller dispatch that burst while excess turns wait instead of all
+writing to `agy_acp_server` together. Seats are shared by every connector using
+the same state directory and are released on turn completion, failure, or
+cancel.
 
-Use this if:
+The tested default is **8 active turns / 8 concurrent starts / 2 seconds
+minimum start spacing**. These are adjustable operating defaults, not a claimed
+Google product limit. Invalid enabled configuration fails closed.
 
-- you run Paseo
-- you have Google Antigravity installed and authenticated locally
-- you want Antigravity available through Generic ACP
-- you delegate multiple agents and want startup bursts paced instead of stampeded
-- you want Claude 4.6 or GPT-OSS 120B through Paseo on the official ACP kernel (local opt-in)
+### Skill discovery
 
-This is probably not for you if:
+The adapter merges native ACP commands with `SKILL.md` metadata from configured
+and default Gemini, Agents, Codex, and workspace roots. Native commands win on
+name collisions, workspace skills take precedence over global skills, and
+`user-invocable: false` entries stay out of slash command hints. Discovery is
+scoped by session cwd so concurrent workspaces cannot leak command metadata to
+each other.
 
-- you do not use Paseo
-- you want a standalone Antigravity replacement
-- you expect this package to redistribute Google's proprietary kernel
+### Model boundary
 
+The unmodified official ACP path uses Gemini-family models as its default
+working set. Accounts entitled to Claude 4.6 or GPT-OSS 120B can opt into the
+local compatibility lifecycle documented in the
+[official-kernel compatibility runbook](docs/operations/official-kernel-compat-runbook.md).
+The same official kernel and Google backend remain responsible for inference;
+this repository does not vendor or replace them.
+
+<!-- readme:architecture -->
+## Architecture and ownership
+
+```text
+Paseo / Generic ACP client
+  -> paseo-agy-acp product adapter
+       identity | daemon context | mode map | MCP rewrite
+       skill hints | blank-turn guard | optional Admission fence
+  -> official agy_acp_server (ACP v1 over NDJSON)
+       OAuth | models | tools | MCP | inference
+```
+
+| Layer | Responsibility | License boundary |
+|---|---|---|
+| Paseo | Agent lifecycle, workspace, delegation, provider configuration | Paseo project |
+| `paseo-agy-acp` | Paseo-specific ACP adaptation and Admission | Apache-2.0; published on npm |
+| Official `agy_acp_server` | Authentication, model catalog, tools, MCP, and inference | Google proprietary software; local install only |
+
+The adapter runs one official kernel child per connector process. Admission is
+optional but recommended whenever one Antigravity account serves concurrent
+Paseo agents.
+
+<!-- readme:requirements -->
+## Requirements
+
+- **Paseo** with Generic ACP provider support
+- **Node.js 22 or newer**
+- A locally installed official Antigravity ACP kernel wrapper or `.par`
+- An Antigravity account able to complete official `oauth-personal`
+- Linux filesystem ownership and mode support when Admission is enabled
+
+Set `PASEO_AGY_ACP_OFFICIAL_BIN` unless the kernel already exists at the
+maintainer-host default pin. If this variable points directly at a `.par`, the
+adapter starts it from its own directory and supplies the required uid.
+
+<!-- readme:quickstart -->
 ## Quickstart
 
-Prerequisites: **Paseo**, **Node.js >= 22**, and a **locally installed** official
-Antigravity ACP kernel (this package does **not** install Google's `.par`).
-`--login` completes official OAuth (`authenticate` / `oauth-personal`). Set
-`PASEO_AGY_ACP_OFFICIAL_BIN` to your kernel wrapper or `.par` (required unless
-it already sits at the maintainer-host default pin).
-
-The npm package `paseo-agy-acp@2.3.0` is the **proxy**. `npx` launches that
-proxy; it does not replace Antigravity or Paseo.
+### 1. Point to the official kernel and authenticate
 
 ```bash
-export PASEO_AGY_ACP_OFFICIAL_BIN="/absolute/path/to/agy_acp_server.par-or-wrapper"
+export PASEO_AGY_ACP_OFFICIAL_BIN="/absolute/path/to/agy-acp-server-wrapper-or.par"
 npx -y paseo-agy-acp@2.3.0 --login
-
-export AGY_ACP_STATE_DIR="$HOME/.local/state/paseo-agy-acp/default"
-install -d -m 700 "$AGY_ACP_STATE_DIR"
-npx -y --package=paseo-agy-acp@2.3.0 agy-acp-prepare-state "$AGY_ACP_STATE_DIR"
-export AGY_ACP_ADMISSION_ENABLED=true
 ```
 
-Then point Paseo's Generic ACP `command` at npx (see
-[Paseo provider config](#paseo-provider-config)). Do **not** treat the next
-line as a standalone chat app: it is the stdio ACP server Paseo spawns.
+OAuth is completed by the official kernel. Its tokens remain in the kernel's
+own state and are not printed by this adapter.
 
-```bash
-npx -y paseo-agy-acp@2.3.0
-```
+### 2. Prepare Admission state
 
-Claude / GPT-OSS: [§1](#1-official-agy-acp-kernel-capabilities) and the
-[runbook](docs/operations/official-kernel-compat-runbook.md). Source checkout
-(`git clone` + `npm ci` + `npm run build`) is under [Install](#install).
-
-## About
-
-This repository is a **product adapter**, not a second Antigravity. The kernel
-does the model work; this repo adds the Paseo-side behavior a Generic ACP bridge
-does not provide on its own.
-
-| Highlight | Why it matters |
-|---|---|
-| **Official ACP kernel** | Native ACP over NDJSON. Without opt-in the official path supports Gemini only. Local opt-in adds entitled Claude 4.6 and GPT-OSS 120B. |
-| **Paseo-side glue** | Daemon `appendSystemPrompt`, mode ids Paseo already sends, and MCP `http` servers are rewritten so Generic ACP agents can talk to Antigravity without extra adapter code. You still install Paseo, the official kernel, and point `command` at this proxy. |
-| **Burst-safe delegation** | An account-wide durable Admission queue paces `session/prompt` so Paseo's main controller can dispatch many Antigravity agents without every turn hitting the kernel at once. |
-| **Production-tested defaults** | Default **8 shared seats / 8 concurrent starts / 2s interval**, from live Paseo dispatch (including a 10-agent burst) plus isolated stress. Integers **≥ 1** can probe higher; this repo does **not** invent a product ceiling. |
-| **Fail-closed operations** | Bad env, policy splits, and unprovable writes fail closed. Queue timeout, cancel, and kernel errors stay distinguishable. |
-| **Empty-turn guard** | An official `end_turn` with no visible assistant/tool output becomes a JSON-RPC error, so Paseo does not record a silent success. |
-| **Clean license split** | This repo stays **Apache-2.0**. The official kernel is proprietary: we **spawn** the binary you already installed; npm does **not** ship the ~1.5GiB `.par`. |
-
-```text
-Paseo Generic ACP (NDJSON)
-  → paseo-agy-acp product proxy
-      identity · daemon context · mode map · MCP rewrite · Admission fence
-  → official agy_acp_server (NDJSON)
-```
-
-| Layer | License | What we do |
-|---|---|---|
-| **This repository** (proxy, Admission, Paseo context) | **Apache-2.0** | Keep Apache-2.0. We are **not** relicensing. |
-| **Official ACP kernel** (`agy_acp_server.par` / `antigravity-acp`) | **Proprietary** | Spawn the kernel on the local machine. Do not redistribute it. |
-| **ACP protocol / `@agentclientprotocol/sdk`** | Separate Apache-2.0 ecosystem | Not required at runtime for the official NDJSON proxy. |
-
----
-
-## 1. Official `agy-acp` kernel capabilities
-
-The product **does not reimplement** Antigravity. It starts Google's native ACP
-server and forwards Agent Client Protocol NDJSON. The table below is the
-**official kernel** surface, as seen through that protocol.
-
-| Area | What the official kernel provides |
-|---|---|
-| Protocol | Native **ACP v1 over NDJSON** |
-| Auth | `authenticate` with `methodId=oauth-personal` (OAuth inside the kernel) |
-| Session lifecycle | `initialize`, `session/new`, `session/prompt`, `session/cancel`, `session/set_mode`, `session/set_config_option` |
-| Streaming | `session/update`: assistant text, thoughts, tool calls / tool updates |
-| Live session modes | `default`, `auto_edit`, `yolo` (official has **no** plan mode) |
-| Tools | File edits, shell/terminal, and other Antigravity tools as Google implements them |
-| MCP | Official MCP client; servers are declared on `session/new` |
-| Models | Without opt-in: Gemini-family only. With local opt-in: entitled Claude 4.6 and GPT-OSS 120B ([§2](#2-paseo-adaptations)). |
-| Turn completion | Official `end_turn` / stop reasons |
-
-### Models
-
-Without opt-in, the official ACP path supports **Gemini-family models only**.
-The Antigravity IDE can already list Claude 4.6 and GPT-OSS 120B for entitled
-accounts; on this ACP path those requests are still shaped for Gemini (JSON
-Schema, tool-call ids, GPT generation config), so they are not a default
-working set.
-
-Local opt-in (same official kernel) is [§2](#2-paseo-adaptations). Operator
-steps: [runbook](docs/operations/official-kernel-compat-runbook.md).
-
-Tool quality, image generation, and provider 503/quota text are owned by the
-official kernel and Google's backend. This product **proxies** that surface.
-
----
-
-## 2. Paseo adaptations
-
-These are the **Paseo-side** layers on top of the official kernel — the reason
-this repository exists.
-
-| # | Adaptation | What it does |
-|---|---|---|
-| 1 | Product identity | `initialize` `agentInfo` is overlaid as `agy-acp` / `paseo-agy-acp` so Paseo sees a stable product name. |
-| 2 | Daemon context bridge | When `PASEO_AGENT_ID` is set, Paseo daemon `appendSystemPrompt` is injected into official `session/prompt`, so workspace/agent context reaches Antigravity. |
-| 3 | Session mode mapping | Paseo / legacy ids map onto official live modes: `accept-edits` → `auto_edit`, `dangerously-skip-permissions` → `yolo`, `plan` → `default`. |
-| 4 | MCP `http` → `sse` | Paseo often hands MCP servers as `type: "http"` plus a header map. The official kernel wants `sse` and `{name,value}` header arrays. The proxy rewrites that on `session/new`. |
-| 5 | Admission fence | When Admission is enabled, each official `session/prompt` takes a durable account-wide seat **before** the kernel write; the seat is released when the turn finishes, fails, or is cancelled. |
-| 6 | Blank-turn guard | Official `end_turn` with **no** visible assistant/tool output is returned as a JSON-RPC error (`-32000`) instead of an empty successful turn. |
-| 7 | Isolated Admission ledger | Official-kernel queue state lives under `$AGY_ACP_STATE_DIR/official-kernel`, separate from any historical ledger. |
-| 8 | Single kernel | `PASEO_AGY_ACP_KERNEL=legacy` and `--legacy-kernel` fail closed. Official is the only ACP execution path. |
-| 9 | Local model compatibility (opt-in) | Same official kernel: local unpack + request transforms so entitled Claude 4.6 and GPT-OSS 120B can complete turns. Off until you opt in. |
-
-`PASEO_HOME` is optional and falls back to `~/.paseo` when unset or empty.
-Paseo typically provides `PASEO_AGENT_ID` (and `PASEO_AGENT_CWD`) to ACP
-provider processes.
-
-### Local opt-in: Claude 4.6 and GPT-OSS 120B
-
-**2.2 still uses the same official ACP kernel.** It only adds this layer.
-If you do not opt in, the official path supports Gemini-family models only.
-
-Opt-in is **local** and **explicit**:
-
-1. Pin the official RC01 artifacts already on the machine (hash-checked; mismatch fail-closes).
-2. Unpack them **only on this host**. npm and git do **not** ship Google's `.par` or runfiles.
-3. Load `paseo_model_compat.py`: keep models that are both in the live CCPA catalog **and** in the local profile; transform tool JSON Schema (`$schema`, `parameters`), pair tool-call ids, apply GPT-OSS generation config. Gemini and unknown ids stay identity (no extra transform).
-4. `prepare` → `verify` → lifecycle `activate`, then set `PASEO_AGY_ACP_OFFICIAL_BIN` to the **stable** wrapper (`agy-acp-kernel-compat-active` / `status.stableWrapperPath`). Do not point production at the per-release smoke wrapper.
-
-Commands: `agy-acp-prepare-official-kernel-compat` (or
-`node ./scripts/prepare-official-kernel-compat.mjs`). Exact flags, JSON keys,
-and rollback: [runbook](docs/operations/official-kernel-compat-runbook.md).
-
-Maintainer-host checks with live entitlement: `claude-sonnet-4-6`,
-`claude-opus-4-6-thinking`, `gpt-oss-120b-medium` — text, sequential tools,
-warm resume. Your account must still list those ids in raw CCPA.
-
-Live Paseo turns on that host after local opt-in (Yolo). Same official kernel;
-npm still does **not** ship Google's `.par`.
-
-**Claude Opus 4.6 (Thinking)** — hello turn, 5s:
-
-![Paseo composer: Claude Opus 4.6 Thinking, Yolo, completed hello turn](docs/evidence/evidence-claude-opus-46-thinking.png)
-
-**GPT-OSS 120B (Medium)** — hello turn, 4s:
-
-![Paseo composer: GPT-OSS 120B Medium, Yolo, completed turn](docs/evidence/evidence-gpt-oss-120b-medium.png)
-
-Please test Claude and GPT-OSS on your machine (one agent and several). If a
-model is missing, a turn fails, or tools misbehave,
-[open an Issue](https://github.com/tiezbro/paseo-agy-acp/issues). We will use
-that to prioritize fixes.
-
----
-
-## 3. Why the Admission queue exists
-
-### Background
-
-Paseo is a **main controller**. It routinely **delegates many Antigravity
-agents at once**. Under that burst, neighboring high concurrency used to
-strand turns: empty assistant bubbles, hangs, or ACP **Internal Error
-`-32603`**. The historical **3+1** fence (3 shared active seats, 1 concurrent
-start, 2s start interval) was a bleed-stop for that failure mode — not a
-measured official ACP maximum.
-
-On the official kernel we production-tested **8 shared seats / 8 concurrent
-starts / 2s interval**, including a 10-agent Antigravity dispatch that did not
-reproduce the old hang. Isolated stress on `127.0.0.1:6768` (6 concurrent yolo
-agents) also did not reproduce it. Official ACP is still **not** proven
-unlimited. **8 is a tested default, not a published product ceiling.**
-
-### Principle
-
-```text
-Paseo main controller
-  delegates many Antigravity agents
-            |
-            v
-  account-wide durable Admission queue
-            |
-     shared active seats (default 8)
-     paced concurrent starts (default 8, ≥ 2s apart)
-            |
-     official session/prompt write
-            |
-     seat released on turn end / failure / cancel
-```
-
-Extra turns **wait in the queue** instead of all hitting `agy_acp_server` at
-once. The queue is oldest-eligible with agent fairness, durable across
-connector processes, and fail-closed on bad env (non-integers, values `< 1`,
-start interval `< 2000ms`). Independent Paseo agents that share one state
-directory share one account pool — they cannot multiply concurrency by
-accident.
-
-### Advantage
-
-The point is **not** to permanently cap Paseo at 3 agents. The point is to
-keep **Paseo → Antigravity delegation steadier**:
-
-- The main controller can still dispatch a burst.
-- Surplus work queues instead of stampeding the official kernel.
-- Seats are account-wide across connector processes and restarts.
-- Queue timeout, cancel, and kernel errors remain distinguishable from a crash.
-- Operators can raise seat/start integers (**≥ 1**) to probe higher
-  concurrency and report what they find.
-
-That is why Admission stays in the product after the official-kernel switch.
-
----
-
-## Admission Controller v2
-
-Admission is the operational implementation of the queue above: durable seats,
-paced starts, recovery, and typed terminals. It is **opt-in** via env
-(`AGY_ACP_ADMISSION_ENABLED=true` plus an absolute `AGY_ACP_STATE_DIR` and a
-valid `PASEO_AGENT_ID`). Recommended for any Paseo host that delegates more
-than one Antigravity agent.
-
-### Enabling Admission
-
-Create one owner-only state directory per Antigravity account and run the
-packaged preflight:
+Admission is optional for a single agent and recommended for multi-agent
+delegation.
 
 ```bash
 export AGY_ACP_STATE_DIR="$HOME/.local/state/paseo-agy-acp/account-name"
 install -d -m 700 "$AGY_ACP_STATE_DIR"
-agy-acp-prepare-state "$AGY_ACP_STATE_DIR"
-export AGY_ACP_ADMISSION_ENABLED=true
+npx -y --package=paseo-agy-acp@2.3.0 \
+  agy-acp-prepare-state "$AGY_ACP_STATE_DIR"
 ```
 
-The preflight creates a missing directory with mode `0700` and verifies type,
-owner, and exact mode. It **rejects** an existing permissive directory instead
-of silently chmod-ing it. After you confirm path and ownership, run
-`chmod 700 -- "$AGY_ACP_STATE_DIR"` and rerun the preflight. Admission key and
-SQLite files are created with mode `0600`.
+Use one owner-only state directory per Antigravity account. The preflight
+creates or validates the directory and refuses an existing permissive path.
 
-Official-kernel queue files are written under
-`$AGY_ACP_STATE_DIR/official-kernel` so they cannot share a ledger with a
-historical install.
+### 3. Configure the Paseo provider
 
-### Default and conservative policy
-
-| Rule | Default | Override |
-|---|---:|---|
-| Shared active seats | **8** (tested) | `AGY_ACP_ADMISSION_MAX_ACTIVE_TURNS` — integer **≥ 1** |
-| Concurrent starts | **8** (tested) | `AGY_ACP_ADMISSION_MAX_CONCURRENT_STARTS` — integer **≥ 1** |
-| Minimum start interval | **2000 ms** | `AGY_ACP_ADMISSION_MIN_START_INTERVAL_MS` — integer **≥ 2000** |
-| Queue timeout | 30 minutes | `AGY_ACP_ADMISSION_QUEUE_TIMEOUT_MS` — integer `1`–`1800000` |
-| Capacity cooldown | 30 seconds | `AGY_ACP_ADMISSION_CAPACITY_COOLDOWN_MS` — integer **≥ 30000** |
-
-Every local connector using the same state directory shares those account
-seats across sessions and models. Requests are selected oldest-eligible with
-agent fairness. A trusted provider-capacity failure pauses only the affected
-provider/model. Queue timeout cancels the request and deletes its encrypted
-prompt in the same transaction.
-
-Overrides are fail-closed: non-integers, values `< 1`, and start intervals
-below 2000 ms refuse to start. This repo does **not** publish a product
-maximum; raise the integers to probe, and please report results.
-
-Optional tighter fence (historical 3+1), **not** the recommended default:
-
-```bash
-AGY_ACP_ADMISSION_MAX_ACTIVE_TURNS=3
-AGY_ACP_ADMISSION_MAX_CONCURRENT_STARTS=1
-```
-
-Soft drain can reduce seats without killing in-flight work or dropping the
-queue.
-
-### Durability, dispatch, and recovery
-
-The local implementation uses `shared-admission-queue` **schema v3**. Durable
-policy (`policy_state` / `policy_fingerprint`), queued owner instances, leases
-with suspect metadata for the runtime reaper, and `schema_migrations` live in
-one SQLite ledger. Unexpected delivery-authority tables still fail closed.
-
-Each enabled runtime opener claims or verifies that durable policy before
-startup recovery. A second connector on the same directory with a **different**
-policy fails closed rather than splitting policy per process.
-
-Idle sessions consume no seat and keep no resident turn process. An admitted
-turn uses a fenced one-shot `session/prompt` write; unprovable writes become
-`dispatch_ambiguous` or `recovery_required` instead of a silent replay.
-Heartbeat, owner identity, and the runtime reaper release capacity only when
-an owner is proven dead. Closing a session cancels queued work; an already
-running turn follows the connector cancel path (`session/cancel`).
-
-Admission does **not** add a second live-output path, outbox, ACK protocol,
-terminal replay, or manual requeue API. Official session history remains an
-ACP Connector / kernel responsibility.
-
-### Design authority and implementation boundary
-
-Current authority is the confirmed Scheme plus accepted Stage 2 artifacts
-(see [Authority documents](#authority-documents-v2000-closeout) below). The
-legacy admission design file is historical input only.
-
-The repository has exactly two source areas:
-
-```text
-paseo-agy-acp/
-|-- ACP Connector/          ACP NDJSON proxy, official kernel spawn, Paseo context
-`-- Admission Controller/   durable seats, queue, policy, paced starts, recovery
-```
-
-`ACP Connector/` owns protocol, identity, mode/MCP rewrites, kernel spawn, and
-the Admission fence around `session/prompt`. `Admission Controller/` owns only
-the shared seat pool, durable queue, policy ledger, leases, reaper, and
-capacity cooldown. Package entrypoints stay inside `ACP Connector/`.
-
----
-
-## Requirements
-
-- **Node.js >= 22**
-- **Official Antigravity ACP kernel** installed locally. Maintainer-host
-  default pin:
-
-  `~/.local/opt/agy-acp-server-agy_acp_server_20260818_01_RC01/agy-acp-server-canary`
-
-  Override with `PASEO_AGY_ACP_OFFICIAL_BIN`. If the path is the `.par` itself,
-  the process `cd`s into that directory and execs with `--uid=` (required on
-  hosts without a usable group, e.g. `nogroup`).
-
-- Completed official `authenticate` (`methodId=oauth-personal`). Tokens stay in
-  the kernel's own state; this repo never prints them.
-
-## Install
-
-`npx` installs and runs **this proxy**. It does not install Paseo or Google's
-kernel. Prefer npm over `git clone` for the adapter only.
-
-```bash
-# Official OAuth through the proxy (kernel must already be on this machine)
-npx -y paseo-agy-acp@2.3.0 --login
-```
-
-Bins: `paseo-agy-acp` / `agy-acp` (ACP proxy), `agy-acp-prepare-state`,
-`agy-acp-prepare-official-kernel-compat`. First `npx` may compile
-`better-sqlite3` (needs a local C++ toolchain).
-
-Source checkout (development):
-
-```bash
-git clone https://github.com/tiezbro/paseo-agy-acp.git
-cd paseo-agy-acp
-npm ci
-npm run build
-npm test
-```
-
-```bash
-# ACP initialize smoke (requires the official binary)
-printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":1}}' \
-  | npx -y paseo-agy-acp@2.3.0
-```
-
-Login (official kernel OAuth):
-
-```bash
-npx -y paseo-agy-acp@2.3.0 --login
-```
-
-## Environment
-
-| Variable | Purpose |
-|---|---|
-| `PASEO_AGY_ACP_OFFICIAL_BIN` | Official kernel wrapper or `.par` path |
-| `PASEO_AGENT_ID` | Enables daemon context + Admission agent binding |
-| `PASEO_HOME` | Optional Paseo home; falls back to `~/.paseo` |
-| `AGY_ACP_ADMISSION_ENABLED` | `true` / `1` to fence prompts through Admission |
-| `AGY_ACP_STATE_DIR` | Admission state directory (official runtime uses `official-kernel/` under it) |
-| `AGY_ACP_ADMISSION_MAX_ACTIVE_TURNS` | Shared active seats. Integer **≥ 1**. Default **8** (tested). |
-| `AGY_ACP_ADMISSION_MAX_CONCURRENT_STARTS` | Concurrent starts. Integer **≥ 1**. Default **8** (tested). |
-| `AGY_ACP_ADMISSION_MIN_START_INTERVAL_MS` | Minimum start spacing. Default **2000**; values below 2000 fail closed. |
-| `AGY_ACP_ADMISSION_QUEUE_TIMEOUT_MS` | Queue wait budget. Default 30 minutes; max 1800000. |
-| `AGY_ACP_ADMISSION_CAPACITY_COOLDOWN_MS` | Provider/model cooldown after a trusted capacity failure. Default 30000; minimum 30000. |
-
-`PASEO_AGY_ACP_KERNEL=legacy` and `--legacy-kernel` fail closed.
-
-## Architecture
-
-```text
-Paseo / Generic ACP client
-  └─ paseo-agy-acp (agy-acp)
-       ├─ product proxy: identity, daemon context, mode map, MCP rewrite
-       ├─ Admission fence on session/prompt (optional, recommended)
-       └─ official agy_acp_server (NDJSON)
-            └─ Antigravity account, tools, MCP, models
-```
-
-One official kernel child per connector process. Admission coordinates
-**account-wide** seats across those processes through the durable ledger.
-
-## Paseo provider config
+Add or update the provider in `$PASEO_HOME/config.json` or
+`~/.paseo/config.json`:
 
 ```json
 {
@@ -480,7 +152,7 @@ One official kernel child per connector process. Admission coordinates
       "type": "acp",
       "command": ["npx", "-y", "paseo-agy-acp@2.3.0"],
       "env": {
-        "PASEO_AGY_ACP_OFFICIAL_BIN": "/home/YOU/.local/opt/agy-acp-server-agy_acp_server_20260818_01_RC01/agy-acp-server-canary",
+        "PASEO_AGY_ACP_OFFICIAL_BIN": "/absolute/path/to/agy-acp-server-wrapper-or.par",
         "AGY_ACP_ADMISSION_ENABLED": "true",
         "AGY_ACP_STATE_DIR": "/home/YOU/.local/state/paseo-agy-acp/account-name"
       }
@@ -489,116 +161,103 @@ One official kernel child per connector process. Admission coordinates
 }
 ```
 
-`command` is how Paseo **spawns this proxy**. `PASEO_AGY_ACP_OFFICIAL_BIN` must
-point at a kernel already installed on the machine. When `command` is `node`,
-pass `["/path/to/paseo-agy-acp/dist/ACP Connector/main.js"]` as `args`.
-Paseo supplies `PASEO_AGENT_ID` to the provider process.
+Paseo supplies `PASEO_AGENT_ID` and `PASEO_AGENT_CWD` to the provider process.
+Omit the two Admission variables only when you intentionally want unfenced
+single-agent operation.
 
-Restart the Paseo daemon after changing the provider so idle Antigravity
-agents pick up the new binary.
+### 4. Restart and verify
 
-## Setup prompt
+Restart the Paseo daemon, create an agent with provider `antigravity`, select a
+supported mode, and send a simple prompt. `npx` starts a stdio ACP server for
+Paseo; it is not a standalone chat application.
 
-Paste into any Paseo agent to install or repair the Antigravity provider:
+<!-- readme:configuration -->
+## Configuration
 
-~~~
-Configure the Paseo daemon to add an ACP provider for Google Antigravity.
+### Essential environment
 
-1. Confirm a local official Antigravity ACP kernel is installed (this package does not vendor it).
-2. Read Paseo config ($PASEO_HOME/config.json or ~/.paseo/config.json).
-3. Add or update providers.antigravity:
-   - type: "acp"
-   - command: ["npx", "-y", "paseo-agy-acp@2.3.0"]  (spawns the proxy, not the Google kernel)
-   - env.PASEO_AGY_ACP_OFFICIAL_BIN: local official kernel wrapper (agy-acp-server-canary or agy_acp_server.par)
-   - env.AGY_ACP_ADMISSION_ENABLED: "true"
-   - env.AGY_ACP_STATE_DIR: absolute owner-only directory (mode 0700)
-4. Prepare Admission state: npx -y --package=paseo-agy-acp@2.3.0 agy-acp-prepare-state "$AGY_ACP_STATE_DIR"
-5. Login once: npx -y paseo-agy-acp@2.3.0 --login
-6. Restart the Paseo daemon.
-7. Verify: create a test agent with provider "antigravity", send a simple prompt.
-~~~
+| Variable | Purpose |
+|---|---|
+| `PASEO_AGY_ACP_OFFICIAL_BIN` | Absolute official kernel wrapper or `.par` path |
+| `PASEO_HOME` | Optional Paseo home; defaults to `~/.paseo` |
+| `AGY_ACP_ADMISSION_ENABLED` | `true` / `1` enables the prompt fence |
+| `AGY_ACP_STATE_DIR` | Absolute owner-only state directory shared by one account |
 
-## Verification
+Advanced seat, start-rate, queue-timeout, cooldown, permission, recovery, and
+policy-change procedures are in [Admission operations](docs/operations/admission.md).
 
-```bash
-# Smoke test (needs the official binary)
-printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":1}}' \
-  | node 'dist/ACP Connector/main.js'
+### Mode mapping
 
-# Full suite
-npm test
-```
+| Paseo or legacy id | Official live mode |
+|---|---|
+| `default` | `default` |
+| `accept-edits` | `auto_edit` |
+| `dangerously-skip-permissions` | `yolo` |
+| `plan` | `default` (the official kernel has no plan mode) |
 
-Canary checklist: daemon context on a real Paseo agent, multi-turn, MCP server
-declared as `http`, mode `dangerously-skip-permissions` → official `yolo`,
-Admission queue under a small seat cap, blank-turn rejection.
+`PASEO_AGY_ACP_KERNEL=legacy` and `--legacy-kernel` fail closed. The official
+kernel is the only execution path.
 
-`2.1.0.0` isolated canary on `127.0.0.1:6768` proved the product proxy +
-official kernel + daemon context.
+### Skill roots
 
-## Known issues
+Discovery reads configured roots from workspace `.agents/skills.json` or
+`skills.json`, and from global `~/.gemini/config/skills.json`. Default roots
+cover workspace Agents/Codex directories and global Gemini/Agents/Codex
+directories. Each skill directory must contain `SKILL.md` frontmatter with a
+usable name and description.
 
-- Please test Claude 4.6 and GPT-OSS 120B after opt-in and
-  [file issues](https://github.com/tiezbro/paseo-agy-acp/issues) if anything is
-  unstable. We will use that to prioritize fixes.
-- Official RC01 active cancel was not confirmed in our harness; live 503/quota
-  was not induced against real backends.
-- The official kernel binary must already be installed; this package does not
-  vendor it. `npx` only launches the proxy.
-- Admission is off until `AGY_ACP_ADMISSION_ENABLED`, `AGY_ACP_STATE_DIR`, and
-  `PASEO_AGENT_ID` are all valid. Discovery/`--login` without an agent id does
-  not open the ledger.
-- Official ACP has no plan mode; Paseo `plan` maps to `default`.
-- Image generation and live provider 503 text are owned by the official kernel.
-  This adapter does not claim those have been re-verified here.
-- Raw-prompt tests can see prepended daemon context when `PASEO_AGENT_ID`
-  points at a live Paseo agent:
+<!-- readme:operations -->
+## Operations and troubleshooting
 
-```bash
-env -u PASEO_AGENT_ID -u PASEO_HOME npm test
-```
+- The official kernel must already be installed. `npx` installs only the proxy.
+- The first npm run may compile `better-sqlite3` and require a local C++
+  toolchain.
+- Restart Paseo after changing provider command, environment, or kernel path.
+- Enabled Admission with missing identity, unsafe state permissions, or invalid
+  policy refuses to start instead of silently running unfenced.
+- Tool quality, image generation, backend quota, and provider error text remain
+  owned by the official kernel and Google backend.
+- For reproducible upgrades or rollback, pin a three-part npm version in the
+  provider command and restart Paseo.
 
-## Upgrade / Rollback
+Current operational references:
 
-If Paseo `command` uses npx, bump or pin the npm tag (for example
-`paseo-agy-acp@2.3.0`) and restart the daemon. That is the upgrade/rollback
-path for packaged installs.
+- [Admission operations](docs/operations/admission.md)
+- [Claude / GPT-OSS local compatibility](docs/operations/official-kernel-compat-runbook.md)
+- [npm Trusted Publishing](docs/operations/npm-publishing.md)
+- [Changelog](CHANGELOG.md)
+- [GitHub Releases](https://github.com/tiezbro/paseo-agy-acp/releases)
+- [Issue tracker](https://github.com/tiezbro/paseo-agy-acp/issues)
 
-Source checkout:
+Detailed implementation and research records remain under `docs/design/`,
+`docs/evidence/`, and `docs/research/`; they are not release history or setup
+instructions.
+
+<!-- readme:development -->
+## Development
 
 ```bash
-# Upgrade
-git pull && npm ci && npm run build && npm test
-
-# Rollback
-git checkout <rev> && npm ci && npm run build && npm test
+git clone https://github.com/tiezbro/paseo-agy-acp.git
+cd paseo-agy-acp
+npm ci
+npm run validate
 ```
 
-Restart the daemon after changing `command` or the kernel path. After an
-Admission policy change (for example 3+1 → 8/8), use a **fresh**
-`AGY_ACP_STATE_DIR` if the durable fingerprint would fail-close the new policy.
+An official-kernel smoke additionally requires
+`PASEO_AGY_ACP_OFFICIAL_BIN`:
 
-## Authority documents (v2.0.0.0 closeout)
+```bash
+node scripts/official-kernel-smoke.mjs
+```
 
-- [confirmed Scheme](/home/tiezbro/projects/MAACS/docs/maacs-paseo-agy-acp-confirmed-scheme.md)
-- [Stage 2 handoff](docs/design/v2.0.0.0-stage2-handoff.md)
-- [503 feasibility](docs/design/v2.0.0.0-stage2-503-feasibility.md)
-- [ACP source map](docs/design/v2.0.0.0-stage2-acp-source-map.md)
-- [Admission source map](docs/design/v2.0.0.0-stage2-admission-source-map.md)
-- [Architecture](docs/design/v2.0.0.0-stage2-architecture.md)
-- [Domain model](docs/design/v2.0.0.0-stage2-domain-model.md)
-- [Test contracts](docs/design/v2.0.0.0-stage2-test-contracts.md)
-- [Specification](docs/design/v2.0.0.0-stage2-spec.md)
+<!-- readme:license -->
+## License and disclaimer
 
-→ [Local technical notes](./docs/PASEO_LOCAL_CHANGES.md)
+The adapter source is [Apache-2.0](LICENSE). The official Antigravity kernel is
+not included and remains governed by
+[Google Antigravity Terms](https://antigravity.google/terms). This community
+project spawns a kernel you installed locally; it does not reimplement,
+relicense, or redistribute that software.
 
-## Disclaimer
-
-The official kernel is governed by
-[Google Antigravity Terms](https://antigravity.google/terms). This product
-spawns that kernel; it does not reimplement or redistribute it.
-
-Third-party tools for Antigravity may violate those terms and risk account
-suspension. Prefer official API keys. Test/secondary accounts only.
-
-**AS IS, NO WARRANTY. USE AT YOUR OWN RISK.**
+Third-party use may carry account or service risk. Prefer authorized accounts
+and official credentials. The software is provided as-is, without warranty.

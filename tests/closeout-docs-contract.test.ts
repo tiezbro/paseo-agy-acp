@@ -25,28 +25,82 @@ function markdownTargets(markdown: string): string[] {
   return [...markdown.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)].map((match) => match[1]);
 }
 
-function missingTargets(markdown: string, targets: string[]): string[] {
-  const links = markdownTargets(markdown);
-  return targets.filter((target) => !links.includes(target));
-}
-
 describe("v2.0.0.0 closeout documentation contract", () => {
-  it("moves README authority pointers from the old design to the Scheme and accepted Stage 2 artifacts", () => {
+  it("keeps product READMEs current, bilingual, and separate from release history", () => {
     const failures: string[] = [];
+    const requiredSections = [
+      "positioning",
+      "value",
+      "architecture",
+      "requirements",
+      "quickstart",
+      "configuration",
+      "operations",
+      "development",
+      "license"
+    ];
+    const requiredTargets = [
+      "./README.md",
+      "./README.zh-CN.md",
+      "./CHANGELOG.md",
+      "docs/operations/admission.md",
+      "docs/operations/official-kernel-compat-runbook.md",
+      "docs/operations/npm-publishing.md"
+    ];
 
-    for (const [label, contents] of [
+    const readmes = [
       ["README.md", readDoc("README.md")],
       ["README.zh-CN.md", readDoc("README.zh-CN.md")]
-    ] as const) {
-      if (markdownTargets(contents).includes(OLD_DESIGN_PATH)) {
-        failures.push(`${label} still links ${OLD_DESIGN_PATH}`);
+    ] as const;
+
+    for (const [label, contents] of readmes) {
+      const links = markdownTargets(contents);
+      for (const target of requiredTargets) {
+        if (!links.includes(target)) {
+          failures.push(`${label} does not link current target ${target}`);
+        }
       }
-      if (!markdownTargets(contents).includes(SCHEME_PATH)) {
-        failures.push(`${label} does not link the confirmed Scheme`);
+      for (const section of requiredSections) {
+        if (!contents.includes(`<!-- readme:${section} -->`)) {
+          failures.push(`${label} lacks bilingual section marker ${section}`);
+        }
       }
-      for (const target of missingTargets(contents, STAGE2_ARTIFACTS)) {
-        failures.push(`${label} does not link accepted artifact ${target}`);
+      for (const historicalTarget of [SCHEME_PATH, OLD_DESIGN_PATH, ...STAGE2_ARTIFACTS]) {
+        if (links.includes(historicalTarget)) {
+          failures.push(`${label} links historical authority ${historicalTarget}`);
+        }
       }
+      if (/\/home\/tiezbro\//.test(contents)) {
+        failures.push(`${label} contains a maintainer-local absolute path`);
+      }
+      if (/\b2\.(?:0|1|2)(?:\.\d+){1,2}\b/.test(contents)) {
+        failures.push(`${label} contains historical release narration`);
+      }
+      if (!/\[English\]\(\.\/README\.md\) \| \[中文\]\(\.\/README\.zh-CN\.md\) \| \[Changelog\]\(\.\/CHANGELOG\.md\)/.test(contents)) {
+        failures.push(`${label} does not expose Changelog after the language links`);
+      }
+
+      const sectionOrder = [...contents.matchAll(/<!-- readme:([^ ]+) -->/g)].map(
+        (match) => match[1]
+      );
+      if (JSON.stringify(sectionOrder) !== JSON.stringify(requiredSections)) {
+        failures.push(`${label} section order differs from the bilingual contract`);
+      }
+    }
+
+    const english = readmes[0][1];
+    const chinese = readmes[1][1];
+    if (JSON.stringify(markdownTargets(english)) !== JSON.stringify(markdownTargets(chinese))) {
+      failures.push("English and Chinese README link targets differ");
+    }
+
+    const executableBlocks = (markdown: string) =>
+      [...markdown.matchAll(/```(bash|json)\n([\s\S]*?)```/g)].map((match) => ({
+        language: match[1],
+        body: match[2]
+      }));
+    if (JSON.stringify(executableBlocks(english)) !== JSON.stringify(executableBlocks(chinese))) {
+      failures.push("English and Chinese README executable examples differ");
     }
 
     expect(failures).toEqual([]);
