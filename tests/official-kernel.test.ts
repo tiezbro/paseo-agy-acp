@@ -1,5 +1,6 @@
 import { spawn } from "node:child_process";
 import { chmodSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { createServer } from "node:http";
 import os from "node:os";
 import path from "node:path";
 import { PassThrough } from "node:stream";
@@ -24,6 +25,7 @@ import { rewriteMcpServers } from "../ACP Connector/official-kernel/mcp-rewrite.
 import { mapToOfficialModeId, rewriteModeFields } from "../ACP Connector/official-kernel/mode-map.js";
 import { createNdjsonParser, encodeNdjson } from "../ACP Connector/official-kernel/ndjson.js";
 import { OfficialKernelProxy } from "../ACP Connector/official-kernel/proxy.js";
+import { runOfficialLogin } from "../ACP Connector/official-kernel/login.js";
 import { officialSpawnArgs, resolveOfficialBinary } from "../ACP Connector/official-kernel/spawn.js";
 import { PASEO_DAEMON_CONTEXT_OPEN } from "../ACP Connector/acp/session/paseo-context.js";
 import type { JsonRpcMessage } from "../ACP Connector/official-kernel/json-rpc.js";
@@ -81,6 +83,51 @@ describe("official kernel selection", () => {
     expect(officialSpawnArgs("/tmp/agy_acp_server.par")).toEqual(["--uid="]);
     expect(officialSpawnArgs(fakeOfficialAgent)).toEqual([]);
     expect(resolveOfficialBinary({ PASEO_AGY_ACP_OFFICIAL_BIN: fakeOfficialAgent })).toBe(fakeOfficialAgent);
+  });
+});
+
+describe("official kernel login", () => {
+  it("forwards a pasted OAuth callback URL after the kernel prints its authorization URL", async () => {
+    const directory = tempDir("paseo-official-login-");
+    const kernel = path.join(directory, "fake-login-kernel.mjs");
+    let callbackReceived = false;
+    const callbackServer = createServer((_request, response) => {
+      callbackReceived = true;
+      response.end("OAuth callback accepted");
+    });
+    await new Promise<void>((resolve) => callbackServer.listen(0, "127.0.0.1", resolve));
+    const address = callbackServer.address();
+    if (!address || typeof address === "string") throw new Error("callback test server did not listen");
+    writeFileSync(
+      kernel,
+      `#!/usr/bin/env node
+import readline from "node:readline";
+const rl = readline.createInterface({ input: process.stdin });
+let authenticateId;
+rl.on("line", (line) => {
+  const message = JSON.parse(line);
+  if (message.method === "initialize") {
+    process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: message.id, result: {} }) + "\\n");
+  } else if (message.method === "authenticate") {
+    authenticateId = message.id;
+    process.stdout.write("https://accounts.example/authorize\\n");
+    setTimeout(() => process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: authenticateId, result: {} }) + "\\n"), 50);
+  }
+});
+`
+    );
+    chmodSync(kernel, 0o755);
+    const input = new PassThrough();
+    input.end(`http://127.0.0.1:${address.port}/?code=example\n`);
+
+    try {
+      await expect(
+        runOfficialLogin({ PASEO_AGY_ACP_OFFICIAL_BIN: kernel }, "test", input)
+      ).resolves.toBe(0);
+      expect(callbackReceived).toBe(true);
+    } finally {
+      await new Promise<void>((resolve) => callbackServer.close(() => resolve()));
+    }
   });
 });
 

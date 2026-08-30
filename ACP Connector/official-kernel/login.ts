@@ -1,3 +1,6 @@
+import { get } from "node:http";
+import { createInterface } from "node:readline/promises";
+import type { Readable } from "node:stream";
 import {
   isJsonRpcFailure,
   isJsonRpcSuccess,
@@ -11,7 +14,8 @@ const AUTHENTICATE_TIMEOUT_MS = 10 * 60_000;
 
 export async function runOfficialLogin(
   environment: NodeJS.ProcessEnv = process.env,
-  version = "0.0.0"
+  version = "0.0.0",
+  input: Readable = process.stdin
 ): Promise<number> {
   process.stderr.write(
     "Starting official Antigravity ACP login (authenticate methodId=oauth-personal).\n"
@@ -21,6 +25,9 @@ export async function runOfficialLogin(
   const child = spawnOfficialKernel({ ...environment, PYTHONUNBUFFERED: "1" });
   const pending = new Map<JsonRpcId, (message: JsonRpcMessage) => void>();
   let nextId = 1;
+  let authenticationStarted = false;
+  let promptCallback: Promise<void> | undefined;
+  let rejectLogin: ((reason?: unknown) => void) | undefined;
 
   const parse = createNdjsonParser(
     (message) => {
@@ -35,7 +42,14 @@ export async function runOfficialLogin(
         settle?.(message);
       }
     },
-    (line) => process.stderr.write(`${line}\n`)
+    (line) => {
+      process.stderr.write(`${formatLoginOutput(line)}\n`);
+      if (authenticationStarted && !promptCallback && extractUrl(line)) {
+        promptCallback = promptForCallbackUrl(input)
+          .then(deliverOAuthCallback)
+          .catch((error) => rejectLogin?.(error));
+      }
+    }
   );
   child.stdout.on("data", parse);
 
@@ -63,7 +77,13 @@ export async function runOfficialLogin(
     if (isJsonRpcFailure(initialized)) {
       throw new Error(initialized.error.message);
     }
-    const authenticated = await request("authenticate", { methodId: "oauth-personal" });
+    authenticationStarted = true;
+    const authenticated = await Promise.race([
+      request("authenticate", { methodId: "oauth-personal" }),
+      new Promise<never>((_, reject) => {
+        rejectLogin = reject;
+      })
+    ]);
     if (isJsonRpcFailure(authenticated)) {
       throw new Error(authenticated.error.message);
     }
@@ -81,6 +101,57 @@ export async function runOfficialLogin(
       child.kill("SIGTERM");
     }
   }
+}
+
+function extractUrl(line: string): string | undefined {
+  return line.match(/https?:\/\/\S+/)?.[0];
+}
+
+function formatLoginOutput(line: string): string {
+  const url = extractUrl(line);
+  if (!url || !line.startsWith("Open the following link to authenticate the ACP server:")) {
+    return line;
+  }
+  return `${line.slice(0, line.indexOf(url)).trimEnd()}\n\n${url}\n`;
+}
+
+async function promptForCallbackUrl(input: Readable): Promise<string> {
+  const readline = createInterface({ input, output: process.stderr });
+  try {
+    const callbackUrl = (await readline.question("\nPaste the OAuth callback URL to finish login: ")).trim();
+    if (callbackUrl.length === 0) throw new Error("OAuth callback URL is required");
+    return callbackUrl;
+  } finally {
+    readline.close();
+  }
+}
+
+function deliverOAuthCallback(callbackUrl: string): Promise<void> {
+  let url: URL;
+  try {
+    url = new URL(callbackUrl);
+  } catch {
+    return Promise.reject(new Error("OAuth callback URL is invalid"));
+  }
+  if (url.protocol !== "http:" || !isLoopbackHost(url.hostname)) {
+    return Promise.reject(new Error("OAuth callback URL must use a local HTTP address"));
+  }
+  return new Promise((resolve, reject) => {
+    const request = get(url, (response) => {
+      response.resume();
+      if ((response.statusCode ?? 500) >= 400) {
+        reject(new Error(`OAuth callback returned HTTP ${response.statusCode}`));
+      } else {
+        resolve();
+      }
+    });
+    request.setTimeout(10_000, () => request.destroy(new Error("OAuth callback timed out")));
+    request.once("error", reject);
+  });
+}
+
+function isLoopbackHost(hostname: string): boolean {
+  return hostname === "127.0.0.1" || hostname === "localhost" || hostname === "[::1]";
 }
 
 function summarizeAuthUpdate(method: string, params: unknown): string {
