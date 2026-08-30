@@ -56,6 +56,7 @@ export class OfficialKernelProxy {
   readonly #sessionCwds = new Map<string, string>();
   readonly #env: NodeJS.ProcessEnv;
   readonly #admission;
+  #sessionNewTail: Promise<void> = Promise.resolve();
   #closed = false;
 
   constructor(options: OfficialKernelProxyOptions) {
@@ -132,6 +133,8 @@ export class OfficialKernelProxy {
     let params = request.params;
     if (request.method === SESSION_NEW_METHOD) {
       params = rewriteMcpServers(rewriteModeFields(params));
+      await this.#forwardSessionNew(request, params);
+      return;
     } else if (
       request.method === SESSION_LOAD_METHOD ||
       request.method === SESSION_RESUME_METHOD
@@ -151,6 +154,24 @@ export class OfficialKernelProxy {
 
     this.#track(request.id, request.method, params);
     this.#writeChild({ ...request, jsonrpc: "2.0", params });
+  }
+
+  // Early session updates have no request id, so keep only one unbound cwd in flight.
+  async #forwardSessionNew(request: JsonRpcRequest, params: unknown): Promise<void> {
+    const previous = this.#sessionNewTail;
+    let release!: () => void;
+    this.#sessionNewTail = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    await previous;
+    try {
+      const response = this.#track(request.id, request.method, params);
+      this.#writeChild({ ...request, jsonrpc: "2.0", params });
+      await response;
+    } finally {
+      release();
+    }
   }
 
   async #handlePrompt(request: JsonRpcRequest, params: unknown): Promise<void> {
@@ -236,13 +257,14 @@ export class OfficialKernelProxy {
       if (params?.update?.sessionUpdate === "available_commands_update") {
         let cwd = sessionId ? this.#sessionCwds.get(sessionId) : undefined;
         if (!cwd) {
-          for (const pending of this.#pending.values()) {
-            if (pending.cwd) {
-              cwd = pending.cwd;
-              if (sessionId) {
-                this.#sessionCwds.set(sessionId, cwd);
-              }
-              break;
+          const pendingSessionNews = Array.from(this.#pending.values()).filter(
+            (pending): pending is PendingClientRequest & { cwd: string } =>
+              pending.method === SESSION_NEW_METHOD && pending.cwd !== undefined
+          );
+          if (pendingSessionNews.length === 1) {
+            cwd = pendingSessionNews[0].cwd;
+            if (sessionId) {
+              this.#sessionCwds.set(sessionId, cwd);
             }
           }
         }
