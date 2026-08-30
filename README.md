@@ -5,7 +5,7 @@
 **Paseo adapter in front of Google's official Antigravity ACP kernel**
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](./LICENSE)
-[![Version](https://img.shields.io/badge/version-2.2.1-blue?style=flat-square)](./package.json)
+[![Version](https://img.shields.io/badge/version-2.3.0-blue?style=flat-square)](./package.json)
 [![npm](https://img.shields.io/npm/v/paseo-agy-acp?style=flat-square)](https://www.npmjs.com/package/paseo-agy-acp)
 [![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen?style=flat-square)](#)
 [![ACP](https://img.shields.io/badge/ACP-NDJSON%20v1-8A2BE2?style=flat-square)](https://agentclientprotocol.com)
@@ -33,9 +33,10 @@ a startup stampede.
 complete turns on this path. If you do not opt in, the official path supports
 Gemini-family models only by default.
 
-**2.2.1** is the same product as 2.2.0: GitHub tags now match npm (`v2.2.1` =
-`paseo-agy-acp@2.2.1`). This README states that `npx` launches this proxy only.
-The older GitHub tag `v2.2.0.0` remains the 2.2.0 line.
+**2.3.0** adds slash command hints for user-invocable skills discovered from
+Gemini, Agents, Codex, configured, and workspace roots. Native ACP commands stay
+intact, workspace skills remain scoped to their session cwd, and concurrent
+session creation cannot mix command hints between workspaces.
 
 > **Not official Paseo support. Not official Google support.**
 > Community-maintained product. Use at your own risk.
@@ -51,6 +52,7 @@ Generic ACP bridge does not provide:
 - session mode mapping
 - MCP `http` to official `sse` rewrite
 - stable product identity
+- local and workspace skill discovery for ACP slash command hints
 - burst-safe account-wide Admission queue for multi-agent delegation
 - local opt-in for Claude 4.6 and GPT-OSS 120B; without it, Gemini-family only
 
@@ -78,16 +80,16 @@ Antigravity ACP kernel (this package does **not** install Google's `.par`).
 `PASEO_AGY_ACP_OFFICIAL_BIN` to your kernel wrapper or `.par` (required unless
 it already sits at the maintainer-host default pin).
 
-The npm package `paseo-agy-acp@2.2.1` is the **proxy**. `npx` launches that
+The npm package `paseo-agy-acp@2.3.0` is the **proxy**. `npx` launches that
 proxy; it does not replace Antigravity or Paseo.
 
 ```bash
 export PASEO_AGY_ACP_OFFICIAL_BIN="/absolute/path/to/agy_acp_server.par-or-wrapper"
-npx -y paseo-agy-acp@2.2.1 --login
+npx -y paseo-agy-acp@2.3.0 --login
 
 export AGY_ACP_STATE_DIR="$HOME/.local/state/paseo-agy-acp/default"
 install -d -m 700 "$AGY_ACP_STATE_DIR"
-npx -y --package=paseo-agy-acp@2.2.1 agy-acp-prepare-state "$AGY_ACP_STATE_DIR"
+npx -y --package=paseo-agy-acp@2.3.0 agy-acp-prepare-state "$AGY_ACP_STATE_DIR"
 export AGY_ACP_ADMISSION_ENABLED=true
 ```
 
@@ -96,7 +98,7 @@ Then point Paseo's Generic ACP `command` at npx (see
 line as a standalone chat app: it is the stdio ACP server Paseo spawns.
 
 ```bash
-npx -y paseo-agy-acp@2.2.1
+npx -y paseo-agy-acp@2.3.0
 ```
 
 Claude / GPT-OSS: [§1](#1-official-agy-acp-kernel-capabilities) and the
@@ -409,7 +411,7 @@ kernel. Prefer npm over `git clone` for the adapter only.
 
 ```bash
 # Official OAuth through the proxy (kernel must already be on this machine)
-npx -y paseo-agy-acp@2.2.1 --login
+npx -y paseo-agy-acp@2.3.0 --login
 ```
 
 Bins: `paseo-agy-acp` / `agy-acp` (ACP proxy), `agy-acp-prepare-state`,
@@ -429,13 +431,13 @@ npm test
 ```bash
 # ACP initialize smoke (requires the official binary)
 printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":1}}' \
-  | npx -y paseo-agy-acp@2.2.1
+  | npx -y paseo-agy-acp@2.3.0
 ```
 
 Login (official kernel OAuth):
 
 ```bash
-npx -y paseo-agy-acp@2.2.1 --login
+npx -y paseo-agy-acp@2.3.0 --login
 ```
 
 ## Environment
@@ -476,7 +478,7 @@ One official kernel child per connector process. Admission coordinates
   "providers": {
     "antigravity": {
       "type": "acp",
-      "command": ["npx", "-y", "paseo-agy-acp@2.2.1"],
+      "command": ["npx", "-y", "paseo-agy-acp@2.3.0"],
       "env": {
         "PASEO_AGY_ACP_OFFICIAL_BIN": "/home/YOU/.local/opt/agy-acp-server-agy_acp_server_20260818_01_RC01/agy-acp-server-canary",
         "AGY_ACP_ADMISSION_ENABLED": "true",
@@ -506,12 +508,12 @@ Configure the Paseo daemon to add an ACP provider for Google Antigravity.
 2. Read Paseo config ($PASEO_HOME/config.json or ~/.paseo/config.json).
 3. Add or update providers.antigravity:
    - type: "acp"
-   - command: ["npx", "-y", "paseo-agy-acp@2.2.1"]  (spawns the proxy, not the Google kernel)
+   - command: ["npx", "-y", "paseo-agy-acp@2.3.0"]  (spawns the proxy, not the Google kernel)
    - env.PASEO_AGY_ACP_OFFICIAL_BIN: local official kernel wrapper (agy-acp-server-canary or agy_acp_server.par)
    - env.AGY_ACP_ADMISSION_ENABLED: "true"
    - env.AGY_ACP_STATE_DIR: absolute owner-only directory (mode 0700)
-4. Prepare Admission state: npx -y --package=paseo-agy-acp@2.2.1 agy-acp-prepare-state "$AGY_ACP_STATE_DIR"
-5. Login once: npx -y paseo-agy-acp@2.2.1 --login
+4. Prepare Admission state: npx -y --package=paseo-agy-acp@2.3.0 agy-acp-prepare-state "$AGY_ACP_STATE_DIR"
+5. Login once: npx -y paseo-agy-acp@2.3.0 --login
 6. Restart the Paseo daemon.
 7. Verify: create a test agent with provider "antigravity", send a simple prompt.
 ~~~
@@ -559,7 +561,7 @@ env -u PASEO_AGENT_ID -u PASEO_HOME npm test
 ## Upgrade / Rollback
 
 If Paseo `command` uses npx, bump or pin the npm tag (for example
-`paseo-agy-acp@2.2.1`) and restart the daemon. That is the upgrade/rollback
+`paseo-agy-acp@2.3.0`) and restart the daemon. That is the upgrade/rollback
 path for packaged installs.
 
 Source checkout:

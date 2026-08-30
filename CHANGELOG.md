@@ -2,6 +2,38 @@
 
 All notable changes to `paseo-agy-acp` are recorded here.
 
+## 2.3.0 - 2026-08-30
+
+### Added
+
+- Discover user and workspace `SKILL.md` files from Gemini, Agents, Codex, and
+  configured skill roots, then expose user-invocable skills through standard
+  ACP slash command hints while preserving native commands.
+- Add a tag-triggered npm Trusted Publishing workflow. A matching `vX.Y.Z` tag
+  on `main` now validates, packs, records, and publishes the public npm tarball
+  automatically with GitHub OIDC provenance and no long-lived npm token.
+
+### Changed
+
+- Scope workspace skill discovery to each ACP session cwd, serialize concurrent
+  `session/new` setup, and prevent command hints from leaking between
+  workspaces.
+- Hide skills marked `user-invocable: false`, preserve workspace-over-global
+  precedence, and parse common quoted and multiline frontmatter forms.
+
+### Verification
+
+- Complete validation: 37 test files, 216 passed, 1 skipped; architecture and
+  secret checks passed.
+- Official-kernel smoke and a live command-update canary preserved native
+  commands, exposed the visible workspace skill, and hid the non-invocable
+  skill.
+
+### Contributors
+
+- Thanks to [@zwmmm](https://github.com/zwmmm) for the initial implementation
+  and review follow-up in [#9](https://github.com/tiezbro/paseo-agy-acp/pull/9).
+
 ## 2.2.1 - 2026-08-29
 
 ### Changed

@@ -5,7 +5,7 @@
 **面向 Paseo 的适配器，跑在 Google 官方 Antigravity ACP 内核前面**
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](./LICENSE)
-[![Version](https://img.shields.io/badge/version-2.2.1-blue?style=flat-square)](./package.json)
+[![Version](https://img.shields.io/badge/version-2.3.0-blue?style=flat-square)](./package.json)
 [![npm](https://img.shields.io/npm/v/paseo-agy-acp?style=flat-square)](https://www.npmjs.com/package/paseo-agy-acp)
 [![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen?style=flat-square)](#)
 [![ACP](https://img.shields.io/badge/ACP-NDJSON%20v1-8A2BE2?style=flat-square)](https://agentclientprotocol.com)
@@ -30,9 +30,9 @@ daemon 上下文、session 模式映射、MCP 改写、产品身份，以及账�
 兼容：有资格的 Claude 4.6 与 GPT-OSS 120B 可以在这条路径上跑完回合。
 如果未 opt-in，官方路径默认只支持 Gemini 系模型。
 
-**2.2.1** 与 2.2.0 是同一产品：GitHub tag 从此与 npm 对齐（`v2.2.1` =
-`paseo-agy-acp@2.2.1`）。本文说明 `npx` 只拉起本代理。旧 GitHub tag
-`v2.2.0.0` 仍是 2.2.0 那条线。
+**2.3.0** 新增可由用户调用的 skill slash command 提示，支持 Gemini、Agents、
+Codex、用户配置和 workspace roots。原生 ACP 命令保持不变，workspace skills
+按 session cwd 隔离，并发创建 session 时不会跨 workspace 混入命令提示。
 
 > **非 Paseo 官方支持。非 Google 官方支持。** 社区维护产品，使用风险自负。
 
@@ -46,6 +46,7 @@ daemon 上下文、session 模式映射、MCP 改写、产品身份，以及账�
 - session 模式映射
 - MCP `http` 到官方 `sse` 的改写
 - 稳定产品身份
+- 面向 ACP slash command 提示的本地与 workspace skill discovery
 - 面向多 agent 委派的账户级 Admission 队列
 - 本机 opt-in 后可跑 Claude 4.6 与 GPT-OSS 120B；未 opt-in 则只支持 Gemini 系
 
@@ -72,16 +73,16 @@ daemon 上下文、session 模式映射、MCP 改写、产品身份，以及账�
 （`authenticate` / `oauth-personal`）。把 `PASEO_AGY_ACP_OFFICIAL_BIN` 指到你的
 内核 wrapper 或 `.par`（除非已在维护者主机默认 pin 路径，否则必填）。
 
-npm 包 `paseo-agy-acp@2.2.1` 是 **代理**。`npx` 只拉起这个代理，**不能**代替
+npm 包 `paseo-agy-acp@2.3.0` 是 **代理**。`npx` 只拉起这个代理，**不能**代替
 Antigravity 或 Paseo。
 
 ```bash
 export PASEO_AGY_ACP_OFFICIAL_BIN="/absolute/path/to/agy_acp_server.par-or-wrapper"
-npx -y paseo-agy-acp@2.2.1 --login
+npx -y paseo-agy-acp@2.3.0 --login
 
 export AGY_ACP_STATE_DIR="$HOME/.local/state/paseo-agy-acp/default"
 install -d -m 700 "$AGY_ACP_STATE_DIR"
-npx -y --package=paseo-agy-acp@2.2.1 agy-acp-prepare-state "$AGY_ACP_STATE_DIR"
+npx -y --package=paseo-agy-acp@2.3.0 agy-acp-prepare-state "$AGY_ACP_STATE_DIR"
 export AGY_ACP_ADMISSION_ENABLED=true
 ```
 
@@ -90,7 +91,7 @@ export AGY_ACP_ADMISSION_ENABLED=true
 而是 Paseo spawn 的 stdio ACP 服务：
 
 ```bash
-npx -y paseo-agy-acp@2.2.1
+npx -y paseo-agy-acp@2.3.0
 ```
 
 Claude / GPT-OSS 见 [§1](#1-官方-agy-acp-内核能力) 和
@@ -385,7 +386,7 @@ paseo-agy-acp/
 
 ```bash
 # 经代理做官方 OAuth（本机必须已有官方内核）
-npx -y paseo-agy-acp@2.2.1 --login
+npx -y paseo-agy-acp@2.3.0 --login
 ```
 
 命令：`paseo-agy-acp` / `agy-acp`（ACP 代理）、`agy-acp-prepare-state`、
@@ -405,13 +406,13 @@ npm test
 ```bash
 # ACP initialize 冒烟（需要官方二进制）
 printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":1}}' \
-  | npx -y paseo-agy-acp@2.2.1
+  | npx -y paseo-agy-acp@2.3.0
 ```
 
 登录（官方内核 OAuth）：
 
 ```bash
-npx -y paseo-agy-acp@2.2.1 --login
+npx -y paseo-agy-acp@2.3.0 --login
 ```
 
 ## 环境变量
@@ -452,7 +453,7 @@ Paseo / Generic ACP 客户端
   "providers": {
     "antigravity": {
       "type": "acp",
-      "command": ["npx", "-y", "paseo-agy-acp@2.2.1"],
+      "command": ["npx", "-y", "paseo-agy-acp@2.3.0"],
       "env": {
         "PASEO_AGY_ACP_OFFICIAL_BIN": "/home/YOU/.local/opt/agy-acp-server-agy_acp_server_20260818_01_RC01/agy-acp-server-canary",
         "AGY_ACP_ADMISSION_ENABLED": "true",
@@ -481,12 +482,12 @@ Configure the Paseo daemon to add an ACP provider for Google Antigravity.
 2. Read Paseo config ($PASEO_HOME/config.json or ~/.paseo/config.json).
 3. Add or update providers.antigravity:
    - type: "acp"
-   - command: ["npx", "-y", "paseo-agy-acp@2.2.1"]  (spawns the proxy, not the Google kernel)
+   - command: ["npx", "-y", "paseo-agy-acp@2.3.0"]  (spawns the proxy, not the Google kernel)
    - env.PASEO_AGY_ACP_OFFICIAL_BIN: local official kernel wrapper (agy-acp-server-canary or agy_acp_server.par)
    - env.AGY_ACP_ADMISSION_ENABLED: "true"
    - env.AGY_ACP_STATE_DIR: absolute owner-only directory (mode 0700)
-4. Prepare Admission state: npx -y --package=paseo-agy-acp@2.2.1 agy-acp-prepare-state "$AGY_ACP_STATE_DIR"
-5. Login once: npx -y paseo-agy-acp@2.2.1 --login
+4. Prepare Admission state: npx -y --package=paseo-agy-acp@2.3.0 agy-acp-prepare-state "$AGY_ACP_STATE_DIR"
+5. Login once: npx -y paseo-agy-acp@2.3.0 --login
 6. Restart the Paseo daemon.
 7. Verify: create a test agent with provider "antigravity", send a simple prompt.
 ~~~
@@ -529,7 +530,7 @@ env -u PASEO_AGENT_ID -u PASEO_HOME npm test
 
 ## 升级 / 回滚
 
-若 Paseo `command` 走 npx，改 npm 版本钉（例如 `paseo-agy-acp@2.2.1`）并重启
+若 Paseo `command` 走 npx，改 npm 版本钉（例如 `paseo-agy-acp@2.3.0`）并重启
 daemon。这是打包安装的升级/回滚路径。
 
 源码 checkout：
