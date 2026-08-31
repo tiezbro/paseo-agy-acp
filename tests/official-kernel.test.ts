@@ -90,9 +90,11 @@ describe("official kernel login", () => {
   it("forwards a pasted OAuth callback URL after the kernel prints its authorization URL", async () => {
     const directory = tempDir("paseo-official-login-");
     const kernel = path.join(directory, "fake-login-kernel.mjs");
+    const callbackSignal = path.join(directory, "callback-received");
     let callbackReceived = false;
     const callbackServer = createServer((_request, response) => {
       callbackReceived = true;
+      writeFileSync(callbackSignal, "received");
       response.end("OAuth callback accepted");
     });
     await new Promise<void>((resolve) => callbackServer.listen(0, "127.0.0.1", resolve));
@@ -101,6 +103,7 @@ describe("official kernel login", () => {
     writeFileSync(
       kernel,
       `#!/usr/bin/env node
+import { existsSync } from "node:fs";
 import readline from "node:readline";
 const rl = readline.createInterface({ input: process.stdin });
 let authenticateId;
@@ -111,7 +114,11 @@ rl.on("line", (line) => {
   } else if (message.method === "authenticate") {
     authenticateId = message.id;
     process.stdout.write("https://accounts.example/authorize\\n");
-    setTimeout(() => process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: authenticateId, result: {} }) + "\\n"), 50);
+    const waitForCallback = setInterval(() => {
+      if (!existsSync(process.env.TEST_CALLBACK_SIGNAL)) return;
+      clearInterval(waitForCallback);
+      process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id: authenticateId, result: {} }) + "\\n");
+    }, 10);
   }
 });
 `
@@ -122,7 +129,11 @@ rl.on("line", (line) => {
 
     try {
       await expect(
-        runOfficialLogin({ PASEO_AGY_ACP_OFFICIAL_BIN: kernel }, "test", input)
+        runOfficialLogin(
+          { ...process.env, PASEO_AGY_ACP_OFFICIAL_BIN: kernel, TEST_CALLBACK_SIGNAL: callbackSignal },
+          "test",
+          input
+        )
       ).resolves.toBe(0);
       expect(callbackReceived).toBe(true);
     } finally {
