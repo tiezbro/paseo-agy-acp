@@ -5,7 +5,7 @@
 **Reliable Paseo adapter for Google's official Antigravity ACP kernel**
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](./LICENSE)
-[![Version](https://img.shields.io/badge/version-2.3.0-blue?style=flat-square)](./package.json)
+[![Version](https://img.shields.io/badge/version-2.3.1-blue?style=flat-square)](./package.json)
 [![npm](https://img.shields.io/npm/v/paseo-agy-acp?style=flat-square)](https://www.npmjs.com/package/paseo-agy-acp)
 [![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen?style=flat-square)](./package.json)
 [![ACP](https://img.shields.io/badge/ACP-NDJSON%20v1-8A2BE2?style=flat-square)](https://agentclientprotocol.com)
@@ -119,7 +119,7 @@ adapter starts it from its own directory and supplies the required uid.
 
 ```bash
 export PASEO_AGY_ACP_OFFICIAL_BIN="/absolute/path/to/agy-acp-server-wrapper-or.par"
-npx -y paseo-agy-acp@2.3.0 --login
+npx -y paseo-agy-acp@2.3.1 --login
 ```
 
 OAuth is completed by the official kernel. Its tokens remain in the kernel's
@@ -133,7 +133,7 @@ delegation.
 ```bash
 export AGY_ACP_STATE_DIR="$HOME/.local/state/paseo-agy-acp/account-name"
 install -d -m 700 "$AGY_ACP_STATE_DIR"
-npx -y --package=paseo-agy-acp@2.3.0 \
+npx -y --package=paseo-agy-acp@2.3.1 \
   agy-acp-prepare-state "$AGY_ACP_STATE_DIR"
 ```
 
@@ -150,7 +150,7 @@ Add or update the provider in `$PASEO_HOME/config.json` or
   "providers": {
     "antigravity": {
       "type": "acp",
-      "command": ["npx", "-y", "paseo-agy-acp@2.3.0"],
+      "command": ["npx", "-y", "paseo-agy-acp@2.3.1"],
       "env": {
         "PASEO_AGY_ACP_OFFICIAL_BIN": "/absolute/path/to/agy-acp-server-wrapper-or.par",
         "AGY_ACP_ADMISSION_ENABLED": "true",

@@ -19,7 +19,7 @@ All connector processes that share one account must use the same
 ```bash
 export AGY_ACP_STATE_DIR="$HOME/.local/state/paseo-agy-acp/account-name"
 install -d -m 700 "$AGY_ACP_STATE_DIR"
-npx -y --package=paseo-agy-acp@2.3.0 \
+npx -y --package=paseo-agy-acp@2.3.1 \
   agy-acp-prepare-state "$AGY_ACP_STATE_DIR"
 export AGY_ACP_ADMISSION_ENABLED=true
 ```
@@ -31,7 +31,7 @@ changed; inspect its owner and contents before running:
 
 ```bash
 chmod 700 -- "$AGY_ACP_STATE_DIR"
-npx -y --package=paseo-agy-acp@2.3.0 \
+npx -y --package=paseo-agy-acp@2.3.1 \
   agy-acp-prepare-state "$AGY_ACP_STATE_DIR"
 ```
 

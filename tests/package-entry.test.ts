@@ -47,7 +47,7 @@ describe("published package entry", () => {
     if ("timeout" in result) child.kill("SIGKILL");
 
     expect(result).toEqual({ code: 0, signal: null });
-    expect(stdout).toBe("2.3.0\n");
+    expect(stdout).toBe("2.3.1\n");
     expect(stderr).toBe("");
   });
 });

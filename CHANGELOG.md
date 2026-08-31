@@ -2,6 +2,24 @@
 
 All notable changes to `paseo-agy-acp` are recorded here.
 
+## 2.3.1 - 2026-08-31
+
+### Fixed
+
+- Show the official OAuth authorization URL promptly during `--login`, put the
+  URL on its own line, and allow pasting the browser callback URL so it can be
+  delivered to the kernel's local loopback listener.
+
+### Verification
+
+- Complete validation: 37 test files, 217 passed, 1 skipped; architecture and
+  secret checks passed.
+
+### Contributors
+
+- Thanks to [@maomomo-eth](https://github.com/maomomo-eth) for the login prompt
+  and callback delivery work in [#10](https://github.com/tiezbro/paseo-agy-acp/pull/10).
+
 ## 2.3.0 - 2026-08-30
 
 ### Added
