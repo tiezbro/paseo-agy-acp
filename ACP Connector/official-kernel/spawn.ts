@@ -13,8 +13,11 @@ export function resolveOfficialBinary(environment: NodeJS.ProcessEnv = process.e
   return configured && configured.length > 0 ? configured : DEFAULT_OFFICIAL_BIN;
 }
 
-export function officialSpawnArgs(binary: string): string[] {
+export function officialSpawnArgs(binary: string, platform: NodeJS.Platform = process.platform): string[] {
   const base = path.basename(binary);
+  // The official agent registry attaches `--uid=` to the linux-x86-64 binary
+  // only; the mac/windows builds reject the flag at startup.
+  if (platform !== "linux") return [];
   if (base.endsWith(".par") || base === "agy_acp_server.par") return ["--uid="];
   return [];
 }

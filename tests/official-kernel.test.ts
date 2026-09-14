@@ -79,9 +79,12 @@ describe("official kernel selection", () => {
     expect(() => resolveAcpKernel({}, ["--legacy-kernel"])).toThrow(/scraper kernel was removed/);
   });
 
-  it("adds --uid= only for the official .par binary", () => {
-    expect(officialSpawnArgs("/tmp/agy_acp_server.par")).toEqual(["--uid="]);
-    expect(officialSpawnArgs(fakeOfficialAgent)).toEqual([]);
+  it("adds --uid= only for the official .par binary on Linux", () => {
+    expect(officialSpawnArgs("/tmp/agy_acp_server.par", "linux")).toEqual(["--uid="]);
+    expect(officialSpawnArgs("/tmp/agy_acp_server.par", "darwin")).toEqual([]);
+    expect(officialSpawnArgs("/tmp/agy_acp_server.par", "win32")).toEqual([]);
+    expect(officialSpawnArgs(fakeOfficialAgent, "linux")).toEqual([]);
+    expect(officialSpawnArgs(fakeOfficialAgent, "darwin")).toEqual([]);
     expect(resolveOfficialBinary({ PASEO_AGY_ACP_OFFICIAL_BIN: fakeOfficialAgent })).toBe(fakeOfficialAgent);
   });
 });

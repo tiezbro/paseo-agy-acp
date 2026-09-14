@@ -99,7 +99,7 @@ Antigravity 账号服务多个并发 Paseo agent 时建议启用。
 
 除非官方内核已经位于维护者主机默认 pin 路径，否则必须设置
 `PASEO_AGY_ACP_OFFICIAL_BIN`。若它直接指向 `.par`，适配器会从该文件所在目录
-启动并提供所需 uid。
+启动，并仅在 Linux 上附加官方 `--uid=` 启动参数。
 
 <!-- readme:quickstart -->
 ## 快速开始

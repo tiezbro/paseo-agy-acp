@@ -110,7 +110,8 @@ Paseo agents.
 
 Set `PASEO_AGY_ACP_OFFICIAL_BIN` unless the kernel already exists at the
 maintainer-host default pin. If this variable points directly at a `.par`, the
-adapter starts it from its own directory and supplies the required uid.
+adapter starts it from its own directory and, on Linux, appends the official
+`--uid=` launch flag.
 
 <!-- readme:quickstart -->
 ## Quickstart
