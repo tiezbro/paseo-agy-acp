@@ -5,7 +5,7 @@
 **Google 官方 Antigravity ACP 内核面向 Paseo 的可靠产品适配器**
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](./LICENSE)
-[![Version](https://img.shields.io/badge/version-2.3.2-blue?style=flat-square)](./package.json)
+[![Version](https://img.shields.io/badge/version-2.4.0-blue?style=flat-square)](./package.json)
 [![npm](https://img.shields.io/npm/v/paseo-agy-acp?style=flat-square)](https://www.npmjs.com/package/paseo-agy-acp)
 [![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen?style=flat-square)](./package.json)
 [![ACP](https://img.shields.io/badge/ACP-NDJSON%20v1-8A2BE2?style=flat-square)](https://agentclientprotocol.com)
@@ -93,23 +93,24 @@ Antigravity 账号服务多个并发 Paseo agent 时建议启用。
 
 - 支持 Generic ACP provider 的 **Paseo**
 - **Node.js 22 或更新版本**
-- 本机已安装的官方 Antigravity ACP kernel wrapper 或 `.par`
 - 可以完成官方 `oauth-personal` 的 Antigravity 账号
 - 启用 Admission 时，系统需支持 Linux 文件 owner 与 mode
 
-除非官方内核已经位于维护者主机默认 pin 路径，否则必须设置
-`PASEO_AGY_ACP_OFFICIAL_BIN`。若它直接指向 `.par`，适配器会从该文件所在目录
-启动，并仅在 Linux 上附加官方 `--uid=` 启动参数。
+首次启动时，适配器按当前操作系统从 Google 下载对应的官方 Antigravity ACP 1.2.1
+包。npm 包本身不包含这些内核。Linux x86_64 还会装上本机兼容包装器。
+`PASEO_AGY_ACP_OFFICIAL_BIN` 留空，或继续指向托管包装器即可。指向其他已存在路径时，
+按该路径启动。
 
 <!-- readme:quickstart -->
 ## 快速开始
 
-### 1. 指定官方内核并完成认证
+### 1. 完成认证
 
 ```bash
-export PASEO_AGY_ACP_OFFICIAL_BIN="/absolute/path/to/agy-acp-server-wrapper-or.par"
-npx -y paseo-agy-acp@2.3.2 --login
+npx -y paseo-agy-acp@2.4.0 --login
 ```
+
+第一次运行会下载并配置官方内核 1.2.1。下载约 320 MiB，放在 `~/.local/opt/`。
 
 OAuth 由官方内核完成。Token 保留在内核自己的状态中，本适配器不会打印。
 
@@ -120,7 +121,7 @@ OAuth 由官方内核完成。Token 保留在内核自己的状态中，本适�
 ```bash
 export AGY_ACP_STATE_DIR="$HOME/.local/state/paseo-agy-acp/account-name"
 install -d -m 700 "$AGY_ACP_STATE_DIR"
-npx -y --package=paseo-agy-acp@2.3.2 \
+npx -y --package=paseo-agy-acp@2.4.0 \
   agy-acp-prepare-state "$AGY_ACP_STATE_DIR"
 ```
 
@@ -136,9 +137,8 @@ npx -y --package=paseo-agy-acp@2.3.2 \
   "providers": {
     "antigravity": {
       "type": "acp",
-      "command": ["npx", "-y", "paseo-agy-acp@2.3.2"],
+      "command": ["npx", "-y", "paseo-agy-acp@2.4.0"],
       "env": {
-        "PASEO_AGY_ACP_OFFICIAL_BIN": "/absolute/path/to/agy-acp-server-wrapper-or.par",
         "AGY_ACP_ADMISSION_ENABLED": "true",
         "AGY_ACP_STATE_DIR": "/home/YOU/.local/state/paseo-agy-acp/account-name"
       }
@@ -180,6 +180,13 @@ Paseo 会向 provider 进程提供 `PASEO_AGENT_ID` 和 `PASEO_AGENT_CWD`。只�
 | `dangerously-skip-permissions` | `yolo` |
 | `plan` | `default`（官方内核没有 plan mode） |
 
+官方 `yolo` 与 Paseo 的 Auto Accept（`features.auto_accept`）是两套独立开关。
+未应答的 `session/request_permission` 会让 `session/prompt` 一直保持打开，
+因此即使 assistant 文本已经可见，agent 仍可能保持 `running`。无人值守运行时，
+请打开 Auto Accept，或用 `paseo permit ls` / `paseo permit allow` 批准，
+并在需要内核跳过工具确认时使用 `yolo`。本适配器不会把已显示的文本当成
+`end_turn`。见 [#11](https://github.com/tiezbro/paseo-agy-acp/issues/11)。
+
 `PASEO_AGY_ACP_KERNEL=legacy` 和 `--legacy-kernel` 会 fail closed。官方内核是唯一
 执行路径。
 
@@ -198,6 +205,9 @@ Agents/Codex 目录和全局 Gemini/Agents/Codex 目录。每个 skill 目录需
 - 修改 provider command、环境变量或内核路径后要重启 Paseo。
 - 已启用 Admission 但 identity 缺失、状态权限不安全或 policy 非法时，系统拒绝启动，
   不会静默变成 unfenced 运行。
+- assistant 文本已经可见但 turn 仍 `running`，通常是未处理的权限卡片，而不是内核
+  丢失完成态。检查 Auto Accept 和 `paseo permit ls`。Paseo 的 `Worked for …`
+  是墙钟时间，权限等待也会计入。
 - 工具质量、生图、backend 配额与 provider 错误文案仍由官方内核和 Google backend
   负责。
 - 可复现升级或回滚应在 provider command 中固定三段 npm 版本，然后重启 Paseo。

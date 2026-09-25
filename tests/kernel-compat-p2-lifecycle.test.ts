@@ -78,12 +78,13 @@ function observation(created: KernelCompatP2Fixture): {
 }
 
 describe("P2 official kernel compatibility pins", () => {
-  it("keeps the frozen RC01 hashes and real runfiles-relative target paths", () => {
-    expect(PRODUCTION_KERNEL_COMPAT_PINS.parSha256).toBe("46b5925100903a23e0ec7da8b8a218c224494dfffeb3fd30fcd84e91acbc8b07");
-    expect(PRODUCTION_KERNEL_COMPAT_PINS.externalHarnessSha256).toBe("8a8d8efc8dcf1f8cb87db6c932957ecf14684cd7d71ee5670b5515c16a685404");
+  it("keeps the frozen 1.2.1 hashes and real runfiles-relative target paths", () => {
+    expect(PRODUCTION_KERNEL_COMPAT_PINS.profileId).toBe("1.2.1");
+    expect(PRODUCTION_KERNEL_COMPAT_PINS.parSha256).toBe("adbf34295671d1fd68b347efe4e4e2587816023cf41b9eff92c451834eb3de95");
+    expect(PRODUCTION_KERNEL_COMPAT_PINS.externalHarnessSha256).toBe("428236f899a22181ecb47b2885b167e71d4f1a661f8ce0046225174a32018f72");
     expect(PRODUCTION_KERNEL_COMPAT_PINS.targets.modelSelection).toMatchObject({
       relativePath: `${ACP_SERVER_DIRECTORY}/model_selection.py`,
-      preimageSha256: "2dabcfcbb7e165cdd4fb73e05c08a8b01230837d818f39a0a13cd3cfbca87b71"
+      preimageSha256: "1348ec7c5d9e2b157e22be00730c265c0e396af9b1e87113ca28c28f55dd684d"
     });
     expect(PRODUCTION_KERNEL_COMPAT_PINS.targets.proxyServer).toMatchObject({
       relativePath: `${ACP_SERVER_DIRECTORY}/ccpa_connection/proxy_server.py`,
@@ -91,7 +92,7 @@ describe("P2 official kernel compatibility pins", () => {
     });
     expect(PRODUCTION_KERNEL_COMPAT_PINS.targets.serverControl).toMatchObject({
       relativePath: `${ACP_SERVER_DIRECTORY}/server.py`,
-      preimageSha256: "8ede74f3cec50e0a76796ef1af91840bab16b7ee36664a2499f07d3119013d7b",
+      preimageSha256: "63101334b325e70d5fe58b1c36f64c0901eb305ffcc51b17c2bda8b32aa4df4c",
       patchable: false
     });
   });
@@ -312,6 +313,29 @@ describe("P2 official kernel compatibility lifecycle", () => {
       }
     };
     await expect(lifecycleFor(created, stalePins).verify(second.artifactId)).rejects.toThrow(/stale or unknown/);
+  });
+
+  it("activates a new pin generation without recording the previous generation as rollback", async () => {
+    const created = fixture();
+    const lifecycle = lifecycleFor(created);
+    const first = await lifecycle.prepare(created.prepareOptions);
+    await lifecycle.activate(first.artifactId);
+
+    const nextPins: KernelCompatPins = { ...created.pins, profileId: "next-generation" };
+    const next = lifecycleFor(created, nextPins);
+    const second = await next.prepare(created.prepareOptions);
+    const activated = await next.activate(second.artifactId);
+
+    expect(activated).toMatchObject({
+      changed: true,
+      currentArtifactId: second.artifactId
+    });
+    expect(activated.previousArtifactId).toBeUndefined();
+    await expect(next.status()).resolves.toMatchObject({
+      current: { artifactId: second.artifactId, verified: true }
+    });
+    expect(existsSync(first.releasePath)).toBe(true);
+    await expect(next.rollback()).rejects.toThrow(/no previous compatibility release/);
   });
 
   it("blocks an active lock and safely quarantines dead or PID-reused lock receipts", async () => {

@@ -15,13 +15,13 @@ export interface KernelCompatPins {
 
 // These are public integrity pins, not bundled Google artifacts or source context.
 export const PRODUCTION_KERNEL_COMPAT_PINS: KernelCompatPins = Object.freeze({
-  profileId: "rc01",
-  parSha256: "46b5925100903a23e0ec7da8b8a218c224494dfffeb3fd30fcd84e91acbc8b07",
-  externalHarnessSha256: "8a8d8efc8dcf1f8cb87db6c932957ecf14684cd7d71ee5670b5515c16a685404",
+  profileId: "1.2.1",
+  parSha256: "adbf34295671d1fd68b347efe4e4e2587816023cf41b9eff92c451834eb3de95",
+  externalHarnessSha256: "428236f899a22181ecb47b2885b167e71d4f1a661f8ce0046225174a32018f72",
   targets: Object.freeze({
     modelSelection: Object.freeze({
       relativePath: "google3/cloud/developer_experience/antigravity_extensions/acp_server/model_selection.py",
-      preimageSha256: "2dabcfcbb7e165cdd4fb73e05c08a8b01230837d818f39a0a13cd3cfbca87b71",
+      preimageSha256: "1348ec7c5d9e2b157e22be00730c265c0e396af9b1e87113ca28c28f55dd684d",
       patchable: true
     }),
     proxyServer: Object.freeze({
@@ -31,7 +31,7 @@ export const PRODUCTION_KERNEL_COMPAT_PINS: KernelCompatPins = Object.freeze({
     }),
     serverControl: Object.freeze({
       relativePath: "google3/cloud/developer_experience/antigravity_extensions/acp_server/server.py",
-      preimageSha256: "8ede74f3cec50e0a76796ef1af91840bab16b7ee36664a2499f07d3119013d7b",
+      preimageSha256: "63101334b325e70d5fe58b1c36f64c0901eb305ffcc51b17c2bda8b32aa4df4c",
       patchable: false
     })
   })

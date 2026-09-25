@@ -77,7 +77,7 @@ describe("admission production composition", () => {
       );
       const initialized = await collected.waitFor((message) => "id" in message && message.id === 1);
       expect(initialized).toMatchObject({
-        result: { agentInfo: { name: "agy-acp", version: "2.3.2" } }
+        result: { agentInfo: { name: "agy-acp", version: "2.4.0" } }
       });
 
       child.stdin.write(

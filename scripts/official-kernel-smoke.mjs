@@ -9,7 +9,7 @@ const officialBin =
   process.env.PASEO_AGY_ACP_OFFICIAL_BIN ??
   path.join(
     process.env.HOME ?? "",
-    ".local/opt/agy-acp-server-agy_acp_server_20260818_01_RC01/agy-acp-server-canary"
+    ".local/opt/agy-acp-server-1.2.1/agy-acp-server-canary"
   );
 
 const child = spawn(process.execPath, [cli], {
@@ -67,7 +67,7 @@ child.stderr.on("data", (chunk) => stderr.push(chunk));
 try {
   const initialized = await request(1, "initialize", {
     protocolVersion: 1,
-    clientInfo: { name: "official-kernel-smoke", version: "2.3.2" },
+    clientInfo: { name: "official-kernel-smoke", version: "2.4.0" },
     capabilities: {}
   });
   if (initialized.error) throw new Error(`initialize failed: ${JSON.stringify(initialized.error)}`);
@@ -75,8 +75,8 @@ try {
   if (agentInfo.name !== "agy-acp") {
     throw new Error(`expected product identity agy-acp, got ${JSON.stringify(agentInfo)}`);
   }
-  if (agentInfo.version !== "2.3.2") {
-    throw new Error(`expected version 2.3.2, got ${agentInfo.version}`);
+  if (agentInfo.version !== "2.4.0") {
+    throw new Error(`expected version 2.4.0, got ${agentInfo.version}`);
   }
 
   const created = await request(2, "session/new", {

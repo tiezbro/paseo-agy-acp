@@ -326,7 +326,7 @@ export class OfficialKernelCompatLifecycle {
         uid
       );
       ensureStableActivationWrapper(this.#stateRoot, this.#pinDigest, uid);
-      const active = readActiveState(this.#stateRoot, uid, this.#pinDigest);
+      const active = readActiveStateForActivation(this.#stateRoot, uid, this.#pinDigest);
       if (active?.currentArtifactId === selectedArtifactId) {
         return {
           changed: false,
@@ -1870,6 +1870,20 @@ function readActiveState(root: string, uid: number, expectedPinDigest?: string):
     throw new KernelCompatLifecycleError("active compatibility state uses stale or unknown kernel compatibility pins");
   }
   return state;
+}
+
+function readActiveStateForActivation(root: string, uid: number, expectedPinDigest: string): ActivationState | undefined {
+  try {
+    return readActiveState(root, uid, expectedPinDigest);
+  } catch (error) {
+    if (
+      error instanceof KernelCompatLifecycleError &&
+      error.message === "active compatibility state uses stale or unknown kernel compatibility pins"
+    ) {
+      return undefined;
+    }
+    throw error;
+  }
 }
 
 function readActiveStateReference(root: string, uid: number): ActiveStateReference | undefined {

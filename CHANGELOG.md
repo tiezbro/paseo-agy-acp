@@ -2,6 +2,29 @@
 
 All notable changes to `paseo-agy-acp` are recorded here.
 
+## 2.4.0 - 2026-09-25
+
+### Changed
+
+- On first start, download the official Antigravity ACP 1.2.1 archive that
+  matches the current operating system. The npm package stores the official
+  URLs and does not contain the kernels. Linux x86_64 also installs the local
+  compatibility wrapper. A custom `PASEO_AGY_ACP_OFFICIAL_BIN` that is not a
+  managed path is left unchanged.
+- Pin the official Antigravity ACP kernel to registry `antigravity-acp` 1.2.1.
+  The local compatibility markers stay the same: the CCPA proxy is unchanged,
+  and the Gemini-only catalog filter is still rewritten in place. `server.py`
+  stays unmodified.
+- Activating a new pin generation replaces the active wrapper. The previous
+  generation stays on disk and is not a lifecycle rollback target.
+
+### Verification
+
+- Hashes checked against the Linux x86_64 zip published 2026-09-23.
+- Complete validation: 37 test files, 218 passed, 1 skipped; architecture and
+  secret checks passed. A live `session/new` on the 1.2.1 compatibility wrapper
+  returned Gemini 3.8 plus the entitled Claude and GPT-OSS ids.
+
 ## 2.3.2 - 2026-09-24
 
 ### Fixed

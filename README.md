@@ -5,7 +5,7 @@
 **Reliable Paseo adapter for Google's official Antigravity ACP kernel**
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](./LICENSE)
-[![Version](https://img.shields.io/badge/version-2.3.2-blue?style=flat-square)](./package.json)
+[![Version](https://img.shields.io/badge/version-2.4.0-blue?style=flat-square)](./package.json)
 [![npm](https://img.shields.io/npm/v/paseo-agy-acp?style=flat-square)](https://www.npmjs.com/package/paseo-agy-acp)
 [![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen?style=flat-square)](./package.json)
 [![ACP](https://img.shields.io/badge/ACP-NDJSON%20v1-8A2BE2?style=flat-square)](https://agentclientprotocol.com)
@@ -104,24 +104,26 @@ Paseo agents.
 
 - **Paseo** with Generic ACP provider support
 - **Node.js 22 or newer**
-- A locally installed official Antigravity ACP kernel wrapper or `.par`
 - An Antigravity account able to complete official `oauth-personal`
 - Linux filesystem ownership and mode support when Admission is enabled
 
-Set `PASEO_AGY_ACP_OFFICIAL_BIN` unless the kernel already exists at the
-maintainer-host default pin. If this variable points directly at a `.par`, the
-adapter starts it from its own directory and, on Linux, appends the official
-`--uid=` launch flag.
+On first start the adapter downloads the official Antigravity ACP 1.2.1 archive
+for the current operating system from Google. The npm package does not contain
+those archives. Linux x86_64 also installs the local compatibility wrapper.
+Leave `PASEO_AGY_ACP_OFFICIAL_BIN` unset, or keep it pointed at the managed
+wrapper. A different existing path is used as-is.
 
 <!-- readme:quickstart -->
 ## Quickstart
 
-### 1. Point to the official kernel and authenticate
+### 1. Authenticate
 
 ```bash
-export PASEO_AGY_ACP_OFFICIAL_BIN="/absolute/path/to/agy-acp-server-wrapper-or.par"
-npx -y paseo-agy-acp@2.3.2 --login
+npx -y paseo-agy-acp@2.4.0 --login
 ```
+
+The first run downloads and configures official kernel 1.2.1. That download is
+about 320 MiB and stays under `~/.local/opt/`.
 
 OAuth is completed by the official kernel. Its tokens remain in the kernel's
 own state and are not printed by this adapter.
@@ -134,7 +136,7 @@ delegation.
 ```bash
 export AGY_ACP_STATE_DIR="$HOME/.local/state/paseo-agy-acp/account-name"
 install -d -m 700 "$AGY_ACP_STATE_DIR"
-npx -y --package=paseo-agy-acp@2.3.2 \
+npx -y --package=paseo-agy-acp@2.4.0 \
   agy-acp-prepare-state "$AGY_ACP_STATE_DIR"
 ```
 
@@ -151,9 +153,8 @@ Add or update the provider in `$PASEO_HOME/config.json` or
   "providers": {
     "antigravity": {
       "type": "acp",
-      "command": ["npx", "-y", "paseo-agy-acp@2.3.2"],
+      "command": ["npx", "-y", "paseo-agy-acp@2.4.0"],
       "env": {
-        "PASEO_AGY_ACP_OFFICIAL_BIN": "/absolute/path/to/agy-acp-server-wrapper-or.par",
         "AGY_ACP_ADMISSION_ENABLED": "true",
         "AGY_ACP_STATE_DIR": "/home/YOU/.local/state/paseo-agy-acp/account-name"
       }
@@ -196,6 +197,15 @@ policy-change procedures are in [Admission operations](docs/operations/admission
 | `dangerously-skip-permissions` | `yolo` |
 | `plan` | `default` (the official kernel has no plan mode) |
 
+Official `yolo` and Paseo's Auto Accept (`features.auto_accept`) are
+separate switches. An unanswered `session/request_permission` keeps
+`session/prompt` open, so the agent can stay `running` after assistant
+text is already visible. For unattended work, enable Auto Accept or
+approve with `paseo permit ls` / `paseo permit allow`, and use `yolo`
+when you also want the kernel to skip tool confirmation. This adapter
+does not treat displayed text as `end_turn`. See
+[#11](https://github.com/tiezbro/paseo-agy-acp/issues/11).
+
 `PASEO_AGY_ACP_KERNEL=legacy` and `--legacy-kernel` fail closed. The official
 kernel is the only execution path.
 
@@ -216,6 +226,10 @@ usable name and description.
 - Restart Paseo after changing provider command, environment, or kernel path.
 - Enabled Admission with missing identity, unsafe state permissions, or invalid
   policy refuses to start instead of silently running unfenced.
+- A turn that stays `running` after visible assistant output is often a
+  pending permission card, not a missing kernel completion. Check Auto Accept
+  and `paseo permit ls`. Paseo's `Worked for …` duration is wall-clock and
+  includes those waits.
 - Tool quality, image generation, backend quota, and provider error text remain
   owned by the official kernel and Google backend.
 - For reproducible upgrades or rollback, pin a three-part npm version in the

@@ -8,6 +8,7 @@ import {
   type JsonRpcMessage
 } from "./json-rpc.js";
 import { createNdjsonParser, encodeNdjson } from "./ndjson.js";
+import { ensureManagedOfficialKernel } from "./ensure-managed-kernel.js";
 import { spawnOfficialKernel } from "./spawn.js";
 
 const AUTHENTICATE_TIMEOUT_MS = 10 * 60_000;
@@ -22,7 +23,8 @@ export async function runOfficialLogin(
   );
   // The official kernel prints the OAuth URL as ordinary stdout text. Its
   // stdout is a pipe here, so force Python to flush that prompt immediately.
-  const child = spawnOfficialKernel({ ...environment, PYTHONUNBUFFERED: "1" });
+  const binary = await ensureManagedOfficialKernel(environment);
+  const child = spawnOfficialKernel({ ...environment, PYTHONUNBUFFERED: "1", PASEO_AGY_ACP_OFFICIAL_BIN: binary });
   const pending = new Map<JsonRpcId, (message: JsonRpcMessage) => void>();
   let nextId = 1;
   let authenticationStarted = false;

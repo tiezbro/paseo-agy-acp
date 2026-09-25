@@ -1,4 +1,5 @@
 import type { Readable, Writable } from "node:stream";
+import { ensureManagedOfficialKernel } from "./ensure-managed-kernel.js";
 import { OfficialKernelProxy } from "./proxy.js";
 import { spawnOfficialKernel } from "./spawn.js";
 
@@ -11,7 +12,8 @@ export interface RunOfficialKernelOptions {
 
 export async function runOfficialKernel(options: RunOfficialKernelOptions): Promise<void> {
   const env = options.env ?? process.env;
-  const child = spawnOfficialKernel(env);
+  const binary = await ensureManagedOfficialKernel(env);
+  const child = spawnOfficialKernel({ ...env, PASEO_AGY_ACP_OFFICIAL_BIN: binary });
   const proxy = new OfficialKernelProxy({
     child,
     stdin: (options.stdin ?? process.stdin) as Readable,
