@@ -5,7 +5,7 @@
 **Google 官方 Antigravity ACP 内核面向 Paseo 的可靠产品适配器**
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](./LICENSE)
-[![Version](https://img.shields.io/badge/version-2.4.0-blue?style=flat-square)](./package.json)
+[![Version](https://img.shields.io/badge/version-2.4.1-blue?style=flat-square)](./package.json)
 [![npm](https://img.shields.io/npm/v/paseo-agy-acp?style=flat-square)](https://www.npmjs.com/package/paseo-agy-acp)
 [![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen?style=flat-square)](./package.json)
 [![ACP](https://img.shields.io/badge/ACP-NDJSON%20v1-8A2BE2?style=flat-square)](https://agentclientprotocol.com)
@@ -107,7 +107,7 @@ Antigravity 账号服务多个并发 Paseo agent 时建议启用。
 ### 1. 完成认证
 
 ```bash
-npx -y paseo-agy-acp@2.4.0 --login
+npx -y paseo-agy-acp@2.4.1 --login
 ```
 
 第一次运行会下载并配置官方内核 1.2.1。下载约 320 MiB，放在 `~/.local/opt/`。
@@ -121,7 +121,7 @@ OAuth 由官方内核完成。Token 保留在内核自己的状态中，本适�
 ```bash
 export AGY_ACP_STATE_DIR="$HOME/.local/state/paseo-agy-acp/account-name"
 install -d -m 700 "$AGY_ACP_STATE_DIR"
-npx -y --package=paseo-agy-acp@2.4.0 \
+npx -y --package=paseo-agy-acp@2.4.1 \
   agy-acp-prepare-state "$AGY_ACP_STATE_DIR"
 ```
 
@@ -137,7 +137,7 @@ npx -y --package=paseo-agy-acp@2.4.0 \
   "providers": {
     "antigravity": {
       "type": "acp",
-      "command": ["npx", "-y", "paseo-agy-acp@2.4.0"],
+      "command": ["npx", "-y", "paseo-agy-acp@2.4.1"],
       "env": {
         "AGY_ACP_ADMISSION_ENABLED": "true",
         "AGY_ACP_STATE_DIR": "/home/YOU/.local/state/paseo-agy-acp/account-name"

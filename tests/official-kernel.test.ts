@@ -204,10 +204,10 @@ describe("official kernel adapters", () => {
   it("overlays product identity onto the official initialize payload", () => {
     const overlaid = overlayProductIdentity(
       { protocolVersion: 1, agentInfo: { name: "antigravity-acp", version: "rc01" } },
-      "2.4.0"
+      "2.4.1"
     );
     expect(overlaid).toMatchObject({
-      agentInfo: { name: PRODUCT_AGENT_NAME, version: "2.4.0" }
+      agentInfo: { name: PRODUCT_AGENT_NAME, version: "2.4.1" }
     });
   });
 
@@ -283,7 +283,7 @@ describe("official kernel proxy", () => {
       stdin,
       stdout,
       env,
-      version: "2.4.0"
+      version: "2.4.1"
     });
     const started = proxy.start();
     const collected = collect(stdout);
@@ -317,7 +317,7 @@ describe("official kernel proxy", () => {
         send({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: 1 } });
         const initialized = await waitFor((message) => "id" in message && message.id === 1);
         expect(initialized).toMatchObject({
-          result: { agentInfo: { name: "agy-acp", version: "2.4.0" } }
+          result: { agentInfo: { name: "agy-acp", version: "2.4.1" } }
         });
 
         send({
@@ -365,6 +365,78 @@ describe("official kernel proxy", () => {
       },
       { PASEO_HOME: home, PASEO_AGENT_ID: "agent-proxy" }
     );
+  });
+
+  it("forwards new, load, and resume MCP callbacks through the protocol bridge", async () => {
+    const seen: Array<{ version: string; protocolVersion: string }> = [];
+    const upstream = createServer((request, response) => {
+      const chunks: Buffer[] = [];
+      request.on("data", (chunk: Buffer) => chunks.push(chunk));
+      request.on("end", () => {
+        const header = request.headers["mcp-protocol-version"];
+        const version = Array.isArray(header) ? header[0] ?? "" : header ?? "";
+        const protocolVersion = JSON.parse(Buffer.concat(chunks).toString("utf8")).params.protocolVersion as string;
+        seen.push({ version, protocolVersion });
+        if (version === "2026-07-28" || protocolVersion === "2026-07-28") {
+          response.writeHead(400).end("Unsupported protocol version: 2026-07-28");
+          return;
+        }
+        response.writeHead(200, { "content-type": "application/json" }).end(
+          JSON.stringify({ jsonrpc: "2.0", id: 1, result: { protocolVersion: "2025-11-25" } })
+        );
+      });
+    });
+    await new Promise<void>((resolve) => upstream.listen(0, "127.0.0.1", () => resolve()));
+    const port = (upstream.address() as { port: number }).port;
+    const original = `http://127.0.0.1:${port}/mcp`;
+    try {
+      await withProxy(async ({ send, waitFor }) => {
+        for (const [id, method] of [
+          [2, "session/new"],
+          [3, "session/load"],
+          [4, "session/resume"]
+        ] as const) {
+          send({
+            jsonrpc: "2.0",
+            id,
+            method,
+            params: {
+              cwd: "/tmp",
+              sessionId: "session-official-1",
+              mcpServers: [{ name: "paseo", type: "http", url: original, headers: { K: "V" } }]
+            }
+          });
+          const reply = await waitFor((message) => "id" in message && message.id === id);
+          expect(reply).toMatchObject({
+            result: { mcpServers: [{ type: "sse", headers: [{ name: "K", value: "V" }] }] }
+          });
+          const servers = (reply as { result: { mcpServers: Array<{ url: string }> } }).result.mcpServers;
+          expect(servers[0]?.url).toMatch(/^http:\/\/127\.0\.0\.1:\d+\/b\/[a-f0-9]{16}\/mcp$/);
+          expect(servers[0]?.url).not.toBe(original);
+          const response = await fetch(servers[0]!.url, {
+            method: "POST",
+            headers: { "content-type": "application/json", "mcp-protocol-version": "2026-07-28" },
+            body: JSON.stringify({
+              jsonrpc: "2.0",
+              id: 1,
+              method: "initialize",
+              params: { protocolVersion: "2026-07-28" }
+            })
+          });
+          expect(response.status).toBe(200);
+          expect(await response.json()).toMatchObject({ result: { protocolVersion: "2025-11-25" } });
+        }
+      });
+      expect(seen).toEqual([
+        { version: "2025-11-25", protocolVersion: "2025-11-25" },
+        { version: "2025-11-25", protocolVersion: "2025-11-25" },
+        { version: "2025-11-25", protocolVersion: "2025-11-25" }
+      ]);
+    } finally {
+      await new Promise<void>((resolve, reject) => {
+        upstream.close((error) => error ? reject(error) : resolve());
+      });
+    }
   });
 
   it("augments available commands with workspace skills and excludes user-invocable: false", async () => {
@@ -512,7 +584,7 @@ describe("official kernel proxy", () => {
       );
       const initialized = await collected.waitFor((message) => "id" in message && message.id === 1);
       expect(initialized).toMatchObject({
-        result: { agentInfo: { name: "agy-acp", version: "2.4.0" } }
+        result: { agentInfo: { name: "agy-acp", version: "2.4.1" } }
       });
     } finally {
       child.stdin.end();

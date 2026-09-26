@@ -72,6 +72,18 @@ rl.on("line", (line) => {
     return;
   }
 
+  if (message.method === "session/load" || message.method === "session/resume") {
+    write({
+      jsonrpc: "2.0",
+      id: message.id,
+      result: {
+        sessionId: message.params?.sessionId,
+        mcpServers: message.params?.mcpServers ?? []
+      }
+    });
+    return;
+  }
+
   if (message.method === "session/set_mode") {
     write({ jsonrpc: "2.0", id: message.id, result: { modeId: message.params?.modeId } });
     return;

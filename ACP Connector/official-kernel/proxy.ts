@@ -15,6 +15,7 @@ import {
   type JsonRpcMessage,
   type JsonRpcRequest
 } from "./json-rpc.js";
+import { bridgeOfficialMcpServers } from "./mcp-protocol-bridge.js";
 import { rewriteMcpServers } from "./mcp-rewrite.js";
 import { rewriteModeFields } from "./mode-map.js";
 import { createNdjsonParser, encodeNdjson } from "./ndjson.js";
@@ -132,13 +133,14 @@ export class OfficialKernelProxy {
   async #onClientRequest(request: JsonRpcRequest): Promise<void> {
     let params = request.params;
     if (request.method === SESSION_NEW_METHOD) {
-      params = rewriteMcpServers(rewriteModeFields(params));
+      params = await bridgeOfficialMcpServers(rewriteMcpServers(rewriteModeFields(params)));
       await this.#forwardSessionNew(request, params);
       return;
     } else if (
       request.method === SESSION_LOAD_METHOD ||
       request.method === SESSION_RESUME_METHOD
     ) {
+      params = await bridgeOfficialMcpServers(rewriteMcpServers(params));
       const sessionId = extractSessionId(params);
       const cwd = extractCwd(params);
       if (sessionId && cwd) {

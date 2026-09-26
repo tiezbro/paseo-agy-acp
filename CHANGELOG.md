@@ -2,6 +2,22 @@
 
 All notable changes to `paseo-agy-acp` are recorded here.
 
+## 2.4.1 - 2026-09-26
+
+### Fixed
+
+- Forward the official kernel's MCP callback through a local bridge. The kernel
+  opens that callback with protocol date `2026-07-28`, and Paseo rejects that
+  date. The bridge presents `2025-11-25`, which both sides accept, on
+  `session/new`, `session/load`, and `session/resume`.
+
+### Verification
+
+- Complete validation: 38 test files, 222 passed, 1 skipped; architecture and
+  secret checks passed. `session/new`, `session/load`, and `session/resume`
+  each hand the kernel a local bridge URL, and a `2026-07-28` initialize is
+  delivered upstream as `2025-11-25`.
+
 ## 2.4.0 - 2026-09-25
 
 ### Changed
