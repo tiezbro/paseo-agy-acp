@@ -20,6 +20,7 @@ import { rewriteMcpServers } from "./mcp-rewrite.js";
 import { rewriteModeFields } from "./mode-map.js";
 import { createNdjsonParser, encodeNdjson } from "./ndjson.js";
 import { augmentAvailableCommands, type AvailableCommand } from "./skill-commands.js";
+import { SystemMessageFolder } from "./system-message-fold.js";
 
 const INITIALIZE_METHOD = "initialize";
 const SESSION_NEW_METHOD = "session/new";
@@ -55,6 +56,7 @@ export class OfficialKernelProxy {
   readonly #pending = new Map<JsonRpcId, PendingClientRequest>();
   readonly #claims = new Map<string, TurnClaim>();
   readonly #sessionCwds = new Map<string, string>();
+  readonly #systemMessageFolder = new SystemMessageFolder();
   readonly #env: NodeJS.ProcessEnv;
   readonly #admission;
   #sessionNewTail: Promise<void> = Promise.resolve();
@@ -125,7 +127,10 @@ export class OfficialKernelProxy {
   #onClientNotification(message: JsonRpcMessage & { method: string }): void {
     if (message.method === SESSION_CANCEL_METHOD) {
       const sessionId = extractSessionId("params" in message ? message.params : undefined);
-      if (sessionId) this.#claims.get(sessionId)?.abort();
+      if (sessionId) {
+        this.#claims.get(sessionId)?.abort();
+        this.#systemMessageFolder.reset(sessionId);
+      }
     }
     this.#writeChild(message);
   }
@@ -283,7 +288,10 @@ export class OfficialKernelProxy {
         };
       }
 
-      this.#writeClient(message);
+      const outboundUpdates = this.#systemMessageFolder.transform(message);
+      for (const updateMessage of outboundUpdates) {
+        this.#writeClient(updateMessage);
+      }
       return;
     }
 
@@ -308,11 +316,15 @@ export class OfficialKernelProxy {
           this.#sessionCwds.set(sessionId, pending.cwd);
         }
       } else if (
-        pending.method === SESSION_PROMPT_METHOD &&
-        isJsonRpcSuccess(message) &&
-        shouldRejectBlankTurn(message.result, pending.sawVisibleOutput)
+        pending.method === SESSION_PROMPT_METHOD
       ) {
-        outbound = blankTurnError(message.id);
+        this.#systemMessageFolder.reset(pending.sessionId);
+        if (
+          isJsonRpcSuccess(message) &&
+          shouldRejectBlankTurn(message.result, pending.sawVisibleOutput)
+        ) {
+          outbound = blankTurnError(message.id);
+        }
       }
       this.#writeClient(outbound);
       pending.resolve(outbound);
