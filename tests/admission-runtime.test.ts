@@ -32,6 +32,18 @@ afterEach(() => {
 });
 
 describe("Admission Controller runtime factory", () => {
+  it("rejects enabled admission on non-Linux platforms before creating state", () => {
+    const directory = path.join(stateDir(), "darwin-rejected");
+
+    expect(() => createAdmissionRuntime({
+      AGY_ACP_ADMISSION_ENABLED: "1",
+      AGY_ACP_STATE_DIR: directory,
+      PASEO_AGENT_ID: "runtime-test-agent"
+    }, { platform: "darwin" })).toThrow(/only supported on linux/);
+
+    expect(existsSync(directory)).toBe(false);
+  });
+
   it("does not create state while admission is absent or explicitly disabled", () => {
     const root = stateDir();
     const absentStateDir = path.join(root, "absent");
@@ -53,7 +65,7 @@ describe("Admission Controller runtime factory", () => {
       AGY_ACP_ADMISSION_ENABLED: "1",
       AGY_ACP_STATE_DIR: directory,
       PASEO_AGENT_ID: "runtime-test-agent"
-    });
+    }, { platform: "linux" });
 
     expect(runtime).not.toBeNull();
     expect(runtime?.controller.schemaVersion).toBe(ADMISSION_SCHEMA_VERSION);
@@ -73,7 +85,7 @@ describe("Admission Controller runtime factory", () => {
       AGY_ACP_ADMISSION_ENABLED: "1",
       AGY_ACP_STATE_DIR: directory,
       PASEO_AGENT_ID: "runtime-policy-owner-a"
-    });
+    }, { platform: "linux" });
 
     try {
       let failure: unknown;
@@ -83,7 +95,7 @@ describe("Admission Controller runtime factory", () => {
           AGY_ACP_STATE_DIR: directory,
           AGY_ACP_ADMISSION_MAX_ACTIVE_TURNS: "1",
           PASEO_AGENT_ID: "runtime-policy-owner-b"
-        });
+        }, { platform: "linux" });
         second?.close();
       } catch (error) {
         failure = error;
@@ -107,7 +119,7 @@ describe("Admission Controller runtime factory", () => {
       AGY_ACP_ADMISSION_ENABLED: "true",
       AGY_ACP_STATE_DIR: directory,
       PASEO_AGENT_ID: "runtime-test-agent"
-    })).toThrow(/must not grant group or other access/);
+    }, { platform: "linux" })).toThrow(/must not grant group or other access/);
     expect(statSync(databasePath).mode & 0o777).toBe(0o640);
   });
 
@@ -121,7 +133,7 @@ describe("Admission Controller runtime factory", () => {
       AGY_ACP_ADMISSION_ENABLED: "true",
       AGY_ACP_STATE_DIR: symlinkDirectory,
       PASEO_AGENT_ID: "runtime-test-agent"
-    })).toThrow(/regular file/);
+    }, { platform: "linux" })).toThrow(/regular file/);
 
     const linkedDirectory = stateDir();
     const databasePath = path.join(linkedDirectory, "runtime.sqlite");
@@ -132,6 +144,6 @@ describe("Admission Controller runtime factory", () => {
       AGY_ACP_ADMISSION_ENABLED: "true",
       AGY_ACP_STATE_DIR: linkedDirectory,
       PASEO_AGENT_ID: "runtime-test-agent"
-    })).toThrow(/exactly one link/);
+    }, { platform: "linux" })).toThrow(/exactly one link/);
   });
 });

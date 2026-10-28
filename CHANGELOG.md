@@ -2,6 +2,16 @@
 
 All notable changes to `paseo-agy-acp` are recorded here.
 
+## Unreleased
+
+### Fixed
+
+- Reject `AGY_ACP_ADMISSION_ENABLED` on non-Linux platforms before the managed
+  kernel is resolved or spawned. Admission proves turn ownership with `/proc`
+  process evidence, so it now fails fast with an error naming the platform
+  instead of failing later or running unfenced. Provider discovery and
+  deployments without Admission are unaffected on every platform.
+
 ## 2.7.0 - 2026-10-27
 
 ### Added

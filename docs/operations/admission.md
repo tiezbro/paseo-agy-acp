@@ -11,6 +11,21 @@ Enable Admission when multiple Paseo agents can use the same Antigravity
 account concurrently. A deliberately isolated single-agent connector can run
 without it.
 
+## Platform support
+
+Admission is **Linux-only**. The fence proves that a turn still belongs to the
+connector that admitted it by reading `/proc/<pid>/stat`, the pid namespace and
+the kernel boot id; there is no equivalent reader on macOS or Windows.
+
+Setting `AGY_ACP_ADMISSION_ENABLED` on another platform now fails fast with
+`admission runtime configuration error: admission is only supported on linux
+because it verifies turns with /proc process evidence; current platform is
+<platform>. Unset AGY_ACP_ADMISSION_ENABLED to run without admission.`
+The connector rejects it before resolving or downloading the official kernel,
+so a misconfiguration cannot leave a half-started provider behind. Unset
+`AGY_ACP_ADMISSION_ENABLED` to run the connector unfenced, which is the only
+supported mode outside Linux.
+
 All connector processes that share one account must use the same
 `AGY_ACP_STATE_DIR`. Different accounts should use different directories.
 

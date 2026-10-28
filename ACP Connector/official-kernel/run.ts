@@ -1,4 +1,9 @@
 import type { Readable, Writable } from "node:stream";
+import {
+  assertAdmissionPlatformSupported,
+  parseAdmissionRuntimeConfig
+} from "../../Admission Controller/runtime-config.js";
+import { isAdmissionDiscoveryEnvironment, isAdmissionEnabled } from "./admission-fence.js";
 import { ensureManagedOfficialKernel } from "./ensure-managed-kernel.js";
 import { OfficialKernelProxy } from "./proxy.js";
 import { spawnOfficialKernel } from "./spawn.js";
@@ -12,6 +17,14 @@ export interface RunOfficialKernelOptions {
 
 export async function runOfficialKernel(options: RunOfficialKernelOptions): Promise<void> {
   const env = options.env ?? process.env;
+  // Reject an unsupported Admission platform before the managed kernel download
+  // and before a kernel child is spawned, so a misconfiguration cannot leave a
+  // half-started provider behind. Discovery runs without an agent identity and
+  // skips Admission entirely.
+  if (isAdmissionEnabled(env) && !isAdmissionDiscoveryEnvironment(env)) {
+    parseAdmissionRuntimeConfig(env);
+    assertAdmissionPlatformSupported();
+  }
   const binary = await ensureManagedOfficialKernel(env);
   const child = spawnOfficialKernel({ ...env, PASEO_AGY_ACP_OFFICIAL_BIN: binary });
   const proxy = new OfficialKernelProxy({
