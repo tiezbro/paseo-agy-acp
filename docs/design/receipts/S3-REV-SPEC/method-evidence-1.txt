@@ -7,8 +7,8 @@ HEAD: 83fb97257814f9072770c77d1bb0da4cfa2b420e
 REVIEWER: PASEO_AGENT_ID=0c8f7428-17f9-4f46-befd-f6b8f42b7015; ParentAgentId=79ab5347-5101-4eff-89ed-6a7aa550ae2e; provider=pi; model=MindStackLab-opencode-go/deepseek-v4-flash; thinking=max; mode=default; PendingPermissions=[]
 
 Skills (read completely; hashes):
-- code-review (primary): /home/tiezbro/.agents/skills/code-review/SKILL.md @ 9cf46653dd9c710ea1e6c22423caf31a794c88773bc94bdaa23140277f470442
-- to-spec (supporting): /home/tiezbro/.agents/skills/to-spec/SKILL.md @ 5d26479544b08048d3a8f79d937b39bc613a617f026b3fd083bafc1e99a7b811
+- code-review (primary): ~/.agents/skills/code-review/SKILL.md @ 9cf46653dd9c710ea1e6c22423caf31a794c88773bc94bdaa23140277f470442
+- to-spec (supporting): ~/.agents/skills/to-spec/SKILL.md @ 5d26479544b08048d3a8f79d937b39bc613a617f026b3fd083bafc1e99a7b811
 Both installed under the pinned source identity mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df (Stage 3 inventory STAGE3-PROMPT-GEN/skill-inventory.md).
 
 code-review step disposition (per §6.22 SKILL_REQUIRED_STEPS + startup gate):

@@ -53,7 +53,7 @@ Do not use a visibility toggle.
 
 ## Push
 
-The writable primary is GitHub `origin` (`https://github.com/tiezbro/paseo-agy-acp.git`). Forgejo (`ssh://git@192.168.6.10:222/tiezbro/paseo-agy-acp.git`) is a read-only **pull mirror**. A `main` push to `origin` runs GitHub Action **Sync Forgejo mirror**, which asks Forgejo to pull.
+The writable primary is GitHub `origin` (`https://github.com/tiezbro/paseo-agy-acp.git`). Forgejo (`ssh://git@forgejo.example.com:222/tiezbro/paseo-agy-acp.git`) is a read-only **pull mirror**. A `main` push to `origin` runs GitHub Action **Sync Forgejo mirror**, which asks Forgejo to pull.
 
 Push `origin`. Do not push `forgejo` — the mirror rejects writes.
 

@@ -31,7 +31,7 @@ DIFF_CHECK=PASS; read-only forbidden-surface scans found only existing implement
 
 METHOD_CONFORMANCE
 IDENTITY_GATE=Injected Paseo status reports CHILD leaf; parent Controller 79ab5347-5101-4eff-89ed-6a7aa550ae2e is running; provider/model=codex/gpt-5.6-luna; thinking=max; mode=full-access; pending=[]; no shell production 6767 inspection.
-SKILLS=code-review /home/tiezbro/.agents/skills/code-review/SKILL.md SHA-256 9cf46653dd9c710ea1e6c22423caf31a794c88773bc94bdaa23140277f470442; codebase-design /home/tiezbro/.agents/skills/codebase-design/SKILL.md SHA-256 a8d50abac5a4018f60e1d911d4b6f4e36454ca14d6c390c0695a578c7de65dad; both were read completely.
+SKILLS=code-review ~/.agents/skills/code-review/SKILL.md SHA-256 9cf46653dd9c710ea1e6c22423caf31a794c88773bc94bdaa23140277f470442; codebase-design ~/.agents/skills/codebase-design/SKILL.md SHA-256 a8d50abac5a4018f60e1d911d4b6f4e36454ca14d6c390c0695a578c7de65dad; both were read completely.
 CODE_REVIEW=Fixed-point and candidate-scope rules were executed against tracked diff plus untracked files; Standards and Spec observations were kept separate. The skill's sub-agent step was inapplicable because this task requires a leaf reviewer with no delegation and independent reviewers already exist.
 CODEBASE_DESIGN=Applied module/interface/seam/depth/leverage/locality vocabulary to the AdmissionRuntime, AdmissionTurnCoordinator, TurnDispatchBoundary, and terminal ownership review. The repaired production seams are exercised through public behavior rather than recording fakes.
 GITNEXUS=No application symbol was edited by this reviewer, so impact-before-edit was not required; no commit was attempted, so detect_changes-before-commit was not applicable. Existing task impact/detect receipts were inspected.

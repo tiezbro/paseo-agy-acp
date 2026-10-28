@@ -5,8 +5,8 @@
 `TASK_ID`：`S3-PROMPT-GEN-DOC-GREEN-001`
 `STAGE`：Stage 3 Prompt Generation（**非 Stage 3 执行**）
 `TASK_TYPE`：independent Documentation GREEN verification（GREEN verifier）
-`SELECTED_PRIMARY_SKILL`：`code-review`（`/home/tiezbro/.agents/skills/code-review/SKILL.md`，行动前完整读取）
-`SELECTED_SUPPORTING_SKILLS`：`writing-for-agents`（`/home/tiezbro/.agents/skills/writing-for-agents/SKILL.md`，行动前完整读取；用于本 receipt 的 findings-first / completion-criteria / 防 premature completion 结构）
+`SELECTED_PRIMARY_SKILL`：`code-review`（`~/.agents/skills/code-review/SKILL.md`，行动前完整读取）
+`SELECTED_SUPPORTING_SKILLS`：`writing-for-agents`（`~/.agents/skills/writing-for-agents/SKILL.md`，行动前完整读取；用于本 receipt 的 findings-first / completion-criteria / 防 premature completion 结构）
 `DEPENDENCIES`：Stage 2 accepted commit `78931bff95ecbd9868f9cfa83a281cbbbf1a60d8`；Spec R3 @ `b6519fca1d3806d41be6354b061e53239ffc3a2c4d8ffce6b85187cbaaf0d7fd`（approved）；Quality R3 @ `1c7cce235c9c4ddcab195dadc71bab0f6b576dd8857e01883e5b67c9bd4aac0c`（approved）；Documentation RED @ `c4533bffa7b0cb14dcc6dca5893ed69e752407e11fe8f16cf70a7b3e6588a1b1`；candidate = canonical（同一 blob）
 `ALLOWED_WRITE_SET`：`docs/design/receipts/STAGE3-PROMPT-GEN/documentation-green.md`（本文件）only；**不 stage**（由 Single Integrator 在 acceptance 后统一 stage）
 
@@ -35,7 +35,7 @@
 | Thinking | `max` | ✓ |
 | Mode | `dont_ask` | Paseo live official option ✓ |
 | `PendingPermissions` | `[]`（0） | ✓ |
-| Status / Cwd | `running` / `/home/tiezbro/projects/paseo-agy-acp` | ✓（与 Prompt §0 cwd 要求一致） |
+| Status / Cwd | `running` / `~/projects/paseo-agy-acp` | ✓（与 Prompt §0 cwd 要求一致） |
 | 委派 | leaf；委派不可用 | 未委派 ✓ |
 
 Skills：`code-review` 与 `writing-for-agents` 两份 SKILL.md 均在行动前完整读取（code-review 双轴审查纪律适配为「Standards=Generator/方法合同 / Spec=Scheme/handoff 转写 fidelity」双轴；writing-for-agents 的 findings-first、completion criteria、防 premature completion 用于本 receipt 结构）。skill 内容与本 GREEN 验证目标一致，无冲突。
@@ -46,11 +46,11 @@ Skills：`code-review` 与 `writing-for-agents` 两份 SKILL.md 均在行动前�
 
 | 项 | exact path | 绑定值 | live 实测 |
 | --- | --- | --- | --- |
-| Generator | `/home/tiezbro/projects/MAACS/docs/controller-prompts/PASEO_AGY_ACP_STAGE3_PROMPT_GENERATOR.md` | `9e2e8334289fe4be546303687daeb28903c58be72c19c4ad40738648686edcdd` | 同 ✓ |
-| confirmed Scheme | `/home/tiezbro/projects/MAACS/docs/maacs-paseo-agy-acp-confirmed-scheme.md` | `d3b712ee5dd01029c66b0372a482f248a6f1ecbcf81572eb74d7b4ba5d98a98d` | 同；状态 `confirmed` ✓ |
+| Generator | `~/projects/MAACS/docs/controller-prompts/PASEO_AGY_ACP_STAGE3_PROMPT_GENERATOR.md` | `9e2e8334289fe4be546303687daeb28903c58be72c19c4ad40738648686edcdd` | 同 ✓ |
+| confirmed Scheme | `~/projects/MAACS/docs/maacs-paseo-agy-acp-confirmed-scheme.md` | `d3b712ee5dd01029c66b0372a482f248a6f1ecbcf81572eb74d7b4ba5d98a98d` | 同；状态 `confirmed` ✓ |
 | Stage 2 handoff | `docs/design/v2.0.0.0-stage2-handoff.md` | sha `c88be84fa4c86c4c63921aaccd08f5f9c765dc896f1c35592f6cb0ee16fafc48`；blob `89c8abe0d82c4915cbf6748db15a9ff86a80c501` | 同 ✓ |
 | AGENTS.md | `AGENTS.md` | `9bbd1e7b1bb7938cc3fd5922a1dcf9a036fa8639267d38789213f4fe9fc3198d` | 同 ✓ |
-| Stage 2 Controller Prompt（provenance） | `/home/tiezbro/projects/MAACS/docs/controller-prompts/PASEO_AGY_ACP_STAGE2_CONTROLLER_PROMPT.md` | `9f946e36e717547e5982eefcc37c188d236e48b3be495541bd12129f84207993` | 同 ✓ |
+| Stage 2 Controller Prompt（provenance） | `~/projects/MAACS/docs/controller-prompts/PASEO_AGY_ACP_STAGE2_CONTROLLER_PROMPT.md` | `9f946e36e717547e5982eefcc37c188d236e48b3be495541bd12129f84207993` | 同 ✓ |
 | 8 份 Stage 2 artifacts | `docs/design/v2.0.0.0-stage2-{503-feasibility,acp-source-map,admission-source-map,architecture,domain-model,test-contracts,spec,handoff}.md` | §2.1 表绑定值（blob+sha） | 8/8 blob + 8/8 sha live 逐一命中 ✓ |
 | Spec R3 receipt | `docs/design/receipts/STAGE3-PROMPT-GEN/spec-review-r3.md` | `b6519fca1d3806d41be6354b061e53239ffc3a2c4d8ffce6b85187cbaaf0d7fd` | 同；VERDICT=approved；SPEC/QUALITY/METHOD/PARALLELISM 四字段全 `CONFORMANT` ✓ |
 | Quality R3 receipt | `docs/design/receipts/STAGE3-PROMPT-GEN/quality-review-r3.md` | `1c7cce235c9c4ddcab195dadc71bab0f6b576dd8857e01883e5b67c9bd4aac0c` | 同；VERDICT=approved；四字段全 `CONFORMANT` ✓ |
@@ -71,7 +71,7 @@ Skills：`code-review` 与 `writing-for-agents` 两份 SKILL.md 均在行动前�
 - **通过。**
 
 ### 3.2 ✅ G2 — Stage3-only、全新顶层会话、exact cwd；Stage1/2 immutable；persistent Goal 只覆盖 Stage 3 Development Closeout
-- §0:15 cwd `/home/tiezbro/projects/paseo-agy-acp`（本会话 Cwd 一致）。
+- §0:15 cwd `~/projects/paseo-agy-acp`（本会话 Cwd 一致）。
 - §0:16 会话类型 = 全新顶层 Paseo Controller 会话，child 不得执行、不得用于委派链内部。
 - §0:17 Stage 边界 = Stage 1 confirmed / Stage 2 accepted（commit `78931bf`、8 份 artifacts 双审 approved、blocking findings=0）；本会话只执行 Stage 3 Development Closeout；禁止重跑/重写/重开 Stage 1/2；输入漂移 → `STAGE2_HANDOFF_REVISIONS_REQUIRED` 并停止。
 - §0:18 persistent Goal 只覆盖「paseo-agy-acp Stage 3 Development Closeout」，不得复用 Stage 2 Goal、不得延伸到安装/Provider/生产/release；Goal tooling 不可用 → `GOAL_MODE_UNAVAILABLE` 停止；仅全部 nodes integrated + 双审 accepted + Parallelism Review accepted + Critical=0 + High=0 且形成本地选择性集成 commit 后标记 complete。
@@ -173,7 +173,7 @@ Skills：`code-review` 与 `writing-for-agents` 两份 SKILL.md 均在行动前�
 
 ## 7. Write-set 证明与 Terminal Boundary
 
-- **唯一写入文件**：`/home/tiezbro/projects/paseo-agy-acp/docs/design/receipts/STAGE3-PROMPT-GEN/documentation-green.md`（本文件）。
+- **唯一写入文件**：`~/projects/paseo-agy-acp/docs/design/receipts/STAGE3-PROMPT-GEN/documentation-green.md`（本文件）。
 - 本文件不嵌入自身 digest；whole-file SHA-256 由外部（本 Verifier 最终响应）在写入后计算并报告。
 - 写入后 `git status --porcelain` 应为：先前 10 份 staged `A` + 本文件 `??` untracked；HEAD/branch 不变（`78931bf`/`main`）。
 - 未写：canonical、candidate、RED、inventory、历轮 receipts、Stage 2 artifacts、源码、测试、package.json/scripts、git index/refs、MAACS、code-of-tiebro、`~/.agents`、`~/.paseo`、/tmp、任何其他路径。未执行：build/test/Provider/6767/network/install/switch/commit/push/tag/deploy/release；未委派。

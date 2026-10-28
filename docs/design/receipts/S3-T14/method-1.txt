@@ -19,8 +19,8 @@ ACCEPTED_CRITICAL_HIGH_COVERAGE:
 - heartbeat: LOW.
 
 SKILL_CONFORMANCE:
-- primary tdd read: /home/tiezbro/.agents/skills/tdd/SKILL.md sha256=5e6b9c16b547113e90afbb946489d1c1384be5c2128f0159bd0bee57251ecf08; RED then GREEN executed at the public AdmissionController/process-evidence seam.
-- supporting implement read: /home/tiezbro/.agents/skills/implement/SKILL.md sha256=6d3fd9e83b8f36e5213854779db49b256a457a7ebb4a503e53fa7dcff696adc3; implementation and validation executed; code-review/commit steps inapplicable by task authority.
+- primary tdd read: ~/.agents/skills/tdd/SKILL.md sha256=5e6b9c16b547113e90afbb946489d1c1384be5c2128f0159bd0bee57251ecf08; RED then GREEN executed at the public AdmissionController/process-evidence seam.
+- supporting implement read: ~/.agents/skills/implement/SKILL.md sha256=6d3fd9e83b8f36e5213854779db49b256a457a7ebb4a503e53fa7dcff696adc3; implementation and validation executed; code-review/commit steps inapplicable by task authority.
 
 CHANGED_PATHS_WITHIN_S3_T14_WRITE_SET:
 - Admission Controller/controller.ts

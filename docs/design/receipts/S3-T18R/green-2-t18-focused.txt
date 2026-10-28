@@ -7,7 +7,7 @@ COMMAND=rtk npm test -- tests/admission-schema-v2.test.ts
 > npm run typecheck && npm run build && vitest run tests/admission-schema-v2.test.ts
 > tsc -p tsconfig.test.json
 > node scripts/clean-dist.mjs && tsc
- RUN  v4.1.10 /home/tiezbro/projects/paseo-agy-acp
+ RUN  v4.1.10 ~/projects/paseo-agy-acp
  Test Files  1 passed (1)
       Tests  4 passed (4)
    Start at  02:17:33

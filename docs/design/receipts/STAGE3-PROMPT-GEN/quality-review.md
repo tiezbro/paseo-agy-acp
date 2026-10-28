@@ -33,7 +33,7 @@
 | Thinking | `max` | 同 |
 | Mode | `dont_ask`（live official option 之一） | 同 |
 | `PendingPermissions` | `[]`（0） | 同 |
-| Cwd | `/home/tiezbro/projects/paseo-agy-acp` | 同 |
+| Cwd | `~/projects/paseo-agy-acp` | 同 |
 | 委派 | 未委派（leaf；RESOURCE_SET 委派不可用） | 未委派 |
 
 ## 2. Hash-first 核验（全部 live 实测，与绑定值一致）
@@ -162,7 +162,7 @@ Git baseline：branch `main`；HEAD `78931bff95ecbd9868f9cfa83a281cbbbf1a60d8`�
 
 ## 写集证明（本审查）
 
-- **唯一写入文件**：`/home/tiezbro/projects/paseo-agy-acp/docs/design/receipts/STAGE3-PROMPT-GEN/quality-review.md`（本文件）。
+- **唯一写入文件**：`~/projects/paseo-agy-acp/docs/design/receipts/STAGE3-PROMPT-GEN/quality-review.md`（本文件）。
 - 写入后 `sha256sum` 与 `git status --porcelain`（应仍仅为 `?? docs/design/receipts/`）见本 Reviewer 最终响应（外部 readback，不写入文件）。
 - 未写：候选、RED、inventory、Stage 2 artifacts、源码、测试、git index/refs、MAACS、code-of-tiebro、`~/.agents`、`~/.paseo`、/tmp、任何其他路径。未执行：build/test/provider/6767/network/install/switch/commit/push/tag/deploy/release；未委派。
 

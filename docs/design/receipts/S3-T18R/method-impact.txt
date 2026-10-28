@@ -10,7 +10,7 @@ IDENTITY_GATE:
 - No delegation performed; thin selector not loaded.
 
 BASELINE_GATE:
-- repo=/home/tiezbro/projects/paseo-agy-acp
+- repo=~/projects/paseo-agy-acp
 - branch=main
 - HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
 - sole parent=78931bff95ecbd9868f9cfa83a281cbbbf1a60d8
@@ -18,8 +18,8 @@ BASELINE_GATE:
 - Allowed pre-existing tracked production diff: ACP Connector/acp/agent.ts; ACP Connector/admission/turn-coordinator.ts; Admission Controller/controller.ts; Admission Controller/schema.ts. These were not edited by S3-T18R.
 
 AUTHORITY_HASH_GATE:
-- /home/tiezbro/projects/MAACS/docs/maacs-paseo-agy-acp-confirmed-scheme.md sha256=d3b712ee5dd01029c66b0372a482f248a6f1ecbcf81572eb74d7b4ba5d98a98d
-- /home/tiezbro/projects/MAACS/docs/controller-prompts/PASEO_AGY_ACP_STAGE2_CONTROLLER_PROMPT.md sha256=9f946e36e717547e5982eefcc37c188d236e48b3be495541bd12129f84207993
+- ~/projects/MAACS/docs/maacs-paseo-agy-acp-confirmed-scheme.md sha256=d3b712ee5dd01029c66b0372a482f248a6f1ecbcf81572eb74d7b4ba5d98a98d
+- ~/projects/MAACS/docs/controller-prompts/PASEO_AGY_ACP_STAGE2_CONTROLLER_PROMPT.md sha256=9f946e36e717547e5982eefcc37c188d236e48b3be495541bd12129f84207993
 - AGENTS.md sha256=9bbd1e7b1bb7938cc3fd5922a1dcf9a036fa8639267d38789213f4fe9fc3198d
 - docs/design/v2.0.0.0-stage2-handoff.md blob=89c8abe0d82c4915cbf6748db15a9ff86a80c501 sha256=c88be84fa4c86c4c63921aaccd08f5f9c765dc896f1c35592f6cb0ee16fafc48
 - docs/design/v2.0.0.0-stage2-architecture.md blob=2a0028cbb60a54aff1fa85afb5d9ca78251f6be9 sha256=7989c043603a11e4b5d88073d8352509d9ffcf7f8c0d736d2b48149aff03eb54

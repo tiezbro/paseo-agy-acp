@@ -9,7 +9,7 @@ rtk npm run validate
 Exit code: 0
 
 Key output:
-RUN  v4.1.10 /home/tiezbro/projects/paseo-agy-acp
+RUN  v4.1.10 ~/projects/paseo-agy-acp
 Test Files  41 passed (41)
 Tests  566 passed | 2 skipped (568)
 Duration  18.89s

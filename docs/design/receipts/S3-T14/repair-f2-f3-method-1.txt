@@ -14,12 +14,12 @@ surface plus the minimal ACP Connector/admission/runtime.ts production lifecycle
 connection required by F2.
 
 SKILLS:
-/home/tiezbro/.agents/skills/tdd/SKILL.md
+~/.agents/skills/tdd/SKILL.md
 sha256=5e6b9c16b547113e90afbb946489d1c1384be5c2128f0159bd0bee57251ecf08
 Executed: behavioral RED before production repair, focused GREEN, affected and
 expanded regression validation. Inapplicable: commit/stage/delegation actions.
 
-/home/tiezbro/.agents/skills/implement/SKILL.md
+~/.agents/skills/implement/SKILL.md
 sha256=6d3fd9e83b8f36e5213854779db49b256a457a7ebb4a503e53fa7dcff696adc3
 Executed: minimal scoped implementation inside authorized write set. Inapplicable:
 code review delegation, staging, commit, push, release, provider probe.

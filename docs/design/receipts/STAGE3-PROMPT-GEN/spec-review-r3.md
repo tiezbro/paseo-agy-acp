@@ -5,11 +5,11 @@
 `TASK_ID`：`S3-PROMPT-GEN-REV-SPEC-003`
 `STAGE`：Stage 3 Prompt Generation（**非 Stage 3 执行**）
 `TASK_TYPE`：independent formal Spec Review（round 3，Generator-fixed：primary `code-review` + supporting `to-spec`）
-`SELECTED_PRIMARY_SKILL`：`code-review`（`/home/tiezbro/.agents/skills/code-review/SKILL.md`，sha256 `9cf46653dd9c710ea1e6c22423caf31a794c88773bc94bdaa23140277f470442`）
-`SELECTED_SUPPORTING_SKILLS`：`to-spec`（`/home/tiezbro/.agents/skills/to-spec/SKILL.md`，sha256 `5d26479544b08048d3a8f79d937b39bc613a617f026b3fd083bafc1e99a7b811`）
+`SELECTED_PRIMARY_SKILL`：`code-review`（`~/.agents/skills/code-review/SKILL.md`，sha256 `9cf46653dd9c710ea1e6c22423caf31a794c88773bc94bdaa23140277f470442`）
+`SELECTED_SUPPORTING_SKILLS`：`to-spec`（`~/.agents/skills/to-spec/SKILL.md`，sha256 `5d26479544b08048d3a8f79d937b39bc613a617f026b3fd083bafc1e99a7b811`）
 `SKILL_SOURCE_IDENTITY`：`mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df`；两份 SKILL.md 均在本轮行动前完整重读（read_file 确认 unchanged，内容以本会话内先前完整读取为准）并 live 核验 hash
 `DEPENDENCIES`：Stage 2 accepted commit `78931bff95ecbd9868f9cfa83a281cbbbf1a60d8`；SKILL_INVENTORY Gate accepted（`skill-inventory.md` @ `e68e057cfc5ea3a60ba099a34ae77d2b9700ced70d26775ae2dcfd76238aee81`）；Documentation RED @ `c4533bffa7b0cb14dcc6dca5893ed69e752407e11fe8f16cf70a7b3e6588a1b1`（自 R2 起 immutable）；Candidate @ `24c06dbe19b720b27b4bb356d84d35918a0cffe94ee098d80d0c6da14fb2b462`（REPAIR-002）；round-1 Spec @ `f9b67ab6…`、round-1 Quality @ `31e08fa6…`、round-2 Spec @ `34ecbc93…`、round-2 Quality @ `0429f46d…`（历轮 receipts 均 immutable，未编辑）
-`EXACT_GIT_BASELINE`：repo `/home/tiezbro/projects/paseo-agy-acp`，branch `main`，HEAD `78931bff95ecbd9868f9cfa83a281cbbbf1a60d8`，tracked/index clean，唯一 untracked = `docs/design/receipts/`
+`EXACT_GIT_BASELINE`：repo `~/projects/paseo-agy-acp`，branch `main`，HEAD `78931bff95ecbd9868f9cfa83a281cbbbf1a60d8`，tracked/index clean，唯一 untracked = `docs/design/receipts/`
 `ALLOWED_WRITE_SET`：`docs/design/receipts/STAGE3-PROMPT-GEN/spec-review-r3.md`（本文件）only
 
 ---
@@ -35,15 +35,15 @@
 | Thinking | `max` | ✓ |
 | Mode | `dont_ask`（Paseo live official option） | ✓ 未硬编码扩大 |
 | `PendingPermissions` | `[]`（0） | ✓ |
-| Status / Cwd | `running` / `/home/tiezbro/projects/paseo-agy-acp` | ✓ |
+| Status / Cwd | `running` / `~/projects/paseo-agy-acp` | ✓ |
 | 委派 | leaf；委派不可用 | 未委派 ✓ |
 
 ## 2. Authority hash-first 核验（live，全量）
 
 | 项 | exact path | 绑定值 | live 实测 |
 | --- | --- | --- | --- |
-| Generator | `/home/tiezbro/projects/MAACS/docs/controller-prompts/PASEO_AGY_ACP_STAGE3_PROMPT_GENERATOR.md` | `9e2e8334289fe4be546303687daeb28903c58be72c19c4ad40738648686edcdd` | 同 ✓ |
-| Scheme | `/home/tiezbro/projects/MAACS/docs/maacs-paseo-agy-acp-confirmed-scheme.md` | `d3b712ee5dd01029c66b0372a482f248a6f1ecbcf81572eb74d7b4ba5d98a98d` | 同；`confirmed` ✓ |
+| Generator | `~/projects/MAACS/docs/controller-prompts/PASEO_AGY_ACP_STAGE3_PROMPT_GENERATOR.md` | `9e2e8334289fe4be546303687daeb28903c58be72c19c4ad40738648686edcdd` | 同 ✓ |
+| Scheme | `~/projects/MAACS/docs/maacs-paseo-agy-acp-confirmed-scheme.md` | `d3b712ee5dd01029c66b0372a482f248a6f1ecbcf81572eb74d7b4ba5d98a98d` | 同；`confirmed` ✓ |
 | AGENTS.md | `AGENTS.md` | `9bbd1e7b1bb7938cc3fd5922a1dcf9a036fa8639267d38789213f4fe9fc3198d` | 同 ✓ |
 | Stage 2 handoff | `docs/design/v2.0.0.0-stage2-handoff.md` | whole-file `c88be84f…afc48`；blob `89c8abe0…` | 同 ✓ |
 | S2-SPIKE-503-001 | `docs/design/v2.0.0.0-stage2-503-feasibility.md` | blob `33ace156…`；sha `c7426456…` | 同 ✓ |

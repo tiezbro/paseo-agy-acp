@@ -7,15 +7,15 @@ Identity and runtime:
 - Provider=codex, Model=gpt-5.5, Thinking=xhigh, Mode=full-access, PendingPermissions=[].
 
 Baseline:
-- cwd=/home/tiezbro/projects/paseo-agy-acp.
+- cwd=~/projects/paseo-agy-acp.
 - branch=main.
 - HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e.
 - HEAD^=78931bff95ecbd9868f9cfa83a281cbbbf1a60d8.
 - Index readback was clean before writes.
 
 Skills:
-- /home/tiezbro/.agents/skills/tdd/SKILL.md source mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df sha256 5e6b9c16b547113e90afbb946489d1c1384be5c2128f0159bd0bee57251ecf08.
-- /home/tiezbro/.agents/skills/implement/SKILL.md source mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df sha256 6d3fd9e83b8f36e5213854779db49b256a457a7ebb4a503e53fa7dcff696adc3.
+- ~/.agents/skills/tdd/SKILL.md source mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df sha256 5e6b9c16b547113e90afbb946489d1c1384be5c2128f0159bd0bee57251ecf08.
+- ~/.agents/skills/implement/SKILL.md source mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df sha256 6d3fd9e83b8f36e5213854779db49b256a457a7ebb4a503e53fa7dcff696adc3.
 - tdd seam/test authoring executed at the pre-agreed seam AgyCliSession.prompt + fake agy + injected readers.
 - tdd RED is inapplicable by S3-T19 green-only authority.
 - implement's source-edit, code-review, staging, and commit steps are inapplicable because production source write set is empty and delegation/stage/commit are forbidden.

@@ -1,7 +1,7 @@
 # Antigravity CLI (`agy` 1.1.13) — Network Hostname/Endpoint Inventory
 
 Research executor report. Scope: all network hostnames/domains the locally installed
-Antigravity CLI `agy` 1.1.13 (`/home/tiezbro/.local/bin/agy`) may access for
+Antigravity CLI `agy` 1.1.13 (`~/.local/bin/agy`) may access for
 authentication, model discovery, inference, updates/downloads, telemetry, and
 auxiliary web/tool features. First-party evidence only. No credentials, tokens,
 cookies, or client secrets are reproduced in this file.

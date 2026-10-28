@@ -123,21 +123,21 @@ Verification for `1.0.0.2`:
 2026-08-06:
 
 - Built and tested `paseo-agy-acp@1.0.0.0`.
-- Packed `/home/tiezbro/projects/paseo-agy-acp/paseo-agy-acp-1.0.0.0.tgz`.
+- Packed `~/projects/paseo-agy-acp/paseo-agy-acp-1.0.0.0.tgz`.
 - Installed it into an isolated prefix:
-  `/home/tiezbro/.local/opt/paseo-agy-acp-1.0.0.0-20260806T1159Z`.
+  `~/.local/opt/paseo-agy-acp-1.0.0.0-20260806T1159Z`.
 - Verified the installed package can import:
   - `dist/main.js`
   - `dist/agy/acp/session/prompt.js`
   - target-local `node-pty`
 - Switched global symlink:
-  `/home/tiezbro/.local/bin/agy-acp`
+  `~/.local/bin/agy-acp`
   to:
-  `/home/tiezbro/.local/opt/paseo-agy-acp-1.0.0.0-20260806T1159Z/bin/agy-acp`.
+  `~/.local/opt/paseo-agy-acp-1.0.0.0-20260806T1159Z/bin/agy-acp`.
 - Previous symlink backup:
-  `/home/tiezbro/.local/bin/agy-acp.backup.20260806T1200Z`.
+  `~/.local/bin/agy-acp.backup.20260806T1200Z`.
 - Previous target record:
-  `/home/tiezbro/.local/bin/agy-acp.backup.20260806T1200Z.txt`.
+  `~/.local/bin/agy-acp.backup.20260806T1200Z.txt`.
 - Production Paseo daemon `127.0.0.1:6767` was not restarted.
 - Production Antigravity canary agent
   `b46d4b7a-67f6-47c6-aa78-032ad4fd6c53` completed on `6767` with
@@ -159,10 +159,10 @@ Verification for `1.0.0.2`:
 - Regression: `tests/queue-steer.test.ts` covers both unset and empty
   `PASEO_HOME` with only `PASEO_AGENT_ID` present.
 - Installed prefix:
-  `/home/tiezbro/.local/opt/paseo-agy-acp-1.0.0.1-20260806T144518Z`.
+  `~/.local/opt/paseo-agy-acp-1.0.0.1-20260806T144518Z`.
 - Active symlink:
-  `/home/tiezbro/.local/bin/agy-acp` ->
-  `/home/tiezbro/.local/opt/paseo-agy-acp-1.0.0.1-20260806T144518Z/bin/agy-acp`.
+  `~/.local/bin/agy-acp` ->
+  `~/.local/opt/paseo-agy-acp-1.0.0.1-20260806T144518Z/bin/agy-acp`.
 - ACP initialize smoke returned `agentInfo.version:"1.0.0.1"`.
 - Production Paseo daemon `127.0.0.1:6767` was not restarted.
 - Antigravity marker-only canary `037d0218-c30e-489b-a97c-c9605a4fad33`
@@ -198,14 +198,14 @@ Verification for `1.0.0.2`:
     passes.
   - `npm pack` — produced `paseo-agy-acp-1.0.0.2.tgz` with `CHANGELOG.md`.
 - Installed prefix:
-  `/home/tiezbro/.local/opt/paseo-agy-acp-1.0.0.2-20260807T010141Z`.
+  `~/.local/opt/paseo-agy-acp-1.0.0.2-20260807T010141Z`.
 - Active symlink:
-  `/home/tiezbro/.local/bin/agy-acp` ->
-  `/home/tiezbro/.local/opt/paseo-agy-acp-1.0.0.2-20260807T010141Z/bin/agy-acp`.
+  `~/.local/bin/agy-acp` ->
+  `~/.local/opt/paseo-agy-acp-1.0.0.2-20260807T010141Z/bin/agy-acp`.
 - Previous symlink backup:
-  `/home/tiezbro/.local/bin/agy-acp.backup.20260807T010302Z`.
+  `~/.local/bin/agy-acp.backup.20260807T010302Z`.
 - Previous target record:
-  `/home/tiezbro/.local/bin/agy-acp.backup.20260807T010302Z.txt`.
+  `~/.local/bin/agy-acp.backup.20260807T010302Z.txt`.
 - Global ACP initialize smoke returned `agentInfo.version:"1.0.0.2"`.
 - Installed mode list check returned
   `["default","accept-edits","plan","dangerously-skip-permissions"]`.
@@ -232,6 +232,6 @@ so Paseo → Antigravity delegation stays steadier under burst). Raise seats
 and starts with env integers ≥ 1 to probe higher concurrency; this repo does
 not publish a product max. Optional 3+1 via env is only a tighter fence.
 Production adapter cutover (daemon not restarted) points
-`/home/tiezbro/.local/bin/agy-acp` at
+`~/.local/bin/agy-acp` at
 `paseo-agy-acp-2.1.0.0-20260823T112457Z` with Admission 8/8/2s and a fresh
 `production-official-8` ledger. `antigravity-official-canary` is disabled.

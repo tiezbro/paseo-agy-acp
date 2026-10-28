@@ -35,10 +35,10 @@
 | Thinking | `max` | 同 |
 | Mode | `dont_ask`（live official option 之一） | 同 |
 | `PendingPermissions` | `[]`（0） | 同 |
-| Cwd | `/home/tiezbro/projects/paseo-agy-acp` | 同 |
+| Cwd | `~/projects/paseo-agy-acp` | 同 |
 | 委派 | 未委派（leaf） | 未委派 |
 
-Skills（本轮行动前完整重读确认）：`code-review` `/home/tiezbro/.agents/skills/code-review/SKILL.md` sha256 `9cf46653…`、`codebase-design` `a8d50aba…`、`writing-for-agents` `a842323e…`——与 inventory §4 绑定一致；read_file 返回 unchanged（R1 已全文读取，内容仍为当前）。
+Skills（本轮行动前完整重读确认）：`code-review` `~/.agents/skills/code-review/SKILL.md` sha256 `9cf46653…`、`codebase-design` `a8d50aba…`、`writing-for-agents` `a842323e…`——与 inventory §4 绑定一致；read_file 返回 unchanged（R1 已全文读取，内容仍为当前）。
 
 ## 2. Hash-first 核验（live 全量，与绑定值一致）
 
@@ -129,7 +129,7 @@ Skills（本轮行动前完整重读确认）：`code-review` `/home/tiezbro/.ag
 
 ## 写集证明（本审查）
 
-- **唯一写入文件**：`/home/tiezbro/projects/paseo-agy-acp/docs/design/receipts/STAGE3-PROMPT-GEN/quality-review-r3.md`（本文件）。
+- **唯一写入文件**：`~/projects/paseo-agy-acp/docs/design/receipts/STAGE3-PROMPT-GEN/quality-review-r3.md`（本文件）。
 - 写入后 `sha256sum` 与 `git status --porcelain`（应仍仅为 `?? docs/design/receipts/`）见本 Reviewer 最终响应（外部 readback，不写入文件）。
 - 未写：候选、RED、inventory、前序 receipts、Stage 2 artifacts、源码、测试、git index/refs、MAACS、code-of-tiebro、`~/.agents`、`~/.paseo`、/tmp、任何其他路径。未执行：build/test/provider/6767/network/install/switch/commit/push/tag/deploy/release；未委派。
 

@@ -11,7 +11,7 @@ STATE=running; mode=build; provider=opencode; model=opencode/deepseek-v4-flash-f
 - paseo_get_agent_status matched the injected environment exactly:
   - parent-agent-id=79ab5347-5101-4eff-89ed-6a7aa550ae2e present and non-empty
   - provider=opencode, model=opencode/deepseek-v4-flash-free, thinking=max, mode=build
-  - pendingPermissions=[]; status=running; cwd=/home/tiezbro/projects/paseo-agy-acp
+  - pendingPermissions=[]; status=running; cwd=~/projects/paseo-agy-acp
 - RESULT: CHILD leaf identity confirmed; parent controller is the same controller
   that parented all S3-T01..T21 workers and prior review rounds; no delegation,
   no routing selector, no orchestration performed.
@@ -28,13 +28,13 @@ STATE=running; mode=build; provider=opencode; model=opencode/deepseek-v4-flash-f
 | git diff --check | 0 | clean (no whitespace errors) |
 
 3. SKILLS (both fully read before review; pinned mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df)
-- code-review: /home/tiezbro/.agents/skills/code-review/SKILL.md
+- code-review: ~/.agents/skills/code-review/SKILL.md
   sha256=9cf46653dd9c710ea1e6c22423caf31a794c88773bc94bdaa23140277f470442
   EXECUTED: fixed-point and candidate-scope review (tracked diff from HEAD plus
   all untracked Stage 3 files); Standards and Spec observations kept separate.
   INAPPLICABLE: parallel Standards/Spec sub-agents (leaf audit-only reviewer with
   no delegation); issue-tracker publication; commit/git steps.
-- codebase-design: /home/tiezbro/.agents/skills/codebase-design/SKILL.md
+- codebase-design: ~/.agents/skills/codebase-design/SKILL.md
   sha256=a8d50abac5a4018f60e1d911d4b6f4e36454ca14d6c390c0695a578c7de65dad
   EXECUTED: module/interface/seam/depth/leverage/locality vocabulary applied to
   AdmissionRuntime, AdmissionTurnCoordinator, TurnDispatchBoundary, controller

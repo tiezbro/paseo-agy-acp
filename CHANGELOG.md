@@ -119,7 +119,7 @@ All notable changes to `paseo-agy-acp` are recorded here.
 - Use the Paseo provider id `paseo-agy-acp` with display name **Antigravity
   Pro** instead of `antigravity`. Paseo v0.11.2 added its own built-in agy
   provider (id `antigravity`, display name Antigravity) that starts the host
-  `agy` CLI (`/home/tiezbro/.local/bin/agy`); its login lives in
+  `agy` CLI (`~/.local/bin/agy`); its login lives in
   `~/.gemini/antigravity-cli`. This adapter does not start that `agy` CLI; it
   starts `agy-acp`, which runs the official ACP kernel `agy_acp_server`, and
   its login lives in `~/.gemini/antigravity-acp`.
@@ -369,10 +369,10 @@ All notable changes to `paseo-agy-acp` are recorded here.
 ### Unchanged
 
 - Production Paseo daemon `127.0.0.1:6767` was **not restarted**. After the
-  8/8 Admission raise, `/home/tiezbro/.local/bin/agy-acp` was retargeted to
-  `/home/tiezbro/.local/opt/paseo-agy-acp-2.1.0.0-20260823T112457Z/bin/agy-acp-production`
+  8/8 Admission raise, `~/.local/bin/agy-acp` was retargeted to
+  `~/.local/opt/paseo-agy-acp-2.1.0.0-20260823T112457Z/bin/agy-acp-production`
   with a fresh ledger at
-  `/home/tiezbro/.local/state/paseo-agy-acp/production-official-8` so the
+  `~/.local/state/paseo-agy-acp/production-official-8` so the
   durable 3+1 fingerprint cannot fail-close the new policy. The default Paseo
   `antigravity` provider still runs that symlink. `antigravity-official-canary`
   is disabled so production is not split. Idle Antigravity agents pick up 8/8

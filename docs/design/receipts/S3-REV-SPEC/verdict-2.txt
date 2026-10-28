@@ -12,7 +12,7 @@ Candidate evidence (round-1 fixed-point method retained; git diff HEAD...HEAD em
 - Fresh `npm run validate` at review time (read-only), executed twice (test summary + full chain): 54 test files passed / 607 tests passed (2 skipped); architecture boundaries PASS; secret scan PASS (158 files). Exit 0 both runs.
 
 Authority verified live (all match §2.1/§6.0):
-- Confirmed Scheme /home/tiezbro/projects/MAACS/docs/maacs-paseo-agy-acp-confirmed-scheme.md @ d3b712ee5dd01029c66b0372a482f248a6f1ecbcf81572eb74d7b4ba5d98a98d (state confirmed) ✓
+- Confirmed Scheme ~/projects/MAACS/docs/maacs-paseo-agy-acp-confirmed-scheme.md @ d3b712ee5dd01029c66b0372a482f248a6f1ecbcf81572eb74d7b4ba5d98a98d (state confirmed) ✓
 - Stage 2 handoff S2-HANDOFF-001 @ c88be84fa4c86c4c63921aaccd08f5f9c765dc896f1c35592f6cb0ee16fafc48 ✓
 - Seven siblings (503-feasibility c7426456…, acp-source-map f2ded52a…, admission-source-map eee7e56c…, architecture 7989c043…, domain-model 3b6fabc9…, test-contracts 51e8e3ba…, spec 3d90fe64…) ✓ (working tree == HEAD for all eight Stage 2 artifacts)
 - Stage 2 Controller Prompt 9f946e36…, AGENTS.md 9bbd1e7b… ✓

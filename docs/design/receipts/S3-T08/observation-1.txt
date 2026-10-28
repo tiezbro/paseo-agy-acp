@@ -2,19 +2,19 @@ TASK_ID: S3-T08-OBS-001
 UTC: 2026-08-19T03:40:22Z
 HEAD: b16aaacfb4a59a44362b9aae5b19e91786a9433b
 agy --version: 1.1.14
-agy file: /home/tiezbro/.local/bin/agy: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0, BuildID[md5/uuid]=d4538a1c9a7a1a5e075cf5cd2160bb9b, stripped
-agy sha256: 2549632914935c42faf6560cbf383ae6b3a3ed5b9f7b0579892e6139a0658fc6  /home/tiezbro/.local/bin/agy
+agy file: ~/.local/bin/agy: ELF 64-bit LSB pie executable, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0, BuildID[md5/uuid]=d4538a1c9a7a1a5e075cf5cd2160bb9b, stripped
+agy sha256: 2549632914935c42faf6560cbf383ae6b3a3ed5b9f7b0579892e6139a0658fc6  ~/.local/bin/agy
 AUTHORIZATION: user authorized S2-SPIKE-503-001 §6 condition 2 (isolated/real observation only)
 
 BOUNDARIES:
-- Repo: /home/tiezbro/projects/paseo-agy-acp
-- Scheme SHA-256 verified: d3b712ee5dd01029c66b0372a482f248a6f1ecbcf81572eb74d7b4ba5d98a98d  /home/tiezbro/projects/MAACS/docs/maacs-paseo-agy-acp-confirmed-scheme.md
+- Repo: ~/projects/paseo-agy-acp
+- Scheme SHA-256 verified: d3b712ee5dd01029c66b0372a482f248a6f1ecbcf81572eb74d7b4ba5d98a98d  ~/projects/MAACS/docs/maacs-paseo-agy-acp-confirmed-scheme.md
 - Working directory for live agy attempts: /tmp/s3-t08-obs-AJ4EY8
-- command -v agy: /home/tiezbro/.local/bin/agy
+- command -v agy: ~/.local/bin/agy
 - Production Paseo 127.0.0.1:6767 was not touched.
 - Production Admission runtime.sqlite / Health / ~/.paseo / ~/.agents were not written.
 - Capture secret scan: no account email, cookie, authorization, bearer, or api key pattern found. The literal token matches were usage fields such as input_tokens/total_tokens only.
-- Process cleanup check: pgrep -af '/home/tiezbro/.local/bin/agy|agy' returned no matches after the attempts.
+- Process cleanup check: pgrep -af '~/.local/bin/agy|agy' returned no matches after the attempts.
 
 CAPTURE_FILES:
 - docs/design/receipts/S3-T08/captures/attempt1.stdout.ndjson sha256=e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
@@ -32,7 +32,7 @@ ATTEMPTS:
 - attempt 1:
   UTC_START: 2026-08-19T03:37:54Z
   UTC_END: 2026-08-19T03:37:54Z
-  command: printf 'Reply with the single word pong.\n' | env -u PASEO_AGENT_ID -u PASEO_HOME -u AGY_ACP_ADMISSION_ENABLED -u AGY_ACP_STATE_DIR timeout 75s /home/tiezbro/.local/bin/agy --print-timeout 60s --mode plan --add-dir /tmp/s3-t08-obs-AJ4EY8 --output-format stream-json --print
+  command: printf 'Reply with the single word pong.\n' | env -u PASEO_AGENT_ID -u PASEO_HOME -u AGY_ACP_ADMISSION_ENABLED -u AGY_ACP_STATE_DIR timeout 75s ~/.local/bin/agy --print-timeout 60s --mode plan --add-dir /tmp/s3-t08-obs-AJ4EY8 --output-format stream-json --print
   version: agy 1.1.14 sha256 2549632914935c42faf6560cbf383ae6b3a3ed5b9f7b0579892e6139a0658fc6
   exit: 2
   stdout: empty; no result object; stdout had result.error: no
@@ -43,7 +43,7 @@ ATTEMPTS:
 - attempt 2:
   UTC_START: 2026-08-19T03:38:15Z
   UTC_END: 2026-08-19T03:38:31Z
-  command: env -u PASEO_AGENT_ID -u PASEO_HOME -u AGY_ACP_ADMISSION_ENABLED -u AGY_ACP_STATE_DIR timeout 75s /home/tiezbro/.local/bin/agy --print 'Reply with the single word pong.' --print-timeout 60s --mode plan --add-dir /tmp/s3-t08-obs-AJ4EY8 --output-format stream-json --disable-slash-commands
+  command: env -u PASEO_AGENT_ID -u PASEO_HOME -u AGY_ACP_ADMISSION_ENABLED -u AGY_ACP_STATE_DIR timeout 75s ~/.local/bin/agy --print 'Reply with the single word pong.' --print-timeout 60s --mode plan --add-dir /tmp/s3-t08-obs-AJ4EY8 --output-format stream-json --disable-slash-commands
   version: agy 1.1.14 sha256 2549632914935c42faf6560cbf383ae6b3a3ed5b9f7b0579892e6139a0658fc6
   exit: 0
   stdout: stream-json init, step_update, terminal result
@@ -54,7 +54,7 @@ ATTEMPTS:
 - attempt 3:
   UTC_START: 2026-08-19T03:38:59Z
   UTC_END: 2026-08-19T03:39:07Z
-  command: env -u PASEO_AGENT_ID -u PASEO_HOME -u AGY_ACP_ADMISSION_ENABLED -u AGY_ACP_STATE_DIR timeout 75s /home/tiezbro/.local/bin/agy --print 'Reply with the single word pong.' --print-timeout 60s --model __s3_t08_nonexistent_model__ --add-dir /tmp/s3-t08-obs-AJ4EY8 --output-format stream-json --disable-slash-commands
+  command: env -u PASEO_AGENT_ID -u PASEO_HOME -u AGY_ACP_ADMISSION_ENABLED -u AGY_ACP_STATE_DIR timeout 75s ~/.local/bin/agy --print 'Reply with the single word pong.' --print-timeout 60s --model __s3_t08_nonexistent_model__ --add-dir /tmp/s3-t08-obs-AJ4EY8 --output-format stream-json --disable-slash-commands
   version: agy 1.1.14 sha256 2549632914935c42faf6560cbf383ae6b3a3ed5b9f7b0579892e6139a0658fc6
   exit: 1
   stdout: one terminal stream-json result; stdout had result.error: yes
@@ -65,7 +65,7 @@ ATTEMPTS:
 - attempt 4:
   UTC_START: 2026-08-19T03:39:28Z
   UTC_END: 2026-08-19T03:39:43Z
-  command: env -u PASEO_AGENT_ID -u PASEO_HOME -u AGY_ACP_ADMISSION_ENABLED -u AGY_ACP_STATE_DIR timeout 75s /home/tiezbro/.local/bin/agy --print 'Reply with the single word pong.' --print-timeout 60s --model 'Gemini 3.7 Flash (Low)' --add-dir /tmp/s3-t08-obs-AJ4EY8 --output-format stream-json --disable-slash-commands
+  command: env -u PASEO_AGENT_ID -u PASEO_HOME -u AGY_ACP_ADMISSION_ENABLED -u AGY_ACP_STATE_DIR timeout 75s ~/.local/bin/agy --print 'Reply with the single word pong.' --print-timeout 60s --model 'Gemini 3.7 Flash (Low)' --add-dir /tmp/s3-t08-obs-AJ4EY8 --output-format stream-json --disable-slash-commands
   version: agy 1.1.14 sha256 2549632914935c42faf6560cbf383ae6b3a3ed5b9f7b0579892e6139a0658fc6
   exit: 0
   stdout: stream-json init, step_update, terminal result
@@ -76,7 +76,7 @@ ATTEMPTS:
 - attempt 5:
   UTC_START: 2026-08-19T03:39:55Z
   UTC_END: 2026-08-19T03:40:09Z
-  command: env -u PASEO_AGENT_ID -u PASEO_HOME -u AGY_ACP_ADMISSION_ENABLED -u AGY_ACP_STATE_DIR timeout 75s /home/tiezbro/.local/bin/agy --print 'Reply with the single word pong.' --print-timeout 60s --model 'Gemini 3.7 Flash (Low)' --add-dir /tmp/s3-t08-obs-AJ4EY8 --output-format stream-json --disable-slash-commands
+  command: env -u PASEO_AGENT_ID -u PASEO_HOME -u AGY_ACP_ADMISSION_ENABLED -u AGY_ACP_STATE_DIR timeout 75s ~/.local/bin/agy --print 'Reply with the single word pong.' --print-timeout 60s --model 'Gemini 3.7 Flash (Low)' --add-dir /tmp/s3-t08-obs-AJ4EY8 --output-format stream-json --disable-slash-commands
   version: agy 1.1.14 sha256 2549632914935c42faf6560cbf383ae6b3a3ed5b9f7b0579892e6139a0658fc6
   exit: 0
   stdout: stream-json init, step_update, terminal result
@@ -90,7 +90,7 @@ CARRIER: none
 NON_503_FAILURE_CARRIER_OBSERVED: result.error in attempt 3, but only for a local invalid-model CLI error; not provider capacity and not HTTP 503.
 HISTORICAL_1_1_12_LOGS: unverified-changelog-only
 HISTORICAL_SEARCH_NOTES:
-- Searched repo, /home/tiezbro/Documents, /home/tiezbro/.codex, and /tmp for 1.1.12 plus 503 carrier terms.
+- Searched repo, ~/Documents, ~/.codex, and /tmp for 1.1.12 plus 503 carrier terms.
 - /tmp/spike-503-001 referenced by the Stage 2 feasibility artifact is absent on this machine.
 - Hits were CHANGELOG/README/test/session prose or prior discussion, not a bound raw receipt containing command, agy 1.1.12 identity, exit, stdout/stderr, result carrier, and file hash.
 - Therefore the CHANGELOG claim about historical native 1.1.12 503 UNAVAILABLE remains unverified for this observation and cannot close current agy 1.1.14 SOURCE_IDENTITY.

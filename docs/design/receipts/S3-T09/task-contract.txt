@@ -4,7 +4,7 @@ utc=2026-08-16T02:40:37Z
 gate_conformance:
 - child identity: PASS; PASEO_AGENT_ID=8d26ca6d-2a6d-4f15-80a4-b786d620eee1; ParentAgentId=79ab5347-5101-4eff-89ed-6a7aa550ae2e.
 - provider/model/thinking/mode/PendingPermissions: PASS; codex/gpt-5.5/xhigh/full-access/PendingPermissions=[].
-- cwd/branch/HEAD/sole parent: PASS; cwd=/home/tiezbro/projects/paseo-agy-acp; branch=main; HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e; parent=78931bff95ecbd9868f9cfa83a281cbbbf1a60d8.
+- cwd/branch/HEAD/sole parent: PASS; cwd=~/projects/paseo-agy-acp; branch=main; HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e; parent=78931bff95ecbd9868f9cfa83a281cbbbf1a60d8.
 - index clean: PASS; git diff --cached --name-only empty.
 - tracked worktree clean: NOT APPLICABLE under current Controller/user allowance; accepted predecessor T18/T18R and parallel task reservations are present.
 

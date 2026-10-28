@@ -7,7 +7,7 @@ COMMAND=rtk npm test -- tests/acp-server.test.ts tests/acp-runtime-wiring.test.t
 > npm run typecheck && npm run build && vitest run tests/acp-server.test.ts tests/acp-runtime-wiring.test.ts tests/queue-steer.test.ts tests/cli.test.ts
 > tsc -p tsconfig.test.json
 > node scripts/clean-dist.mjs && tsc
- RUN  v4.1.10 /home/tiezbro/projects/paseo-agy-acp
+ RUN  v4.1.10 ~/projects/paseo-agy-acp
  Test Files  4 passed (4)
       Tests  168 passed | 1 skipped (169)
    Start at  02:17:59

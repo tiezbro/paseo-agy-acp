@@ -4,7 +4,7 @@ UTC=2026-08-16T03:22:54Z
 HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
 
 FRESH_READBACK
-cwd=/home/tiezbro/projects/paseo-agy-acp
+cwd=~/projects/paseo-agy-acp
 branch=main
 parent=78931bff95ecbd9868f9cfa83a281cbbbf1a60d8
 index=clean

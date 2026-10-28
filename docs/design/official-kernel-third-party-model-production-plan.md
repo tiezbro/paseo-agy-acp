@@ -229,7 +229,7 @@ prepare 工具生成独立 wrapper。wrapper：
 真实 apply 前必须新增独立 audit work package。通过后：
 
 1. 记录但不泄露当前 wrapper、kernel hash、daemon fingerprint 和 Admission policy；
-2. 保留当前 `/home/tiezbro/.local/bin/agy-acp` 可执行回滚副本；
+2. 保留当前 `~/.local/bin/agy-acp` 可执行回滚副本；
 3. 原子更新生产 wrapper 的 `PASEO_AGY_ACP_OFFICIAL_BIN` 到 generated wrapper；
 4. 不改变并行队列配置；
 5. 用新 Paseo agent 验证 14 项目录；

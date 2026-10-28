@@ -23,7 +23,7 @@ Broad:
   - secret scan: PASS (158 files checked)
 
 GitNexus detect-changes:
-- Command: mcp__gitnexus.detect_changes({ repo: "paseo-agy-acp", scope: "unstaged", worktree: "/home/tiezbro/projects/paseo-agy-acp" })
+- Command: mcp__gitnexus.detect_changes({ repo: "paseo-agy-acp", scope: "unstaged", worktree: "~/projects/paseo-agy-acp" })
 - Exit code: tool success
 - Summary: changed_count=17; changed_files=20; affected_count=0; risk_level=low; affected_processes=[]
 - Scope note: output includes accepted predecessor and concurrent sibling dirty paths in the shared worktree, not only S3-T21 files.

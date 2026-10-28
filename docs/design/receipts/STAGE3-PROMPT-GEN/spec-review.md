@@ -5,18 +5,18 @@
 `TASK_ID`：`S3-PROMPT-GEN-REV-SPEC-001`
 `STAGE`：Stage 3 Prompt Generation（**非 Stage 3 执行**）
 `TASK_TYPE`：independent formal Spec Review（Generator-fixed：primary `code-review` + supporting `to-spec`）
-`SELECTED_PRIMARY_SKILL`：`code-review`（`/home/tiezbro/.agents/skills/code-review/SKILL.md`，sha256 `9cf46653dd9c710ea1e6c22423caf31a794c88773bc94bdaa23140277f470442`）
-`SELECTED_SUPPORTING_SKILLS`：`to-spec`（`/home/tiezbro/.agents/skills/to-spec/SKILL.md`，sha256 `5d26479544b08048d3a8f79d937b39bc613a617f026b3fd083bafc1e99a7b811`）
+`SELECTED_PRIMARY_SKILL`：`code-review`（`~/.agents/skills/code-review/SKILL.md`，sha256 `9cf46653dd9c710ea1e6c22423caf31a794c88773bc94bdaa23140277f470442`）
+`SELECTED_SUPPORTING_SKILLS`：`to-spec`（`~/.agents/skills/to-spec/SKILL.md`，sha256 `5d26479544b08048d3a8f79d937b39bc613a617f026b3fd083bafc1e99a7b811`）
 `SKILL_SOURCE_IDENTITY`：`mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df`；两份 SKILL.md 均在行动前完整读取；live hash 与 skill-inventory 绑定一致
 `DEPENDENCIES`：Stage 2 accepted commit `78931bff95ecbd9868f9cfa83a281cbbbf1a60d8`；SKILL_INVENTORY Gate accepted（`skill-inventory.md` @ `e68e057cfc5ea3a60ba099a34ae77d2b9700ced70d26775ae2dcfd76238aee81`）；Documentation RED @ `8c6418c8cb76d9bb9de3a11e56a937b3130acabfe379f9ac47f297896e0af0ca`；Candidate @ `5f3b04089b14b24231d15242197007f7d40c650cdbbc0c35f77692f52504fb19`
-`EXACT_GIT_BASELINE`：repo `/home/tiezbro/projects/paseo-agy-acp`，branch `main`，HEAD `78931bff95ecbd9868f9cfa83a281cbbbf1a60d8`，tracked/index clean，唯一 untracked = `docs/design/receipts/`（Prompt-generation receipt 目录）
+`EXACT_GIT_BASELINE`：repo `~/projects/paseo-agy-acp`，branch `main`，HEAD `78931bff95ecbd9868f9cfa83a281cbbbf1a60d8`，tracked/index clean，唯一 untracked = `docs/design/receipts/`（Prompt-generation receipt 目录）
 `ALLOWED_WRITE_SET`：`docs/design/receipts/STAGE3-PROMPT-GEN/spec-review.md`（本文件）only
 
 ---
 
 ## 0. Findings-first 摘要
 
-1. **[HIGH-1] 阻断性自相矛盾：候选准入要求未来 Stage 3 会话 HEAD=`78931bf`，但 canonical Prompt 只存在于其父为 `78931bf` 的后续 packaging commit 中。** 候选 §1.2 step 3、§2.1 表第 1 行、§6.0 `EXACT_GIT_BASELINE` 均绑定「会话启动时 HEAD=78931bf」。但 Generator 流程规定 canonical target 由 Single Integrator 在双审 accepted 后写入并创建本地 packaging commit（Generator「Single Integration 与 Documentation GREEN」：packaging commit 的 parent = generation parent `78931bf`），用户随后在 `cwd=/home/tiezbro/projects/paseo-agy-acp` 启动新顶层 Stage 3 会话时仓库 HEAD 必然是 packaging commit 而非 `78931bf`。按候选正文自己的准入规则，会话将确定性失败于 §1.2 step 3（`WORKTREE_DRIFT_UNRESOLVED`），且 §6.0 使每个 task 的 fresh readback 都以 `STAGE2_HANDOFF_REVISIONS_REQUIRED` 停止。**阻断性执行矛盾 → 单一路径修复（见 FINDINGS F1 与 §2.1 修复判词）。**
+1. **[HIGH-1] 阻断性自相矛盾：候选准入要求未来 Stage 3 会话 HEAD=`78931bf`，但 canonical Prompt 只存在于其父为 `78931bf` 的后续 packaging commit 中。** 候选 §1.2 step 3、§2.1 表第 1 行、§6.0 `EXACT_GIT_BASELINE` 均绑定「会话启动时 HEAD=78931bf」。但 Generator 流程规定 canonical target 由 Single Integrator 在双审 accepted 后写入并创建本地 packaging commit（Generator「Single Integration 与 Documentation GREEN」：packaging commit 的 parent = generation parent `78931bf`），用户随后在 `cwd=~/projects/paseo-agy-acp` 启动新顶层 Stage 3 会话时仓库 HEAD 必然是 packaging commit 而非 `78931bf`。按候选正文自己的准入规则，会话将确定性失败于 §1.2 step 3（`WORKTREE_DRIFT_UNRESOLVED`），且 §6.0 使每个 task 的 fresh readback 都以 `STAGE2_HANDOFF_REVISIONS_REQUIRED` 停止。**阻断性执行矛盾 → 单一路径修复（见 FINDINGS F1 与 §2.1 修复判词）。**
 2. **[MED-2] Documentation RED §0.7/§2 的写集声明与其自身 §7.1 记录矛盾。** RED §0.7「本任务只写上述两个 receipt 路径」与 §2「`WRITE_SET_VIOLATION`…均不适用」与 §7.1 如实记录的瞬时 `/tmp/verify_s3_prompt.py` 越界写不一致。真实终态 = 发生过一次 `WRITE_SET_VIOLATION` 类瞬时偏差、已 bounded cleanup 并验证删除（本 Reviewer live 核验 `/tmp/verify_s3_prompt.py` 不存在）、已在 §7.1 披露；修复 = 改写 RED §0.7 与 §2 blocker 行措辞，不waive（见 FINDINGS F2）。
 3. **[MED-3] §1.2 step 3 的 untracked 准入是目录通配符，过宽。** 「唯一允许的 untracked = `docs/design/receipts/` 下已存在的 receipts」未 pin 精确文件集；packaging commit 已含获准控制证据时 untracked 应为空或精确集合。修复 = pin 精确 untracked 集合（见 FINDINGS F3，与 F1 同一次 §1.2 step 3 改写）。
 4. **[LOW-4] 候选 §5 第 6 条 `npm test -- <文件>` 含尖括号占位 token**（verbatim 继承自 accepted S2-TEST-001:167，但违反 Generator「无占位 token」与 literal-scan 纪律）→ 需改写成无尖括号措辞（见 FINDINGS F4）。
@@ -37,15 +37,15 @@
 | Thinking | `max` | ✓ |
 | Mode | `dont_ask`（Paseo live official option：default/accept_edits/dont_ask） | ✓ 未硬编码扩大 |
 | `PendingPermissions` | `[]`（0） | ✓ |
-| Status / Cwd | `running` / `/home/tiezbro/projects/paseo-agy-acp` | ✓ |
+| Status / Cwd | `running` / `~/projects/paseo-agy-acp` | ✓ |
 | 委派 | leaf；`RESOURCE_SET` 委派不可用 | 未委派 ✓ |
 
 ## 2. Authority hash-first 核验（live，全量）
 
 | 项 | exact path | 绑定值 | live 实测 | 结果 |
 | --- | --- | --- | --- | --- |
-| Stage 3 Prompt Generator | `/home/tiezbro/projects/MAACS/docs/controller-prompts/PASEO_AGY_ACP_STAGE3_PROMPT_GENERATOR.md` | `9e2e8334289fe4be546303687daeb28903c58be72c19c4ad40738648686edcdd` | 同 | ✓ |
-| confirmed Scheme | `/home/tiezbro/projects/MAACS/docs/maacs-paseo-agy-acp-confirmed-scheme.md` | `d3b712ee5dd01029c66b0372a482f248a6f1ecbcf81572eb74d7b4ba5d98a98d` | 同；状态 `confirmed` | ✓ |
+| Stage 3 Prompt Generator | `~/projects/MAACS/docs/controller-prompts/PASEO_AGY_ACP_STAGE3_PROMPT_GENERATOR.md` | `9e2e8334289fe4be546303687daeb28903c58be72c19c4ad40738648686edcdd` | 同 | ✓ |
+| confirmed Scheme | `~/projects/MAACS/docs/maacs-paseo-agy-acp-confirmed-scheme.md` | `d3b712ee5dd01029c66b0372a482f248a6f1ecbcf81572eb74d7b4ba5d98a98d` | 同；状态 `confirmed` | ✓ |
 | AGENTS.md | `AGENTS.md` | `9bbd1e7b1bb7938cc3fd5922a1dcf9a036fa8639267d38789213f4fe9fc3198d` | 同 | ✓ |
 | Stage 2 handoff | `docs/design/v2.0.0.0-stage2-handoff.md` | whole-file `c88be84fa4c86c4c63921aaccd08f5f9c765dc896f1c35592f6cb0ee16fafc48`；blob `89c8abe0d82c4915cbf6748db15a9ff86a80c501` | 同 | ✓ |
 | S2-SPIKE-503-001 | `docs/design/v2.0.0.0-stage2-503-feasibility.md` | blob `33ace156c84c769f55608ba33e95012462cc1718`；sha256 `c742645666b456bd5f42602a407446f70cd55321a0d2be2da044f514cb27de19` | 同 | ✓ |
@@ -58,7 +58,7 @@
 | SKILL_INVENTORY receipt | `docs/design/receipts/STAGE3-PROMPT-GEN/skill-inventory.md` | `e68e057cfc5ea3a60ba099a34ae77d2b9700ced70d26775ae2dcfd76238aee81` | 同 | ✓ |
 | Documentation RED | `docs/design/receipts/STAGE3-PROMPT-GEN/documentation-red.md` | `8c6418c8cb76d9bb9de3a11e56a937b3130acabfe379f9ac47f297896e0af0ca` | 同 | ✓ |
 | Candidate | `docs/design/receipts/STAGE3-PROMPT-GEN/stage3-prompt-candidate.md` | `5f3b04089b14b24231d15242197007f7d40c650cdbbc0c35f77692f52504fb19` | 同 | ✓ |
-| Stage 2 Controller Prompt（provenance） | `/home/tiezbro/projects/MAACS/docs/controller-prompts/PASEO_AGY_ACP_STAGE2_CONTROLLER_PROMPT.md` | `9f946e36e717547e5982eefcc37c188d236e48b3be495541bd12129f84207993` | 同 | ✓ |
+| Stage 2 Controller Prompt（provenance） | `~/projects/MAACS/docs/controller-prompts/PASEO_AGY_ACP_STAGE2_CONTROLLER_PROMPT.md` | `9f946e36e717547e5982eefcc37c188d236e48b3be495541bd12129f84207993` | 同 | ✓ |
 | branch / HEAD | — | `main` / `78931bff95ecbd9868f9cfa83a281cbbbf1a60d8` | 同；`git status --porcelain` 仅 `?? docs/design/receipts/` | ✓ |
 
 **14 项必需 Skill 的 live sha256 与 inventory `SOURCE_HASH` 全量一致**（tdd `5e6b9c16…`、implement `6d3fd9e8…`、diagnosing-bugs `b9339b09…`、triage `91e2817e…`、writing-for-agents `a842323e…`、code-review `9cf46653…`、to-spec `5d264795…`、codebase-design `a8d50aba…`、resolving-merge-conflicts `c7c9ba81…`、research `af378829…`、wayfinder `d33e2141…`、domain-modeling `9617041d…`、wizard `7fb2b4ba…`、improve-codebase-architecture `7b76f01b…`）。`code-review`/`to-spec` 两份本 Review 已完整读取。无 `SHARED_SCHEME_MISSING`/`SCHEME_HASH_MISMATCH`/`STAGE2_HANDOFF_MISSING`/`HANDOFF_HASH_MISMATCH`/`WORKTREE_DRIFT_UNRESOLVED`（当前态）/`SKILL_UNAVAILABLE`/`SKILL_FALLBACK_UNAPPROVED`/`METHOD_AUTHORITY_CONFLICT`/`ROLE_SEPARATION_UNAVAILABLE`/`AGENT_MODE_UNAVAILABLE`。`WRITE_SET_VIOLATION`：见 FINDINGS F2（RED 自身记录问题，非本 Review 触发）。
@@ -74,7 +74,7 @@
 - Generator（Generator:281）：canonical target 由 Single Integrator 写入后创建「本地 packaging commit」，且「packaging commit 只能通过写入后的 readback 固定，不能要求 Prompt 正文预先包含它自己的 commit OID」（Generator:153 同旨：不得嵌入未来 packaging OID）。
 - Generator「本次完成标准」（Generator:299-309）：packaging commit 在 Generator 流程内形成，然后才「启动新 Stage 3 顶层会话」。
 
-**判定**：是阻断性自相矛盾。canonical Prompt 文件只存在于 packaging commit 中（其 parent = generation parent `78931bf`）；用户按候选 §9「启动方式」在 `cwd=/home/tiezbro/projects/paseo-agy-acp` 启动新会话时，仓库 HEAD 必然是该 packaging commit，不可能同时等于 `78931bf`。候选正文自己的准入 step 3 与每个 task 的 baseline 条款都会把合法的 packaging-commit 状态误判为漂移并 typed stop——即「按候选规定启动会话」在结构上必然失败。`BLOCKING_AMBIGUITY_REMAINS` 类执行矛盾成立。
+**判定**：是阻断性自相矛盾。canonical Prompt 文件只存在于 packaging commit 中（其 parent = generation parent `78931bf`）；用户按候选 §9「启动方式」在 `cwd=~/projects/paseo-agy-acp` 启动新会话时，仓库 HEAD 必然是该 packaging commit，不可能同时等于 `78931bf`。候选正文自己的准入 step 3 与每个 task 的 baseline 条款都会把合法的 packaging-commit 状态误判为漂移并 typed stop——即「按候选规定启动会话」在结构上必然失败。`BLOCKING_AMBIGUITY_REMAINS` 类执行矛盾成立。
 
 **单一路径修复判词（唯一 disposition）**：把「HEAD 必须等于 78931bf」改写为「HEAD 必须是 Generator 流程的 packaging commit 或 78931bf 本身」的结构性准入，同时保留 generation parent 绑定与不预写未来 OID 纪律：
 1. §1.2 step 3 改为：`branch=main；HEAD = Generator 流程 packaging commit（其 parent 必须 = generation parent 78931bf，以 git rev-parse HEAD^ 核验），或 HEAD=78931bf（packaging 前的等价态）；index 干净；untracked = 精确 pin 的集合（见 F3）。其他漂移 → WORKTREE_DRIFT_UNRESOLVED。`；

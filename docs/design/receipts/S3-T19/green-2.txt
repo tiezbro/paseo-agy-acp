@@ -4,7 +4,7 @@ Command: rtk npm test -- tests/admission-native-process.test.ts
 Exit code: 0
 
 Key output:
-RUN  v4.1.10 /home/tiezbro/projects/paseo-agy-acp
+RUN  v4.1.10 ~/projects/paseo-agy-acp
 Test Files  1 passed (1)
 Tests  4 passed (4)
 Start at  05:16:42

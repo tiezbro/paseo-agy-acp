@@ -6,7 +6,7 @@ ROLE=fresh independent leaf reviewer; no delegation
 PASEO_AGENT_ID=e4816ee7-3bed-4200-bd92-66a122c2e51c
 PARENT_CONTROLLER=79ab5347-5101-4eff-89ed-6a7aa550ae2e; injected status running
 IDENTITY=CHILD; provider/model=codex/gpt-5.6-luna; thinking=max; mode=full-access; pending=[]
-CWD=/home/tiezbro/projects/paseo-agy-acp
+CWD=~/projects/paseo-agy-acp
 
 1. BASELINE AND SCOPE
 BRANCH=main
@@ -19,9 +19,9 @@ FIXED_POINT_METHOD=The review set is git diff HEAD plus git ls-files --others --
 WRITE_SET=Only docs/design/receipts/S3-REV-QUAL/verdict-2.txt and docs/design/receipts/S3-REV-QUAL/method-evidence-2.txt.
 
 2. AUTHORITY READ AND HASH GATE
-CONFIRMED_SCHEME=/home/tiezbro/projects/MAACS/docs/maacs-paseo-agy-acp-confirmed-scheme.md SHA-256=d3b712ee5dd01029c66b0372a482f248a6f1ecbcf81572eb74d7b4ba5d98a98d
-STAGE2_CONTROLLER_PROMPT=/home/tiezbro/projects/MAACS/docs/controller-prompts/PASEO_AGY_ACP_STAGE2_CONTROLLER_PROMPT.md SHA-256=9f946e36e717547e5982eefcc37c188d236e48b3be495541bd12129f84207993
-AGENTS=/home/tiezbro/projects/paseo-agy-acp/AGENTS.md SHA-256=9bbd1e7b1bb7938cc3fd5922a1dcf9a036fa8639267d38789213f4fe9fc3198d
+CONFIRMED_SCHEME=~/projects/MAACS/docs/maacs-paseo-agy-acp-confirmed-scheme.md SHA-256=d3b712ee5dd01029c66b0372a482f248a6f1ecbcf81572eb74d7b4ba5d98a98d
+STAGE2_CONTROLLER_PROMPT=~/projects/MAACS/docs/controller-prompts/PASEO_AGY_ACP_STAGE2_CONTROLLER_PROMPT.md SHA-256=9f946e36e717547e5982eefcc37c188d236e48b3be495541bd12129f84207993
+AGENTS=~/projects/paseo-agy-acp/AGENTS.md SHA-256=9bbd1e7b1bb7938cc3fd5922a1dcf9a036fa8639267d38789213f4fe9fc3198d
 S2_503=docs/design/v2.0.0.0-stage2-503-feasibility.md SHA-256=c742645666b456bd5f42602a407446f70cd55321a0d2be2da044f514cb27de19
 S2_ACP=docs/design/v2.0.0.0-stage2-acp-source-map.md SHA-256=f2ded52a47a73773efcbbf27b1d395ad6a9abba7e95b0bdd2516c3b0fe65f860
 S2_ADMISSION=docs/design/v2.0.0.0-stage2-admission-source-map.md SHA-256=eee7e56c7ddaa09dc155cb92772298eb0b19710e88b336e16a3851546015fafb
@@ -34,8 +34,8 @@ STAGE3_PROMPT=docs/design/v2.0.0.0-stage3-execution-prompt.md SHA-256=24c06dbe19
 AUTHORITY_READ=confirmed Scheme, Stage 2 Controller Prompt, AGENTS.md, all eight immutable Stage 2 inputs, and canonical Stage 3 prompt were read in full; Stage 2 files have no current worktree diff.
 
 3. SKILL CONFORMANCE
-CODE_REVIEW_SKILL=/home/tiezbro/.agents/skills/code-review/SKILL.md SHA-256=9cf46653dd9c710ea1e6c22423caf31a794c88773bc94bdaa23140277f470442; fully read.
-CODEBASE_DESIGN_SKILL=/home/tiezbro/.agents/skills/codebase-design/SKILL.md SHA-256=a8d50abac5a4018f60e1d911d4b6f4e36454ca14d6c390c0695a578c7de65dad; fully read.
+CODE_REVIEW_SKILL=~/.agents/skills/code-review/SKILL.md SHA-256=9cf46653dd9c710ea1e6c22423caf31a794c88773bc94bdaa23140277f470442; fully read.
+CODEBASE_DESIGN_SKILL=~/.agents/skills/codebase-design/SKILL.md SHA-256=a8d50abac5a4018f60e1d911d4b6f4e36454ca14d6c390c0695a578c7de65dad; fully read.
 CODE_REVIEW_EXECUTED=Fixed-point pinning, candidate inventory, independent Standards/Spec separation, and smell-baseline judgment were applied to the current worktree.
 CODE_REVIEW_INAPPLICABLE=The skill requests spawning two sub-agents; user authority requires a leaf reviewer with no delegation, and S3-REV-SPEC plus this Quality reviewer already provide independent axes.
 CODEBASE_DESIGN_EXECUTED=Used module, interface, implementation, seam, adapter, depth, leverage, and locality terms to inspect production dispatch, runtime reaper, process evidence, and terminal ownership.

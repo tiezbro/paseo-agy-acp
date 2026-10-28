@@ -6,7 +6,7 @@
 `STAGE`：Stage 3 Prompt Generation（**非 Stage 3 执行**）
 `TASK_TYPE`：Documentation RED + Stage 3 执行 Prompt authoring
 `SELECTED_PRIMARY_SKILL`：`writing-for-agents`；`SELECTED_SUPPORTING_SKILLS`：`to-spec`（Generator 固定映射）
-`SKILL_SOURCE_IDENTITY`：`mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df`；`/home/tiezbro/.agents/skills/writing-for-agents/SKILL.md` sha256 `a842323e664e5af104eac5c97ad22fda929ebeb62d81c501161ac1f6f482db58`；`/home/tiezbro/.agents/skills/to-spec/SKILL.md` sha256 `5d26479544b08048d3a8f79d937b39bc613a617f026b3fd083bafc1e99a7b811`
+`SKILL_SOURCE_IDENTITY`：`mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df`；`~/.agents/skills/writing-for-agents/SKILL.md` sha256 `a842323e664e5af104eac5c97ad22fda929ebeb62d81c501161ac1f6f482db58`；`~/.agents/skills/to-spec/SKILL.md` sha256 `5d26479544b08048d3a8f79d937b39bc613a617f026b3fd083bafc1e99a7b811`
 `DEPENDENCIES`：Generator admission passed；SKILL_INVENTORY Gate accepted；inventory `docs/design/receipts/STAGE3-PROMPT-GEN/skill-inventory.md` sha256 `e68e057cfc5ea3a60ba099a34ae77d2b9700ced70d26775ae2dcfd76238aee81`；Stage 2 immutable commit `78931bff95ecbd9868f9cfa83a281cbbbf1a60d8`
 `ALLOWED_WRITE_SET`：`docs/design/receipts/STAGE3-PROMPT-GEN/documentation-red.md`、`docs/design/receipts/STAGE3-PROMPT-GEN/stage3-prompt-candidate.md`（本文件 = 前者）
 
@@ -35,15 +35,15 @@
 | Thinking | `max` | ✓ |
 | Mode | `dont_ask`（Paseo live official option：default/accept_edits/dont_ask 之一） | ✓ 未硬编码扩大 |
 | `PendingPermissions` | `[]`（0） | ✓ |
-| Status / Cwd | `running` / `/home/tiezbro/projects/paseo-agy-acp` | ✓ |
+| Status / Cwd | `running` / `~/projects/paseo-agy-acp` | ✓ |
 | 委派 | 本 Worker 是 leaf；`RESOURCE_SET` 委派不可用 | 未委派 ✓ |
 
 ## 2. Authority hash-first 核验（live）
 
 | 项 | exact path | 绑定值 | live 实测 | 结果 |
 | --- | --- | --- | --- | --- |
-| Stage 3 Prompt Generator | `/home/tiezbro/projects/MAACS/docs/controller-prompts/PASEO_AGY_ACP_STAGE3_PROMPT_GENERATOR.md` | `9e2e8334289fe4be546303687daeb28903c58be72c19c4ad40738648686edcdd` | 同 | ✓ |
-| confirmed 共同 Scheme | `/home/tiezbro/projects/MAACS/docs/maacs-paseo-agy-acp-confirmed-scheme.md` | `d3b712ee5dd01029c66b0372a482f248a6f1ecbcf81572eb74d7b4ba5d98a98d` | 同；状态 `confirmed` | ✓ |
+| Stage 3 Prompt Generator | `~/projects/MAACS/docs/controller-prompts/PASEO_AGY_ACP_STAGE3_PROMPT_GENERATOR.md` | `9e2e8334289fe4be546303687daeb28903c58be72c19c4ad40738648686edcdd` | 同 | ✓ |
+| confirmed 共同 Scheme | `~/projects/MAACS/docs/maacs-paseo-agy-acp-confirmed-scheme.md` | `d3b712ee5dd01029c66b0372a482f248a6f1ecbcf81572eb74d7b4ba5d98a98d` | 同；状态 `confirmed` | ✓ |
 | Stage 2 handoff | `docs/design/v2.0.0.0-stage2-handoff.md` | whole-file `c88be84fa4c86c4c63921aaccd08f5f9c765dc896f1c35592f6cb0ee16fafc48`；blob `89c8abe0d82c4915cbf6748db15a9ff86a80c501` | 同 | ✓ |
 | AGENTS.md | `AGENTS.md` | `9bbd1e7b1bb7938cc3fd5922a1dcf9a036fa8639267d38789213f4fe9fc3198d` | 同 | ✓ |
 | S2-SPIKE-503-001 | `docs/design/v2.0.0.0-stage2-503-feasibility.md` | blob `33ace156c84c769f55608ba33e95012462cc1718`；sha256 `c742645666b456bd5f42602a407446f70cd55321a0d2be2da044f514cb27de19` | 同 | ✓ |

@@ -4,7 +4,7 @@ TITLE=isolated-paseo-6768-single-canary
 UTC=2026-08-16T08:17:10Z
 RESULT=PASS
 TEMP_HOME=/tmp/paseo-agy-acp-s3-canary-A4rQdS
-PASEO_CLI=/home/tiezbro/.local/bin/paseo
+PASEO_CLI=~/.local/bin/paseo
 PASEO_ENV_STRIPPED=PASEO_AGENT_CWD,PASEO_AGENT_ID,PASEO_HOME
 
 PRECONDITIONS
@@ -77,7 +77,7 @@ POST_CLEANUP= test ! -e /tmp/paseo-agy-acp-s3-canary-A4rQdS -> exit 0; prefix sc
 
 SKILL_DISPOSITIONS
 - paseo-isolated-testing/SKILL.md was read completely, sha256=1e64d81484efd78ac12d75be44066921c8a65d737dff42a3a9e05e436b35ff4e.
-- references/isolated-daemon-testing.md is missing at /home/tiezbro/.agents/skills/paseo/paseo-isolated-testing/references/isolated-daemon-testing.md; core SKILL.md only was used.
+- references/isolated-daemon-testing.md is missing at ~/.agents/skills/paseo/paseo-isolated-testing/references/isolated-daemon-testing.md; core SKILL.md only was used.
 - The core skill production-home guard is inapplicable under canonical project authority: no ~/.paseo read/hash/write and no production 127.0.0.1:6767 call occurred.
 
 ASSERTIONS

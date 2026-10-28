@@ -9,7 +9,7 @@ rtk npm test -- tests/admission-fault-security-matrix.test.ts tests/agy-dispatch
 Exit code: 0
 
 Key output:
-RUN  v4.1.10 /home/tiezbro/projects/paseo-agy-acp
+RUN  v4.1.10 ~/projects/paseo-agy-acp
 Test Files  4 passed (4)
 Tests  24 passed (24)
 Duration  961ms

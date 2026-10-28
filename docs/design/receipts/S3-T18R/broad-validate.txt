@@ -21,7 +21,7 @@ COMMAND=npm run validate
 > node scripts/clean-dist.mjs && tsc
 
 
- RUN  v4.1.10 /home/tiezbro/projects/paseo-agy-acp
+ RUN  v4.1.10 ~/projects/paseo-agy-acp
 
 Cloning into '/tmp/agy-acp-reconcile-ctMZRu/parent/vendor'...
 done.

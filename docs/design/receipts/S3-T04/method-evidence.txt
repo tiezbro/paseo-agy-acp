@@ -8,11 +8,11 @@ startup_gate:
 PASEO_AGENT_ID=3d2c7c08-8296-426f-ab39-0aee60698cf8
 ParentAgentId=79ab5347-5101-4eff-89ed-6a7aa550ae2e
 Provider=codex; Model=gpt-5.5; Thinking=xhigh; Mode=full-access; PendingPermissions=[]
-cwd=/home/tiezbro/projects/paseo-agy-acp; branch=main; HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e; sole parent=78931bff95ecbd9868f9cfa83a281cbbbf1a60d8; index clean=YES
+cwd=~/projects/paseo-agy-acp; branch=main; HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e; sole parent=78931bff95ecbd9868f9cfa83a281cbbbf1a60d8; index clean=YES
 
 authority_hashes:
-Scheme /home/tiezbro/projects/MAACS/docs/maacs-paseo-agy-acp-confirmed-scheme.md sha256=d3b712ee5dd01029c66b0372a482f248a6f1ecbcf81572eb74d7b4ba5d98a98d
-Stage 2 Controller Prompt /home/tiezbro/projects/MAACS/docs/controller-prompts/PASEO_AGY_ACP_STAGE2_CONTROLLER_PROMPT.md sha256=9f946e36e717547e5982eefcc37c188d236e48b3be495541bd12129f84207993
+Scheme ~/projects/MAACS/docs/maacs-paseo-agy-acp-confirmed-scheme.md sha256=d3b712ee5dd01029c66b0372a482f248a6f1ecbcf81572eb74d7b4ba5d98a98d
+Stage 2 Controller Prompt ~/projects/MAACS/docs/controller-prompts/PASEO_AGY_ACP_STAGE2_CONTROLLER_PROMPT.md sha256=9f946e36e717547e5982eefcc37c188d236e48b3be495541bd12129f84207993
 AGENTS.md sha256=9bbd1e7b1bb7938cc3fd5922a1dcf9a036fa8639267d38789213f4fe9fc3198d
 handoff docs/design/v2.0.0.0-stage2-handoff.md sha256=c88be84fa4c86c4c63921aaccd08f5f9c765dc896f1c35592f6cb0ee16fafc48
 S2-SPEC-001 docs/design/v2.0.0.0-stage2-spec.md sha256=3d90fe642f9322970c8e40e7a23b22228d62bfb3c52a5faac5a10960a9d03450; complete read command executed with rtk read, plus S3-T04/C1 sections read back.

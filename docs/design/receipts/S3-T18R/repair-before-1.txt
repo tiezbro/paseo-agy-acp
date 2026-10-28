@@ -7,7 +7,7 @@ COMMAND=rtk npm test -- tests/admission-schema.test.ts tests/admission-controlle
 > npm run typecheck && npm run build && vitest run tests/admission-schema.test.ts tests/admission-controller.test.ts tests/admission-fault-security-matrix.test.ts tests/admission-sqlite-contention.test.ts tests/admission-startup-recovery.test.ts tests/admission-turn-coordinator.test.ts tests/admission-503-classifier.test.ts tests/admission-dispatch-faultpoints.test.ts tests/admission-process-evidence-contract.test.ts tests/admission-race-contract.test.ts tests/admission-scheduling-contract.test.ts tests/admission-seats-contract.test.ts tests/admission-timeout-contract.test.ts tests/admission-process.test.ts
 > tsc -p tsconfig.test.json
 > node scripts/clean-dist.mjs && tsc
- RUN  v4.1.10 /home/tiezbro/projects/paseo-agy-acp
+ RUN  v4.1.10 ~/projects/paseo-agy-acp
  ❯ tests/admission-fault-security-matrix.test.ts (2 tests | 1 failed) 203ms
      × commits process identity and dispatch intent atomically 200ms
  ❯ tests/admission-seats-contract.test.ts (3 tests | 1 failed) 208ms

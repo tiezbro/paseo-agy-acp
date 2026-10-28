@@ -9,8 +9,8 @@ Selected skills:
 
 Skill source identity:
 - source: mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df
-- /home/tiezbro/.agents/skills/tdd/SKILL.md sha256=5e6b9c16b547113e90afbb946489d1c1384be5c2128f0159bd0bee57251ecf08
-- /home/tiezbro/.agents/skills/implement/SKILL.md sha256=6d3fd9e83b8f36e5213854779db49b256a457a7ebb4a503e53fa7dcff696adc3
+- ~/.agents/skills/tdd/SKILL.md sha256=5e6b9c16b547113e90afbb946489d1c1384be5c2128f0159bd0bee57251ecf08
+- ~/.agents/skills/implement/SKILL.md sha256=6d3fd9e83b8f36e5213854779db49b256a457a7ebb4a503e53fa7dcff696adc3
 
 Executed:
 - Fresh readback of cwd, branch, HEAD, unique parent, index, and dirty scope before GREEN.

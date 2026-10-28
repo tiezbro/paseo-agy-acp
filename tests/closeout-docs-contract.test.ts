@@ -3,7 +3,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 const ROOT = process.cwd();
-const SCHEME_PATH = "/home/tiezbro/projects/MAACS/docs/maacs-paseo-agy-acp-confirmed-scheme.md";
+const SCHEME_PATH = "~/projects/MAACS/docs/maacs-paseo-agy-acp-confirmed-scheme.md";
 const OLD_DESIGN_PATH = "docs/design/v2.0.0.0-admission-controller.md";
 
 const STAGE2_ARTIFACTS = [

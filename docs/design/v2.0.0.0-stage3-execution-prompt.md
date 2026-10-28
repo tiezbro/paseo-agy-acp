@@ -12,7 +12,7 @@
 
 ## 0. 启动身份与唯一授权
 
-- **cwd**：`/home/tiezbro/projects/paseo-agy-acp`。
+- **cwd**：`~/projects/paseo-agy-acp`。
 - **会话类型**：全新顶层 Paseo Controller 会话（top-level；本 Prompt 不得由 child Agent 执行，也不得被用于委派链内部）。
 - **Stage 边界**：Stage 1 已由用户确认（共同 Scheme `confirmed`）；Stage 2 已完成并 accepted（commit `78931bf`，8 份 artifacts 双审 approved、blocking findings=0）。本会话**只执行 Stage 3 Development Closeout**；禁止重跑、重写或重开 Stage 1/2。输入与 accepted 基线不一致时，返回 typed blocker `STAGE2_HANDOFF_REVISIONS_REQUIRED` 并停止，不得自行补规格。
 - **persistent Goal**：建立一个只覆盖「paseo-agy-acp Stage 3 Development Closeout」的独立 persistent Goal；不得复用/重开已完成的 Stage 2 Goal，不得把 Goal 延伸到安装、Provider、生产或 release。Goal tooling 不可用时返回 `GOAL_MODE_UNAVAILABLE` 并停止。只有全部 Stage 3 nodes integrated、双审 accepted、Parallelism Review accepted、Critical=0、High=0 并形成本地选择性集成 commit 后才标记 complete。
@@ -35,7 +35,7 @@
 
 ### 1.2 准入（只读核验；任一失败返回对应 typed blocker 并停止）
 
-1. confirmed 共同 Scheme 仍是 `/home/tiezbro/projects/MAACS/docs/maacs-paseo-agy-acp-confirmed-scheme.md`，状态 `confirmed`，live SHA-256 = `d3b712ee5dd01029c66b0372a482f248a6f1ecbcf81572eb74d7b4ba5d98a98d`；缺失 → `SHARED_SCHEME_MISSING`；不一致 → `SCHEME_HASH_MISMATCH`。
+1. confirmed 共同 Scheme 仍是 `~/projects/MAACS/docs/maacs-paseo-agy-acp-confirmed-scheme.md`，状态 `confirmed`，live SHA-256 = `d3b712ee5dd01029c66b0372a482f248a6f1ecbcf81572eb74d7b4ba5d98a98d`；缺失 → `SHARED_SCHEME_MISSING`；不一致 → `SCHEME_HASH_MISMATCH`。
 2. Stage 2 accepted commit `78931bff95ecbd9868f9cfa83a281cbbbf1a60d8`、8 份 artifacts（§2.1 表）的 path/blob/SHA-256 可完整读取且一致；handoff 缺失 → `STAGE2_HANDOFF_MISSING`；漂移 → `HANDOFF_HASH_MISMATCH` 或 `STAGE2_HANDOFF_REVISIONS_REQUIRED`。
 3. 当前 `paseo-agy-acp`：branch=`main`；**运行时 HEAD = Generator 流程的 packaging commit**（其**唯一 parent 必须 = generation parent `78931bff95ecbd9868f9cfa83a281cbbbf1a60d8`**，以 `git rev-parse HEAD^` 核验；packaging delta 只含 canonical Stage 3 Prompt `docs/design/v2.0.0.0-stage3-execution-prompt.md` 与 Generator 获准的控制证据，并与 post-commit 外部完整性 receipt 记录一致）；**index 干净、tracked worktree clean**。untracked 允许集（fail-closed）：**优先要求干净 worktree（untracked 为空）**——packaging commit 已包含 canonical Prompt 与全部获准控制证据；若 post-commit Generator 证据被有意保持 untracked，只允许**外部提供的 post-commit 完整性 receipt manifest 中逐条记录的路径与 SHA-256 值**，且全部路径必须约束在 `docs/design/receipts/STAGE3-PROMPT-GEN/` 之下（由 Controller 在准入时以该 manifest 外部核验；本 Prompt 正文不内嵌任何固定文件名清单、不内嵌任何 hash、不预写未来 packaging OID）；**untracked 非空但 manifest 缺失或 manifest 与实际 untracked 集不一致 → `WORKTREE_DRIFT_UNRESOLVED`**；manifest 之外任何 untracked 路径一律 → `WORKTREE_DRIFT_UNRESOLVED`。其他 HEAD/内容漂移且无新用户裁决 → `WORKTREE_DRIFT_UNRESOLVED`（HEAD/dirty 面）或 `STAGE2_HANDOFF_REVISIONS_REQUIRED`（immutable 内容/hash 面）。**本 Prompt 仅在 Generator 流程完成之后使用**：canonical target 已写入、packaging commit 已形成、post-commit 外部完整性 receipt 已生成。
 4. handoff 的 coverage、`DEPENDENCY_DAG`（§2.2）、`WRITE_SET_MAP`（§2.3）、`RESOURCE_SET_MAP`（§2.4）、integration barriers（§2.5）、task briefs（§6）与 RED/GREEN contracts（§5）未漂移；`blocking ambiguity=0` 与 `unresolved blockers=none` 只能由双审 + 集成后的外部 receipt 证明，不在准入期声称。
@@ -50,8 +50,8 @@
 | 项 | exact path | Git blob（HEAD:path） | whole-file SHA-256 | 稳定身份 / 语义角色 |
 | --- | --- | --- | --- | --- |
 | generation parent / packaging commit 的唯一 parent（源码基线） | repo 历史 commit（**非运行时 HEAD**；会话运行时 HEAD = packaging commit，见 §1.2 step 3） | `78931bff95ecbd9868f9cfa83a281cbbbf1a60d8` | — | Stage 3 源码 baseline、branch `main`、packaging commit 的唯一 parent |
-| confirmed 共同 Scheme | `/home/tiezbro/projects/MAACS/docs/maacs-paseo-agy-acp-confirmed-scheme.md` | （MAACS 仓库，不在本 repo） | `d3b712ee5dd01029c66b0372a482f248a6f1ecbcf81572eb74d7b4ba5d98a98d` | 唯一业务 authority，状态 `confirmed` |
-| Stage 2 Controller Prompt（provenance） | `/home/tiezbro/projects/MAACS/docs/controller-prompts/PASEO_AGY_ACP_STAGE2_CONTROLLER_PROMPT.md` | — | `9f946e36e717547e5982eefcc37c188d236e48b3be495541bd12129f84207993` | Stage 2 方法 provenance |
+| confirmed 共同 Scheme | `~/projects/MAACS/docs/maacs-paseo-agy-acp-confirmed-scheme.md` | （MAACS 仓库，不在本 repo） | `d3b712ee5dd01029c66b0372a482f248a6f1ecbcf81572eb74d7b4ba5d98a98d` | 唯一业务 authority，状态 `confirmed` |
+| Stage 2 Controller Prompt（provenance） | `~/projects/MAACS/docs/controller-prompts/PASEO_AGY_ACP_STAGE2_CONTROLLER_PROMPT.md` | — | `9f946e36e717547e5982eefcc37c188d236e48b3be495541bd12129f84207993` | Stage 2 方法 provenance |
 | 仓库 instructions | `AGENTS.md` | — | `9bbd1e7b1bb7938cc3fd5922a1dcf9a036fa8639267d38789213f4fe9fc3198d` | GitNexus impact/detect_changes 规则 |
 | Stage 2 handoff | `docs/design/v2.0.0.0-stage2-handoff.md` | `89c8abe0d82c4915cbf6748db15a9ff86a80c501` | `c88be84fa4c86c4c63921aaccd08f5f9c765dc896f1c35592f6cb0ee16fafc48` | `S2-HANDOFF-001`：唯一 canonical handoff（本 Prompt 的事实来源；不内嵌自身 digest，integrity 由 post-commit 外部 receipt 绑定） |
 | 503 可行性 | `docs/design/v2.0.0.0-stage2-503-feasibility.md` | `33ace156c84c769f55608ba33e95012462cc1718` | `c742645666b456bd5f42602a407446f70cd55321a0d2be2da044f514cb27de19` | `S2-SPIKE-503-001`：trusted-503 typed-stop 依赖；锁定三元组 `SOURCE_FIELD_GAP`+`REAL_PROVIDER_REQUIRED`+`SOURCE_IDENTITY_UNKNOWN` |
@@ -147,7 +147,7 @@ S3-INT-CONFLICT：条件 brief，仅真实 merge/rebase/content conflict 存在�
 
 | 资源 | 可用性 | 约束 |
 | --- | --- | --- |
-| 仓库 read-only（`/home/tiezbro/projects/paseo-agy-acp`） | 全部 task | 写只限各自 ALLOWED_WRITE_SET |
+| 仓库 read-only（`~/projects/paseo-agy-acp`） | 全部 task | 写只限各自 ALLOWED_WRITE_SET |
 | live source / tests / package scripts | 全部 task | 只读；结论须回 live source |
 | GitNexus（`node .gitnexus/run.cjs`） | 全部 source-edit task | 只读 `query`/`context`/`impact`/`detect-changes`；改 symbol 前必须 `impact` |
 | npm test / npm run validate | 全部 task | 只运行各自 brief 指定的命令；不 install/switch |
@@ -231,7 +231,7 @@ S3-INT-CONFLICT：条件 brief，仅真实 merge/rebase/content conflict 存在�
 
 ### 4.4 Skill 来源与读取规则
 
-- 全部所需 Skills 为全局 pinned Matt-derived Skills，唯一批准来源 `mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df`，全局安装路径 = `/home/tiezbro/.agents/skills/` 下以 Skill 名称命名的目录内的 `SKILL.md`（Inventory 已逐项核验 path + source commit + sha256 + 可读 + 可委派，14 项 `AVAILABLE=YES`，无 fallback 声明）。
+- 全部所需 Skills 为全局 pinned Matt-derived Skills，唯一批准来源 `mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df`，全局安装路径 = `~/.agents/skills/` 下以 Skill 名称命名的目录内的 `SKILL.md`（Inventory 已逐项核验 path + source commit + sha256 + 可读 + 可委派，14 项 `AVAILABLE=YES`，无 fallback 声明）。
 - **每个 delegated task 行动前必须完整读取** selected primary + supporting `SKILL.md` 并逐项报告执行证据（installed path + source commit + SHA-256 + 逐项 executed/inapplicable）；一个 task 一个 primary、最多两个 supporting。
 - 缺失/漂移 → `SKILL_UNAVAILABLE`；未批准 fallback → `SKILL_FALLBACK_UNAPPROVED`；Skill 物理行为与 authority/write-set 冲突 → `METHOD_AUTHORITY_CONFLICT`，不为了形式服从 skill 而扩大权限。
 
@@ -259,8 +259,8 @@ Receipt 规则（S2-TEST-001 §5.0/§7）：receipt 文件写入 `docs/design/re
 ### 6.0 Common Task Contract（所有 task 共用字段值；每 brief 显式列出全部 25 个字段名，共享值以本节为准）
 
 - `STAGE`：`3`
-- `EXACT_GIT_BASELINE`：repo `/home/tiezbro/projects/paseo-agy-acp`；branch `main`；**immutable 源码/权威基线（generation parent）= accepted Stage 2 commit `78931bff95ecbd9868f9cfa83a281cbbbf1a60d8`**（handoff §12.0 所记内部参考 HEAD `2229353676ada1531c95763eca4a3a25fccdbed3` 已被该 accepted commit 取代）。**运行时 HEAD ≠ 该基线**：正常启动时 HEAD = Generator 流程 packaging commit，其唯一 parent 必须 = 上述 generation parent（结构核验见 §1.2 step 3；packaging commit 自身 OID 由 post-commit 外部完整性 receipt 绑定，本 Prompt 不预写）。**任务启动时必须 fresh readback**（cwd/branch/HEAD/`HEAD^` parent 链/index/dirty ownership）；HEAD 不在 §1.2 step 3 允许集且无新用户裁决 → typed stop `WORKTREE_DRIFT_UNRESOLVED`；immutable 基线或权威哈希漂移 → `STAGE2_HANDOFF_REVISIONS_REQUIRED`。
-- `AUTHORITY_PATHS_AND_HASHES`（base，每 brief 追加 task 特定 sibling）：confirmed Scheme `/home/tiezbro/projects/MAACS/docs/maacs-paseo-agy-acp-confirmed-scheme.md` @ `d3b712ee5dd01029c66b0372a482f248a6f1ecbcf81572eb74d7b4ba5d98a98d`；Stage 2 Controller Prompt @ `9f946e36e717547e5982eefcc37c188d236e48b3be495541bd12129f84207993`；AGENTS.md @ `9bbd1e7b1bb7938cc3fd5922a1dcf9a036fa8639267d38789213f4fe9fc3198d`；handoff `S2-HANDOFF-001`（path `docs/design/v2.0.0.0-stage2-handoff.md`；不内嵌自身 digest；integrity 由 post-commit 外部 receipt 绑定）；8 份 sibling 按 path + stable identity + semantic role（§2.1 表，含 blob 与 sha256）。
+- `EXACT_GIT_BASELINE`：repo `~/projects/paseo-agy-acp`；branch `main`；**immutable 源码/权威基线（generation parent）= accepted Stage 2 commit `78931bff95ecbd9868f9cfa83a281cbbbf1a60d8`**（handoff §12.0 所记内部参考 HEAD `2229353676ada1531c95763eca4a3a25fccdbed3` 已被该 accepted commit 取代）。**运行时 HEAD ≠ 该基线**：正常启动时 HEAD = Generator 流程 packaging commit，其唯一 parent 必须 = 上述 generation parent（结构核验见 §1.2 step 3；packaging commit 自身 OID 由 post-commit 外部完整性 receipt 绑定，本 Prompt 不预写）。**任务启动时必须 fresh readback**（cwd/branch/HEAD/`HEAD^` parent 链/index/dirty ownership）；HEAD 不在 §1.2 step 3 允许集且无新用户裁决 → typed stop `WORKTREE_DRIFT_UNRESOLVED`；immutable 基线或权威哈希漂移 → `STAGE2_HANDOFF_REVISIONS_REQUIRED`。
+- `AUTHORITY_PATHS_AND_HASHES`（base，每 brief 追加 task 特定 sibling）：confirmed Scheme `~/projects/MAACS/docs/maacs-paseo-agy-acp-confirmed-scheme.md` @ `d3b712ee5dd01029c66b0372a482f248a6f1ecbcf81572eb74d7b4ba5d98a98d`；Stage 2 Controller Prompt @ `9f946e36e717547e5982eefcc37c188d236e48b3be495541bd12129f84207993`；AGENTS.md @ `9bbd1e7b1bb7938cc3fd5922a1dcf9a036fa8639267d38789213f4fe9fc3198d`；handoff `S2-HANDOFF-001`（path `docs/design/v2.0.0.0-stage2-handoff.md`；不内嵌自身 digest；integrity 由 post-commit 外部 receipt 绑定）；8 份 sibling 按 path + stable identity + semantic role（§2.1 表，含 blob 与 sha256）。
 - `FORBIDDEN_SURFACES`：本 task ALLOWED_WRITE_SET 之外的全部仓库路径（含其他 task 文件、sibling Stage 2 artifacts）；MAACS、code-of-tiebro、`~/.paseo`、`~/.agents`；git index/refs（S3-INT-* 除外）；真实 Provider/登录/模型探测；生产 `127.0.0.1:6767`；install/switch/network/（除本 brief 明确测试命令外）build/commit/push/tag/deploy/release；禁止恢复面（§3 清单：outbox/delivery claim/custom ACK/terminal replay/client route fence/second live SQLite→ACP/shadow parity/custom request identity/manual requeue/recovery claim/exact-conversation binder/startup-permit/大型 migration 框架/第三源码区/强制 `dangerously-skip-permissions`/policy 不升版本方案）。
 - `RESOURCE_SET`：§2.4 表；仓库只读、GitNexus 只读、live source、npm test runner、child-process helper、fake agy/injected readers、临时 state dir；无委派、无真实 Provider、无网络。
 - `METHOD_CONFORMANCE_EVIDENCE`：报告 selected primary/supporting `SKILL.md` 的 installed path + source commit + SHA-256（§4.4 来源），逐项 executed/inapplicable；未委派；无越权写；SKILL.md 缺失/漂移 → `SKILL_UNAVAILABLE`。
@@ -280,7 +280,7 @@ Receipt 规则（S2-TEST-001 §5.0/§7）：receipt 文件写入 `docs/design/re
 | SELECTED_PRIMARY_SKILL | `tdd` |
 | SELECTED_SUPPORTING_SKILLS | `implement` |
 | SKILL_SELECTION_REASON | 回归测试作者 = 测试 seam 工作；tdd 提供 seam-disciplined test authoring；tdd 的 RED 步显式 inapplicable（测试必须在未修改 live HEAD 上通过）；implement 支持仅在回归揭示真实缺陷时按诊断循环升级 |
-| SKILL_SOURCE_IDENTITY | `mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df`；`/home/tiezbro/.agents/skills/tdd/SKILL.md`、`/home/tiezbro/.agents/skills/implement/SKILL.md`（启动时核验 path+commit+hash） |
+| SKILL_SOURCE_IDENTITY | `mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df`；`~/.agents/skills/tdd/SKILL.md`、`~/.agents/skills/implement/SKILL.md`（启动时核验 path+commit+hash） |
 | SKILL_REQUIRED_STEPS | 完整读取两份 SKILL.md；按 S2-TEST-001 §5.0 通用规则在 pre-agreed seam（`parseAdmissionRuntimeConfig` + `admitNext`）编写并运行回归；tdd RED 步不适用；每断言期望值来自 Scheme 常量（3/1/非法集）与 S2-ARCH-001 exact names，禁止 tautological 断言 |
 | SKILL_EXPECTED_OUTPUT | 新回归文件 + green regression receipts（§6.0 格式） |
 | SKILL_FORBIDDEN_SHORTCUTS | 不写生产源码；不把 missing-test-file 当 RED；不 mutation-as-RED；不 mock-only/implementation-coupled 断言 |
@@ -490,7 +490,7 @@ Receipt 规则（S2-TEST-001 §5.0/§7）：receipt 文件写入 `docs/design/re
 | SELECTED_PRIMARY_SKILL | `diagnosing-bugs` |
 | SELECTED_SUPPORTING_SKILLS | `triage` |
 | SKILL_SELECTION_REASON | Controller 澄清（handoff §2.4-3）固定绑定；任务唯一可执行内容是核验外部失败证据链是否闭合并正确记录 typed-blocked；无代码可循环，skill 的 red-capable loop 步骤 inapplicable under project authority（记录） |
-| SKILL_SOURCE_IDENTITY | `mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df`；`/home/tiezbro/.agents/skills/diagnosing-bugs/SKILL.md`、`/home/tiezbro/.agents/skills/triage/SKILL.md`（启动时核验） |
+| SKILL_SOURCE_IDENTITY | `mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df`；`~/.agents/skills/diagnosing-bugs/SKILL.md`、`~/.agents/skills/triage/SKILL.md`（启动时核验） |
 | SKILL_REQUIRED_STEPS | 完整读取 SKILL.md；复核 S2-SPIKE-503-001 锁定结论与重开条件；确认无 trusted-503 RED/READY/regex/phrase 归一化/fake-binary truth 声称被创建；写 typed-blocked receipt |
 | SKILL_EXPECTED_OUTPUT | `docs/design/receipts/S3-T08/typed-blocked.txt`（三元组 + 重开条件） |
 | SKILL_FORBIDDEN_SHORTCUTS | 不得把 typed-blocked 变成 RED/READY/实现任务；不得写仓库实现/测试/合同；不得把 `429`/transport 测试误标为 trusted-503 证据；负分类不开 capacity cooldown |
@@ -880,7 +880,7 @@ Receipt 规则（S2-TEST-001 §5.0/§7）：receipt 文件写入 `docs/design/re
 | SELECTED_PRIMARY_SKILL | `writing-for-agents` |
 | SELECTED_SUPPORTING_SKILLS | （无 supporting skill；Controller 澄清 handoff §2.4-3 固定） |
 | SKILL_SELECTION_REASON | Controller 澄清（handoff §2.4-3）唯一绑定；文档为 Agent/人消费的可执行材料，writing-for-agents 的 context pointers/information hierarchy/completion criteria 规则适用；其 docs contract 测试是 acceptance input，不是第二个 primary |
-| SKILL_SOURCE_IDENTITY | `mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df`；`/home/tiezbro/.agents/skills/writing-for-agents/SKILL.md`（启动时核验） |
+| SKILL_SOURCE_IDENTITY | `mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df`；`~/.agents/skills/writing-for-agents/SKILL.md`（启动时核验） |
 | SKILL_REQUIRED_STEPS | 完整读取 SKILL.md；RED 先于 GREEN（live README/README.zh-CN 链接旧 design；CHANGELOG 含 stale Admission/schema assertions；旧 design 自封「已确认」）；minimal GREEN：三面文档更新（引用 Scheme + Stage 2 artifacts，CHANGELOG 与 v2 migration/policy/recovery/terminal 合同一致）+ 旧 design 头部降级 + 逐条款 disposition 标注；docs contract test 通过 |
 | SKILL_EXPECTED_OUTPUT | RED receipt → minimal GREEN → GREEN receipt |
 | SKILL_FORBIDDEN_SHORTCUTS | 不写第二份 authority；不改源码/测试行为；不把 disposition 标注写为「全部保留」 |
@@ -910,7 +910,7 @@ Receipt 规则（S2-TEST-001 §5.0/§7）：receipt 文件写入 `docs/design/re
 | SELECTED_PRIMARY_SKILL | `code-review` |
 | SELECTED_SUPPORTING_SKILLS | `to-spec` |
 | SKILL_SELECTION_REASON | Controller Prompt 已 pin（Spec Review = code-review + to-spec） |
-| SKILL_SOURCE_IDENTITY | `mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df`；`/home/tiezbro/.agents/skills/code-review/SKILL.md`、`/home/tiezbro/.agents/skills/to-spec/SKILL.md`（启动时核验） |
+| SKILL_SOURCE_IDENTITY | `mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df`；`~/.agents/skills/code-review/SKILL.md`、`~/.agents/skills/to-spec/SKILL.md`（启动时核验） |
 | SKILL_REQUIRED_STEPS | 完整读取 SKILL.md；以 Scheme/handoff/七 sibling 为基准逐 task 核对；确认 S2-SPEC-001 §10.1 与本 §2.2 相同、T20/T21 前驱集合完整且只排除 T08；核对 25 字段完整性、schema/terminal sole ownership 与 503 三元组措辞 |
 | SKILL_EXPECTED_OUTPUT | verdict receipt（`SPEC_CONFORMANCE`/`QUALITY_CONFORMANCE`/`METHOD_CONFORMANCE`/`PARALLELISM_CONFORMANCE`/`FINDINGS`/`AFFECTED_SCOPE`/`VERDICT`） |
 | SKILL_FORBIDDEN_SHORTCUTS | 不修代码/不写实现；不把 chat 当证据；`revisions-required`/`failed` → 返回原 Worker 或 bounded repair Worker 后重新双审 |
@@ -940,7 +940,7 @@ Receipt 规则（S2-TEST-001 §5.0/§7）：receipt 文件写入 `docs/design/re
 | SELECTED_PRIMARY_SKILL | `code-review` |
 | SELECTED_SUPPORTING_SKILLS | `codebase-design` |
 | SKILL_SELECTION_REASON | Controller Prompt 已 pin（Quality Review = code-review + codebase-design） |
-| SKILL_SOURCE_IDENTITY | `mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df`；`/home/tiezbro/.agents/skills/code-review/SKILL.md`、`/home/tiezbro/.agents/skills/codebase-design/SKILL.md`（启动时核验） |
+| SKILL_SOURCE_IDENTITY | `mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df`；`~/.agents/skills/code-review/SKILL.md`、`~/.agents/skills/codebase-design/SKILL.md`（启动时核验） |
 | SKILL_REQUIRED_STEPS | 完整读取 SKILL.md；逐 task 核对 RED/GREEN 合同可执行、写集/资源集无冲突、DAG 无环、无 `READY_FRONTIER` 预填、无「重启恢复」验收路径、无 speculative 双终态声称 |
 | SKILL_EXPECTED_OUTPUT | verdict receipt（同 §6.22 七字段格式） |
 | SKILL_FORBIDDEN_SHORTCUTS | 不修代码；不按 Agent 数量判定并行性（只查真实串行理由）；不伪造 PARALLELISM_CONFORMANCE |
@@ -970,7 +970,7 @@ Receipt 规则（S2-TEST-001 §5.0/§7）：receipt 文件写入 `docs/design/re
 | SELECTED_PRIMARY_SKILL | `implement` |
 | SELECTED_SUPPORTING_SKILLS | `code-review` |
 | SKILL_SELECTION_REASON | Controller Prompt 已 pin（ordinary code Single Integration = implement + code-review）；implement 提供 commit/staging 纪律，code-review 提供 staging 前自检 |
-| SKILL_SOURCE_IDENTITY | `mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df`；`/home/tiezbro/.agents/skills/implement/SKILL.md`、`/home/tiezbro/.agents/skills/code-review/SKILL.md`（启动时核验） |
+| SKILL_SOURCE_IDENTITY | `mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df`；`~/.agents/skills/implement/SKILL.md`、`~/.agents/skills/code-review/SKILL.md`（启动时核验） |
 | SKILL_REQUIRED_STEPS | 完整读取 SKILL.md；核对双审 verdict receipts；`detect_changes` 验证只影响预期 symbol/flow；选择性暂存 accepted code 文件；保护用户与 unrelated changes；**不 commit**（最终 commit 在 S3-INT-FINAL-COMMIT） |
 | SKILL_EXPECTED_OUTPUT | 暂存清单 + `detect_changes` receipt + phase receipt |
 | SKILL_FORBIDDEN_SHORTCUTS | 不补写/重构/扩大内容；不 commit；不 push；不触碰 docs refs（属 phase 2）；不 stage 未 accepted 文件 |
@@ -1000,7 +1000,7 @@ Receipt 规则（S2-TEST-001 §5.0/§7）：receipt 文件写入 `docs/design/re
 | SELECTED_PRIMARY_SKILL | `writing-for-agents` |
 | SELECTED_SUPPORTING_SKILLS | `code-review` |
 | SKILL_SELECTION_REASON | Controller Prompt 已 pin（ordinary documentation Single Integration = writing-for-agents + code-review） |
-| SKILL_SOURCE_IDENTITY | `mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df`；`/home/tiezbro/.agents/skills/writing-for-agents/SKILL.md`、`/home/tiezbro/.agents/skills/code-review/SKILL.md`（启动时核验） |
+| SKILL_SOURCE_IDENTITY | `mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df`；`~/.agents/skills/writing-for-agents/SKILL.md`、`~/.agents/skills/code-review/SKILL.md`（启动时核验） |
 | SKILL_REQUIRED_STEPS | 完整读取 SKILL.md；核对双审 verdict receipts；`detect_changes` 验证 docs scope；选择性暂存 accepted docs 文件；保护用户与 unrelated changes；**不 commit**（最终 commit 在 S3-INT-FINAL-COMMIT） |
 | SKILL_EXPECTED_OUTPUT | 暂存清单 + phase receipt |
 | SKILL_FORBIDDEN_SHORTCUTS | 不补写文档内容；不 commit；不 push；不 stage 未 accepted 文件 |
@@ -1030,7 +1030,7 @@ Receipt 规则（S2-TEST-001 §5.0/§7）：receipt 文件写入 `docs/design/re
 | SELECTED_PRIMARY_SKILL | `implement` |
 | SELECTED_SUPPORTING_SKILLS | `code-review` |
 | SKILL_SELECTION_REASON | commit/staging 机制属 implementation/integration 纪律（implement：「Commit your work to the current branch」），code-review 支撑 staging 前核对；handoff §2.4-3 固定 |
-| SKILL_SOURCE_IDENTITY | `mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df`；`/home/tiezbro/.agents/skills/implement/SKILL.md`、`/home/tiezbro/.agents/skills/code-review/SKILL.md`（启动时核验） |
+| SKILL_SOURCE_IDENTITY | `mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df`；`~/.agents/skills/implement/SKILL.md`、`~/.agents/skills/code-review/SKILL.md`（启动时核验） |
 | SKILL_REQUIRED_STEPS | 完整读取 SKILL.md；两 phase 暂存清单合并核对；commit 前 `detect_changes`（只影响预期 symbol/flow）；选择性暂存 → `git commit`（本地 main）；回报 exact commit、paths、Git blobs、SHA-256；生成外部完整性 receipt；**不 push** |
 | SKILL_EXPECTED_OUTPUT | 唯一本地 commit + 外部完整性 receipt（accepted commit/blob/artifact SHA）+ commit receipt |
 | SKILL_FORBIDDEN_SHORTCUTS | 不 push/tag/deploy/release；不 stage 未 accepted 文件；不补写/重构；不得把「本地 commit」伪装成「已安装/已上线/已发布」 |
@@ -1060,7 +1060,7 @@ Receipt 规则（S2-TEST-001 §5.0/§7）：receipt 文件写入 `docs/design/re
 | SELECTED_PRIMARY_SKILL | `resolving-merge-conflicts` |
 | SELECTED_SUPPORTING_SKILLS | `code-review` |
 | SKILL_SELECTION_REASON | Controller Prompt 已 pin（integration conflict = resolving-merge-conflicts + code-review）；仅真实冲突时加载 |
-| SKILL_SOURCE_IDENTITY | `mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df`；`/home/tiezbro/.agents/skills/resolving-merge-conflicts/SKILL.md`（启动时核验） |
+| SKILL_SOURCE_IDENTITY | `mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df`；`~/.agents/skills/resolving-merge-conflicts/SKILL.md`（启动时核验） |
 | SKILL_REQUIRED_STEPS | 仅当 `git status`/merge 显示真实冲突时执行 skill 冲突流程；resolution 后重新验证该文件行为；无冲突 → 记录 inapplicable |
 | SKILL_EXPECTED_OUTPUT | conflict receipt（冲突文件、resolution、重新验证）或 inapplicable 记录 |
 | SKILL_FORBIDDEN_SHORTCUTS | 不得为形式服从 skill 而扩大权限/内容；不得用 conflict brief 绕过双审 |
@@ -1162,6 +1162,6 @@ FRONTIER_RECOMPUTE_EVENTS
 
 ## 9. 完成标准与使用说明
 
-- **启动方式**：在 `cwd=/home/tiezbro/projects/paseo-agy-acp` 的新顶层 Paseo Controller 会话中粘贴本文件全文。**本 Prompt 仅在 Generator 流程完成后使用**：canonical target（`docs/design/v2.0.0.0-stage3-execution-prompt.md`）已由 Single Integrator 写入、packaging commit 已形成、post-commit 外部完整性 receipt 已生成；启动时 HEAD = packaging commit（唯一 parent = generation parent `78931bf`），按 §1.2 step 3 结构化准入核验。先完成 §0 Goal 与 §1 准入，再进入 §2-§8 执行。
+- **启动方式**：在 `cwd=~/projects/paseo-agy-acp` 的新顶层 Paseo Controller 会话中粘贴本文件全文。**本 Prompt 仅在 Generator 流程完成后使用**：canonical target（`docs/design/v2.0.0.0-stage3-execution-prompt.md`）已由 Single Integrator 写入、packaging commit 已形成、post-commit 外部完整性 receipt 已生成；启动时 HEAD = packaging commit（唯一 parent = generation parent `78931bf`），按 §1.2 step 3 结构化准入核验。先完成 §0 Goal 与 §1 准入，再进入 §2-§8 执行。
 - **本会话完成时返回**：全部 task/review/integration 的 exact receipts 路径；唯一集成 commit（commit hash + paths + Git blobs + SHA-256，由外部 receipt 绑定）；Spec/Quality/Method/Parallelism verdicts；六阶段验收证据；`ready-for-release` 状态或剩余 blockers；release boundary 与剩余风险。
 - **本 Prompt 的验收**：任何 `revisions-required`/`failed` 都回到对应 Worker/Writer 修订并重新双审；GREEN 全部通过前不得宣称 Stage 3 完成；本 Prompt 的 packaging 由 Generator 流程完成，本 Prompt 正文不包含自身 digest 或 packaging commit OID。

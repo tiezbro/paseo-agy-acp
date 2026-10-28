@@ -6,7 +6,7 @@
 `GATE_STATUS`: REPORTED —— 本文件是 inventory 输入与 evidence；Gate accept 由 Controller 按互斥决策树裁决
 `SKILL_SELECTION`: primary `research`；supporting `wayfinder`、`triage`（Generator 强制的唯一 bootstrap task）
 `DEPENDENCIES`: Generator admission passed；Stage 2 immutable commit `78931bff95ecbd9868f9cfa83a281cbbbf1a60d8`
-`EXACT_GIT_BASELINE`: repo `/home/tiezbro/projects/paseo-agy-acp`, branch `main`, HEAD `78931bff95ecbd9868f9cfa83a281cbbbf1a60d8`, clean worktree/index（无漂移）
+`EXACT_GIT_BASELINE`: repo `~/projects/paseo-agy-acp`, branch `main`, HEAD `78931bff95ecbd9868f9cfa83a281cbbbf1a60d8`, clean worktree/index（无漂移）
 
 ---
 
@@ -33,7 +33,7 @@
 | Thinking | `max` | ✓ |
 | Mode | `dont_ask`（Paseo live official option：default/accept_edits/dont_ask 之一） | ✓ 未硬编码扩大 |
 | `PendingPermissions` | `[]`（0） | ✓ |
-| Status / Cwd | `running` / `/home/tiezbro/projects/paseo-agy-acp` | ✓ |
+| Status / Cwd | `running` / `~/projects/paseo-agy-acp` | ✓ |
 | 委派 | 本 Worker 是 leaf；`RESOURCE_SET` §10 委派不可用 | 未委派 ✓ |
 
 ## 2. Git baseline 与 authority hash 核验（live，hash-first）
@@ -99,7 +99,7 @@
 ### 4.1 可读性 / 委派性证据（逐项核验，brief 步骤 4）
 
 - 14/14 `SKILL.md` 由当前 Agent 经 `read_file` 完整读取成功（含 frontmatter `name` 与目录名逐一匹配）。
-- 14/14 位于全局 pinned 路径 `/home/tiezbro/.agents/skills/<name>/SKILL.md`（handoff §13 规定路径），非 repo 内、非同名目录冒充。
+- 14/14 位于全局 pinned 路径 `~/.agents/skills/<name>/SKILL.md`（handoff §13 规定路径），非 repo 内、非同名目录冒充。
 - 14/14 `SOURCE_HASH` 与本机 `sha256sum` 实测一致，且与 COT-0059 SCHEME source manifest 记录的 upstream pinned-commit hash 逐字节一致（见 §6）。
 - `CAN_BE_DELEGATED=YES`：Controller 可在 delegated brief 中 pin（handoff §14 明示每次委派前完整读取）；`disable-model-invocation: true` 的 5 项（implement/wayfinder/triage/improve-codebase-architecture/to-spec）仅限制自发模型调用，不影响 Controller 授权委派。
 
@@ -120,7 +120,7 @@
 1. **唯一批准来源**（三处 authority 一致 pin）：
    - Generator §「Stage 3 Skill Inventory Gate」：`mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df`；
    - Scheme §6.4：同一 pin；
-   - handoff §13：同一 pin + 全局安装路径 `/home/tiezbro/.agents/skills/<name>/SKILL.md`。
+   - handoff §13：同一 pin + 全局安装路径 `~/.agents/skills/<name>/SKILL.md`。
 2. **外部冻结证据**：`code-of-tiebro/Documents/ITER/COT-0059/00-control/SCHEME.md`（revision 16, updated_at 2026-08-14T09:05:41Z）冻结 `https://github.com/mattpocock/skills @ 8b78b531ab965735c5dc74f6f7a219e1e37326df`，tree `f4effeaa391f196b146046266cca1918f7be6ad4`，35 项，MIT，Copyright (c) 2026 Matt Pocock；其 source manifest 记录每项 upstream `skills/…/SKILL.md` 的 SHA-256（2026-08-13 对 pinned commit 的 live clone/read/hash）。
 3. **逐字节一致证明**：本机 14/14 必需项 + 5 补充项的 `sha256sum` 与 COT-0059 manifest 完全相等（例：research `af378829…`、writing-for-agents `a842323e…`、to-tickets `5ecdf1d4…`）。安装内容 = pinned commit 内容，无本地改写、无近似冒充。
 4. **本机安装形态**：`~/.agents/skills/<name>/SKILL.md` 单文件 + 每目录 `agents/` 元数据（如 `research/agents/openai.yaml`，Codex discovery metadata，非方法载体）；目录 mtime 2026-08-15 06:18（批量安装）；`~/.agents/.skill-lock.json`（version 3）只登记 Paseo/design skills，**不**登记 Matt skills —— 安装器未写该 lock，故 INSTALLED_SOURCE 以 §6.1-6.3 证据为准，lock 缺失不作为 unavailable 依据。
@@ -148,7 +148,7 @@
 
 ## 9. Write-set 证明（唯一写集 readback / hash / status）
 
-- **唯一写入文件**：`/home/tiezbro/projects/paseo-agy-acp/docs/design/receipts/STAGE3-PROMPT-GEN/skill-inventory.md`（父目录仅为此文件创建）。
+- **唯一写入文件**：`~/projects/paseo-agy-acp/docs/design/receipts/STAGE3-PROMPT-GEN/skill-inventory.md`（父目录仅为此文件创建）。
 - 本文件**不嵌入自身 digest**；最终 whole-file SHA-256 由外部（本 Worker 终报）在写入后计算并报告，不写入文件。
 - 写入后 readback、`sha256sum`、`git status --porcelain`（应只新增上述唯一 untracked 文件）、终报前 `paseo inspect` runtime 重核验 —— 见本 Worker 最终响应。
 

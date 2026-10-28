@@ -1,5 +1,5 @@
-5e6b9c16b547113e90afbb946489d1c1384be5c2128f0159bd0bee57251ecf08  /home/tiezbro/.agents/skills/tdd/SKILL.md
-6d3fd9e83b8f36e5213854779db49b256a457a7ebb4a503e53fa7dcff696adc3  /home/tiezbro/.agents/skills/implement/SKILL.md
+5e6b9c16b547113e90afbb946489d1c1384be5c2128f0159bd0bee57251ecf08  ~/.agents/skills/tdd/SKILL.md
+6d3fd9e83b8f36e5213854779db49b256a457a7ebb4a503e53fa7dcff696adc3  ~/.agents/skills/implement/SKILL.md
 61dd245d521647208ea776f1f4b7e2b203460f20fa1a2ed311b5eacdbe5b9eee  docs/design/receipts/S3-T18R/architecture.txt
 0bbc5f233eaf128a93c044e03272f87289e2f9c52a2d5b6abcbfbc64862333f2  docs/design/receipts/S3-T18R/broad-validate.txt
 2a431e8408e77a7b0ab2d23daeb56d2dce28cce37e623b357b62945fd11180e7  docs/design/receipts/S3-T18R/detect-changes.txt

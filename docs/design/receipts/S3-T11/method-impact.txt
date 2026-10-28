@@ -7,7 +7,7 @@ Startup gate:
 - PASEO_AGENT_ID=54a0d60e-9785-4452-a1c9-5ffbcb50b8e4.
 - ParentAgentId=79ab5347-5101-4eff-89ed-6a7aa550ae2e.
 - Provider=codex; Model=gpt-5.5; Thinking=xhigh; Mode=full-access; PendingPermissions=[].
-- cwd=/home/tiezbro/projects/paseo-agy-acp; branch=main; HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e; sole parent=78931bff95ecbd9868f9cfa83a281cbbbf1a60d8; index clean before writes.
+- cwd=~/projects/paseo-agy-acp; branch=main; HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e; sole parent=78931bff95ecbd9868f9cfa83a281cbbbf1a60d8; index clean before writes.
 
 Authority hashes:
 - Scheme d3b712ee5dd01029c66b0372a482f248a6f1ecbcf81572eb74d7b4ba5d98a98d.

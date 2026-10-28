@@ -24,13 +24,13 @@ SOURCE_BRIEF: S3-REV-QUAL verdict-1.txt F4 (lines 62-67), lines 30-38
     paseo.parent-agent-id=79ab5347-5101-4eff-89ed-6a7aa550ae2e
   - ParentAgentId/controller present and non-empty -> CHILD identity confirmed;
     no routing selector, no delegation, no orchestration performed.
-- status=running, cwd=/home/tiezbro/projects/paseo-agy-acp. No permission request pending.
+- status=running, cwd=~/projects/paseo-agy-acp. No permission request pending.
 - RESULT: child fresh-leaf identity verified; sole parent controller
   79ab5347-5101-4eff-89ed-6a7aa550ae2e (same controller that parented the
   S3-REV-QUAL reviewer and all S3-T01..T21 workers).
 
 2. BASELINE_GATE — fresh git readback (exact commands, exit codes, UTC)
-Readback executed at 2026-08-16T06:43:30Z in cwd /home/tiezbro/projects/paseo-agy-acp:
+Readback executed at 2026-08-16T06:43:30Z in cwd ~/projects/paseo-agy-acp:
 
 | command | exit | output (abridged where marked) |
 | --- | --- | --- |

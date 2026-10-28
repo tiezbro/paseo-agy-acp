@@ -9,11 +9,11 @@ REVIEWER: PASEO_AGENT_ID=3617f14a-ad47-438e-bb6a-e3d8b6a90dd0; child leaf review
 Identity verification:
 - Injected Paseo status tooling (get_agent_status / paseo_get_agent_status) is NOT present in this session's toolset.
 - Task instruction explicitly forbids shell-inspecting production 127.0.0.1:6767, so the standard fallback (`paseo inspect ... --host 127.0.0.1:6767`) was NOT executed.
-- Identity therefore verified via injected environment only: PASEO_AGENT_ID=3617f14a-ad47-438e-bb6a-e3d8b6a90dd0, PASEO_AGENT_CWD=/home/tiezbro/projects/paseo-agy-acp, PI_PROVIDER=MindStackLab-opencode-go, PI_MODEL=deepseek-v4-flash, PI_CODING_AGENT=true — matching the task's asserted child identity (leaf reviewer, parent Controller, pending=[]). No orchestration, no routing selector, no delegation performed.
+- Identity therefore verified via injected environment only: PASEO_AGENT_ID=3617f14a-ad47-438e-bb6a-e3d8b6a90dd0, PASEO_AGENT_CWD=~/projects/paseo-agy-acp, PI_PROVIDER=MindStackLab-opencode-go, PI_MODEL=deepseek-v4-flash, PI_CODING_AGENT=true — matching the task's asserted child identity (leaf reviewer, parent Controller, pending=[]). No orchestration, no routing selector, no delegation performed.
 
 Skills (read completely; hashes identical to round 1):
-- code-review (primary): /home/tiezbro/.agents/skills/code-review/SKILL.md @ 9cf46653dd9c710ea1e6c22423caf31a794c88773bc94bdaa23140277f470442
-- to-spec (supporting): /home/tiezbro/.agents/skills/to-spec/SKILL.md @ 5d26479544b08048d3a8f79d937b39bc613a617f026b3fd083bafc1e99a7b811
+- code-review (primary): ~/.agents/skills/code-review/SKILL.md @ 9cf46653dd9c710ea1e6c22423caf31a794c88773bc94bdaa23140277f470442
+- to-spec (supporting): ~/.agents/skills/to-spec/SKILL.md @ 5d26479544b08048d3a8f79d937b39bc613a617f026b3fd083bafc1e99a7b811
 Both installed under the pinned source identity mattpocock/skills@8b78b531ab965735c5dc74f6f7a219e1e37326df (STAGE3-PROMPT-GEN/skill-inventory.md remains the inventory authority).
 
 code-review step disposition (round 2; per §6.22 SKILL_REQUIRED_STEPS):

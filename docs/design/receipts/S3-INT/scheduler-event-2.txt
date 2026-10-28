@@ -6,7 +6,7 @@ CONTROLLER_ID=79ab5347-5101-4eff-89ed-6a7aa550ae2e
 EVENT=fresh-quality-round-3-launched-and-runtime-verified
 
 BASELINE
-CWD=/home/tiezbro/projects/paseo-agy-acp
+CWD=~/projects/paseo-agy-acp
 BRANCH=main
 HEAD=83fb97257814f9072770c77d1bb0da4cfa2b420e
 SOLE_PARENT=78931bff95ecbd9868f9cfa83a281cbbbf1a60d8
