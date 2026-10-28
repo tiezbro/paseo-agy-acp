@@ -119,7 +119,10 @@ CI 使用真实 Paseo 0.13.2 ACP 客户端、隔离内核和本地 HTTP MCP 服�
 - **Node.js 22 或更新版本**
 - Linux x86_64 托管兼容层需使用普通用户运行
 - 可以完成官方 `oauth-personal` 的 Antigravity 账号
-- 启用 Admission 时，系统需支持 Linux 文件 owner 与 mode
+- **仅启用 Admission 时需要 Linux。** fence 依赖 `/proc` 进程证据确认回合归属，
+  并要求 Linux 的文件 owner 与 mode 支持。在 macOS 或 Windows 上启用 Admission
+  会立即以指明平台的错误退出，而不是在未加锁的情况下启动；不设置
+  `AGY_ACP_ADMISSION_ENABLED` 时各平台均可运行。
 
 首次启动时，适配器按当前操作系统从 Google 下载对应的官方 Antigravity ACP 1.4.3
 包。npm 包本身不包含这些内核。Linux x86_64 还会装上本机兼容包装器。

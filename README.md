@@ -136,7 +136,11 @@ isolation, Paseo 0.12.0 and other operating systems were not retested. See the
 - **Node.js 22 or newer**
 - A non-root Linux user for the managed Linux x86_64 compatibility lifecycle
 - An Antigravity account able to complete official `oauth-personal`
-- Linux filesystem ownership and mode support when Admission is enabled
+- **Linux, only when Admission is enabled.** The fence proves turn ownership
+  with `/proc` process evidence and requires Linux filesystem ownership and
+  mode support. Enabling Admission on macOS or Windows fails fast with an
+  explanatory error instead of starting unfenced; leaving
+  `AGY_ACP_ADMISSION_ENABLED` unset works on every supported platform.
 
 On first start the adapter downloads the official Antigravity ACP 1.4.3 archive
 for the current operating system from Google. The npm package does not contain
@@ -167,7 +171,9 @@ for both login and the provider as described below.
 ### 2. Prepare Admission state
 
 Admission is optional for a single agent and recommended for multi-agent
-delegation.
+delegation. **It is Linux-only**: the fence verifies turn ownership with
+`/proc` process evidence, so setting `AGY_ACP_ADMISSION_ENABLED` on macOS or
+Windows exits with an error naming the platform instead of running unfenced.
 
 ```bash
 export AGY_ACP_STATE_DIR="$HOME/.local/state/paseo-agy-acp/account-name"

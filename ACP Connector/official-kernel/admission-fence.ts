@@ -7,13 +7,14 @@ export function officialAdmissionStateDir(stateDir: string): string {
   return join(stateDir, "official-kernel");
 }
 
-export function isAdmissionDiscoveryEnvironment(environment: NodeJS.ProcessEnv): boolean {
+export function isAdmissionEnabled(environment: NodeJS.ProcessEnv): boolean {
   const enabled = environment.AGY_ACP_ADMISSION_ENABLED;
+  return enabled === "1" || enabled === "true";
+}
+
+export function isAdmissionDiscoveryEnvironment(environment: NodeJS.ProcessEnv): boolean {
   const agentId = environment.PASEO_AGENT_ID;
-  return (
-    (enabled === "1" || enabled === "true") &&
-    (agentId === undefined || agentId.trim().length === 0)
-  );
+  return isAdmissionEnabled(environment) && (agentId === undefined || agentId.trim().length === 0);
 }
 
 export function issueAdmittedOfficialPromptWrite(
@@ -42,8 +43,7 @@ export function createOfficialAdmission(
     process.stderr.write("Admission enabled without PASEO_AGENT_ID: discovery only; session/prompt is blocked until an agent identity is provided.\n");
     return undefined;
   }
-  const enabled = environment.AGY_ACP_ADMISSION_ENABLED;
-  if (enabled !== "1" && enabled !== "true") return undefined;
+  if (!isAdmissionEnabled(environment)) return undefined;
   const agentId = environment.PASEO_AGENT_ID;
   if (!agentId) return undefined;
   const parentStateDir = environment.AGY_ACP_STATE_DIR;
