@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
 jobs:
   validate:
     name: Lint, typecheck, build & test
@@ -14,6 +17,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -26,3 +31,36 @@ jobs:
 
       - name: Validate
         run: npm run validate
+
+  paseo-client-compat:
+    name: Locked Paseo 0.13.2 client contracts
+    env:
+      PASEO_COMPAT_CLIENT_ROOT: tests/fixtures/paseo-client
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            tests/fixtures/paseo-client/package-lock.json
+
+      - name: Verify compatibility dependency lock
+        run: node scripts/verify-paseo-client-lock.mjs
+
+      - name: Install adapter dependencies
+        run: npm ci
+
+      - name: Install locked compatibility client without lifecycle scripts
+        run: npm ci --prefix tests/fixtures/paseo-client --ignore-scripts --no-audit --no-fund --registry=https://registry.npmjs.org/
+
+      - name: Test real Paseo ACP client compatibility
+        run: npm run test:paseo-client

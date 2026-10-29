@@ -1,0 +1,8 @@
+{
+  "name": "paseo-acp-client-contract-fixture",
+  "version": "0.0.0",
+  "private": true,
+  "dependencies": {
+    "@getpaseo/server": "0.13.2"
+  }
+}

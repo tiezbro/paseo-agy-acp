@@ -17,7 +17,7 @@ function capabilityHarness(env: NodeJS.ProcessEnv) {
   const received: JsonRpcMessage[] = [];
   child.stdin.on("data", createNdjsonParser(message => forwarded.push(message as JsonRpcRequest)));
   stdout.on("data", createNdjsonParser(message => received.push(message)));
-  const running = new OfficialKernelProxy({ child: child as unknown as ChildProcessWithoutNullStreams, stdin, stdout, env, version: "2.7.0" }).start();
+  const running = new OfficialKernelProxy({ child: child as unknown as ChildProcessWithoutNullStreams, stdin, stdout, env, version: "2.7.1" }).start();
   return {
     forwarded, received,
     send(id: number, method: string, params: unknown) { stdin.write(encodeNdjson({ jsonrpc: "2.0", id, method, params })); },

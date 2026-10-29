@@ -3,7 +3,7 @@
 Coexist with Paseo's built-in Antigravity and sign in two Antigravity Pro accounts
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](./LICENSE)
-[![Version](https://img.shields.io/badge/version-2.7.0-blue?style=flat-square)](./package.json)
+[![Version](https://img.shields.io/badge/version-2.7.1-blue?style=flat-square)](./package.json)
 [![npm](https://img.shields.io/npm/v/paseo-agy-acp?style=flat-square)](https://www.npmjs.com/package/paseo-agy-acp)
 [![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen?style=flat-square)](./package.json)
 [![ACP](https://img.shields.io/badge/ACP-NDJSON%20v1-8A2BE2?style=flat-square)](https://agentclientprotocol.com)
@@ -14,9 +14,10 @@ Since v0.11.0, Paseo includes a built-in Antigravity provider. `paseo-agy-acp`
 coexists with it as an independent provider, so Paseo can sign in two
 Antigravity Pro accounts and dispatch everyday work to different accounts.
 
-**Upstream runtime: Registry `antigravity-acp` 1.4.3.** Version 2.7.0 adds
-protocol lifecycle hardening, read-only skill resources, model tracking and
-operational diagnostics while preserving the v2.6.1 workspace-integrity fix.
+**Upstream runtime: Registry `antigravity-acp` 1.4.3.** Version 2.7.1 fixes
+Admission transaction contention and adds real Paseo 0.13.2 client contracts
+and author-local cross-host verification notes, retaining protocol lifecycle hardening, read-only
+skill resources, model tracking, diagnostics and the workspace-integrity fix.
 
 ![Antigravity and Antigravity Pro both available in Paseo](./docs/images/antigravity-and-antigravity-pro.png)
 
@@ -115,17 +116,25 @@ The adapter runs one official kernel child per connector process. Admission is
 optional but recommended whenever one Antigravity account serves concurrent
 Paseo agents.
 
-Version 2.7.0 was independently smoke-tested on Linux x86_64 with the installed
-Paseo v0.13.2 ACP client and official Antigravity ACP 1.4.3. Checks covered
-new sessions, skill resources, text/tool turns, shutdown cleanup and workspace
-isolation. Complete Paseo daemon/UI, account isolation, Paseo 0.12.0 and other
-operating systems were not retested. See the [verification scope](docs/operations/paseo-adapter-verification.md).
+CI verifies the adapter with the real Paseo 0.13.2 ACP client, an isolated
+kernel, and a local HTTP MCP server. It does not run a Google account, a real
+Paseo daemon, or a cross-host deployment.
+
+The author reports local cross-VM Gemini/Claude delegation and follow-up turns,
+plus Gemini cancellation and host reconnection, using the Admission patch
+source. Those runs are **author-local acceptance, outside CI**. Raw environment
+evidence is not public and has not been independently reproduced by the
+maintainer; these observations are not a product guarantee. UI, account
+isolation, Paseo 0.12.0 and other operating systems were not retested. See the
+[verification scope](docs/operations/paseo-adapter-verification.md) and
+[cross-host runbook](docs/operations/paseo-cross-host-e2e.md).
 
 <!-- readme:requirements -->
 ## Requirements
 
 - **Paseo** v0.12.0 or newer with custom ACP provider support
 - **Node.js 22 or newer**
+- A non-root Linux user for the managed Linux x86_64 compatibility lifecycle
 - An Antigravity account able to complete official `oauth-personal`
 - Linux filesystem ownership and mode support when Admission is enabled
 
@@ -141,7 +150,7 @@ wrapper. A different existing path is used as-is.
 ### 1. Authenticate
 
 ```bash
-npx -y paseo-agy-acp@2.7.0 --login
+npx -y paseo-agy-acp@2.7.1 --login
 ```
 
 The first run downloads and configures official kernel 1.4.3. That download is
@@ -149,6 +158,11 @@ about 320 MiB and stays under `~/.local/opt/`.
 
 OAuth is completed by the official kernel. Its tokens remain in the kernel's
 own state and are not printed by this adapter.
+
+On a headless VM, open the authorization link on your computer, then paste the
+complete localhost callback URL into the same VM terminal. Run login and the
+provider as the same Linux user. If your network requires a proxy, configure it
+for both login and the provider as described below.
 
 ### 2. Prepare Admission state
 
@@ -158,7 +172,7 @@ delegation.
 ```bash
 export AGY_ACP_STATE_DIR="$HOME/.local/state/paseo-agy-acp/account-name"
 install -d -m 700 "$AGY_ACP_STATE_DIR"
-npx -y --package=paseo-agy-acp@2.7.0 \
+npx -y --package=paseo-agy-acp@2.7.1 \
   agy-acp-prepare-state "$AGY_ACP_STATE_DIR"
 ```
 
@@ -177,7 +191,7 @@ Add or update the provider in `$PASEO_HOME/config.json` or
       "paseo-agy-acp": {
         "extends": "acp",
         "label": "Antigravity Pro",
-        "command": ["npx", "-y", "paseo-agy-acp@2.7.0"],
+        "command": ["npx", "-y", "paseo-agy-acp@2.7.1"],
         "env": {
           "AGY_ACP_ADMISSION_ENABLED": "true",
           "AGY_ACP_STATE_DIR": "/home/YOU/.local/state/paseo-agy-acp/account-name"
@@ -226,6 +240,15 @@ server for Paseo; it is not a standalone chat application.
 Advanced seat, start-rate, queue-timeout, cooldown, permission, recovery, and
 policy-change procedures are in [Admission operations](docs/operations/admission.md).
 
+### Network proxy
+
+When required, set `HTTP_PROXY`, `HTTPS_PROXY`, `http_proxy` and `https_proxy`
+in the provider's `env`. Set `NO_PROXY` and `no_proxy` to
+`localhost,127.0.0.1,::1`, adding any directly connected host addresses.
+Use a proxy address reachable from each machine; `127.0.0.1` always refers to
+that machine. Terminal exports used for login do not configure an already
+running Paseo daemon. See the cross-host runbook for complete examples.
+
 ### Mode mapping
 
 | Paseo or legacy id | Official live mode |
@@ -272,7 +295,8 @@ authentication and daemon state remain `not_checked`. Run
 `paseo-agy-acp --prepare-kernel` explicitly to install or verify the managed
 kernel before launching an agent.
 
-- The official kernel must already be installed. `npx` installs only the proxy.
+- `npx` installs the proxy package; `--prepare-kernel`, `--login` or the first
+  protocol launch downloads the managed official kernel separately.
 - The first npm run may compile `better-sqlite3` and require a local C++
   toolchain.
 - After changing provider command, environment, or kernel path, run `paseo reload`.
@@ -293,6 +317,7 @@ Current operational references:
 
 - [Admission operations](docs/operations/admission.md)
 - [Claude / GPT-OSS local compatibility](docs/operations/official-kernel-compat-runbook.md)
+- [Cross-host deployment, proxy and E2E verification](docs/operations/paseo-cross-host-e2e.md)
 - [npm Trusted Publishing](docs/operations/npm-publishing.md)
 - [Changelog](CHANGELOG.md)
 - [GitHub Releases](https://github.com/tiezbro/paseo-agy-acp/releases)

@@ -13,7 +13,7 @@ describe("真实子进程 stdio 生命周期集成（fake kernel，无 daemon）
     const stdout = new PassThrough();
     const messages: JsonRpcMessage[] = [];
     stdout.on("data", createNdjsonParser(message => messages.push(message)));
-    const running = new OfficialKernelProxy({ child, stdin, stdout, env: {}, version: "2.7.0" }).start();
+    const running = new OfficialKernelProxy({ child, stdin, stdout, env: {}, version: "2.7.1" }).start();
     const send = (message: JsonRpcMessage) => stdin.write(encodeNdjson(message));
     const response = async (id: string | number) => {
       await vi.waitFor(() => expect(messages.some(message => "id" in message && message.id === id)).toBe(true));

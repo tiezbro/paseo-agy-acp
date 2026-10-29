@@ -1,6 +1,6 @@
 {
   "name": "paseo-agy-acp",
-  "version": "2.7.0",
+  "version": "2.7.1",
   "description": "Paseo product ACP adapter that proxies the official Google Antigravity ACP kernel (NDJSON) with Admission and daemon context",
   "type": "module",
   "author": {
@@ -48,11 +48,13 @@
     "build": "node scripts/clean-dist.mjs && tsc",
     "typecheck": "tsc -p tsconfig.test.json",
     "test": "npm run typecheck && npm run build && vitest run",
+    "test:paseo-client": "npm run validate:paseo-client-lock && npm run build && node --test tests/paseo-client-compat.test.mjs",
     "validate:architecture": "node scripts/verify-import-boundaries.mjs",
     "validate:secrets": "node scripts/verify-no-secrets.mjs",
     "validate": "npm test && npm run validate:architecture && npm run validate:secrets",
     "test:watch": "vitest",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "validate:paseo-client-lock": "node scripts/verify-paseo-client-lock.mjs"
   },
   "dependencies": {
     "better-sqlite3": "^13.0.1"

@@ -1410,7 +1410,9 @@ export class AdmissionController {
   }
 
   private transaction<T>(fn: () => T): T {
-    return this.#db.transaction(fn)();
+    // 状态转换会先读后写；提前获取写锁，让 busy_timeout 在读取快照前等待，
+    // 避免并发连接提交后，延迟事务升级写锁立即报 SQLITE_BUSY。
+    return this.#db.transaction(fn).immediate();
   }
 
   private runInjectedTransactionFault(callback: (() => void) | undefined): void {

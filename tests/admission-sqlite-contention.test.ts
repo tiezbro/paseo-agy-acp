@@ -71,6 +71,25 @@ process.stdout.write(\`\${JSON.stringify(result)}\\n\`);
 if (result.status !== "recorded") process.exitCode = 2;
 `;
 
+// 用独立进程持有真实写锁，覆盖先读后写的事务升级竞争。
+const HOLD_WRITER_SCRIPT = String.raw`
+import Database from "better-sqlite3";
+const [databasePath, requestId] = process.argv.slice(1);
+const db = new Database(databasePath);
+db.pragma("busy_timeout = 5000");
+db.exec("BEGIN IMMEDIATE");
+db.prepare("UPDATE turn_requests SET fingerprint = fingerprint WHERE request_id = ?").run(requestId);
+process.stdout.write("locked\n");
+process.stdin.once("data", () => {
+  setTimeout(() => {
+    db.exec("COMMIT");
+    db.close();
+    process.stdin.destroy();
+  }, 350);
+});
+process.stdin.resume();
+`;
+
 function databasePath(): string {
   const stateDir = mkdtempSync(path.join(os.tmpdir(), "paseo-agy-sqlite-contention-"));
   stateDirs.push(stateDir);
@@ -170,6 +189,52 @@ afterEach(() => {
 });
 
 describe("Admission SQLite contention and rollback contract", () => {
+  it.each(["enqueue", "activate", "complete"] as const)(
+    "waits for a concurrent writer before %s reads its transaction snapshot",
+    async (operation) => {
+      const file = databasePath();
+      const admission = controller(file);
+      const lease = starting(admission, "writer-request");
+      admission.markDispatchIntent(lease, 1_003);
+      if (operation === "complete") admission.markActive(lease, 1_004);
+      const child = spawn(process.execPath, ["--input-type=module", "-e", HOLD_WRITER_SCRIPT, file, lease.requestId], {
+        cwd: repositoryRoot,
+        stdio: "pipe"
+      });
+      // 先订阅退出事件，保证父进程同步等待锁时不会错过子进程退出。
+      const exited = once(child, "exit");
+      try {
+        await waitForLine(child, "locked");
+        child.stdin.write("release after contender starts\n");
+        if (operation === "enqueue") {
+          expect(admission.enqueueWithPayload({
+            requestId: "contender",
+            sessionId: "contender-session",
+            agentId: "contender-agent",
+            fingerprint: "contender-fingerprint",
+            provider: "antigravity",
+            model: "model-test",
+            now: 1_005
+          }, "contender prompt", 61_005)).toEqual({ requestId: "contender", existed: false });
+          expect(admission.getRequest("contender")?.state).toBe("queued");
+          // 持有者仍占用席位，锁竞争不能绕过全局准入上限。
+          expect(admission.admitRequest("contender", 1_006, OWNER)).toBeNull();
+        } else if (operation === "activate") {
+          admission.markActive(lease, 1_005);
+          expect(admission.getRequest(lease.requestId)?.state).toBe("active");
+        } else {
+          admission.completeLiveTurn(lease, 1_005, { outcome: "completed" });
+          expect(admission.getRequest(lease.requestId)?.state).toBe("completed");
+        }
+        expect((await exited)[0]).toBe(0);
+      } finally {
+        if (child.exitCode === null) child.kill();
+        await exited;
+      }
+    },
+    10_000
+  );
+
   it("rechecks a committed dispatch identity after a child process holds the SQLite writer lock", async () => {
     const file = databasePath();
     const admission = controller(file);
