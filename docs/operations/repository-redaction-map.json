@@ -1,14 +1,15 @@
 {
   "schemaVersion": 1,
-  "sourceCommit": "e36574eb24d888e6c81a2025d087c15ca70313d1",
+  "sourceCommit": "c2a0fb8ddd88cefb5ab7a11cdf71cb08ac278cdf",
+  "redactionCommit": "fd88f84206bedbd1f568f14984b41610f323d0c1",
   "files": [
     {
       "path": "CHANGELOG.md",
       "reason": "maintainer-home",
-      "originalBlob": "f89a56eea82a1b018e6b84fe37c7c87b63d6d94e",
-      "redactedBlob": "a06a06abc29bf9915b4271d0c20cb1dbd0e810d8",
-      "originalSha256": "9f2d2175134064d97ac15da7a1fa1aec4c9ea73ab319b7d3358ad1a8192b2542",
-      "redactedSha256": "b238cf416bb5876692ada3ae253b0fca27a0e5e3edeebd481e94038f1ba58fda"
+      "originalBlob": "e933de23bad327958ca1467611523c5ae57bea39",
+      "redactedBlob": "f8e5934f3129048c9953fe42bac67071140f182d",
+      "originalSha256": "d0dd86b4dc4ad29fa28ef1dccb86aca1ca51b9f6d370b84da71e10191e80ce3a",
+      "redactedSha256": "7222694bd75efa482b17003d7d494f4bf7bdfea21848bb8ab7d2fb9c7d6c6ea1"
     },
     {
       "path": "agent.md",

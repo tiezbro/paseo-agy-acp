@@ -64,3 +64,27 @@ jobs:
 
       - name: Test real Paseo ACP client compatibility
         run: npm run test:paseo-client
+
+  repository-redaction:
+    name: Read-only redaction mappings and secrets
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout complete evidence history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Verify all 89 mappings and scan every mapped file
+        run: node scripts/verify-repository-redaction.mjs
+
+      - name: Scan repository and historical receipts
+        run: |
+          node scripts/verify-no-secrets.mjs
+          node scripts/verify-no-secrets.mjs --root docs/design/receipts
