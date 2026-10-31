@@ -33,9 +33,18 @@ jobs:
         run: npm run validate
 
   paseo-client-compat:
-    name: Locked Paseo 0.13.2 client contracts
+    name: Locked Paseo ${{ matrix.paseo.version }} client contracts
+    strategy:
+      fail-fast: false
+      matrix:
+        paseo:
+          - version: 0.13.2
+            fixture: tests/fixtures/paseo-client
+          - version: 0.14.0
+            fixture: tests/fixtures/paseo-client-0.14.0
     env:
-      PASEO_COMPAT_CLIENT_ROOT: tests/fixtures/paseo-client
+      PASEO_COMPAT_VERSION: ${{ matrix.paseo.version }}
+      PASEO_COMPAT_CLIENT_ROOT: ${{ matrix.paseo.fixture }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -51,7 +60,7 @@ jobs:
           cache: npm
           cache-dependency-path: |
             package-lock.json
-            tests/fixtures/paseo-client/package-lock.json
+            ${{ matrix.paseo.fixture }}/package-lock.json
 
       - name: Verify compatibility dependency lock
         run: node scripts/verify-paseo-client-lock.mjs
@@ -60,7 +69,7 @@ jobs:
         run: npm ci
 
       - name: Install locked compatibility client without lifecycle scripts
-        run: npm ci --prefix tests/fixtures/paseo-client --ignore-scripts --no-audit --no-fund --registry=https://registry.npmjs.org/
+        run: npm ci --prefix "$PASEO_COMPAT_CLIENT_ROOT" --ignore-scripts --no-audit --no-fund --registry=https://registry.npmjs.org/
 
       - name: Test real Paseo ACP client compatibility
         run: npm run test:paseo-client

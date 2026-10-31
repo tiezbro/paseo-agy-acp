@@ -214,10 +214,19 @@ describe("official kernel adapters", () => {
   });
 
   it("rejects a successful end_turn that never showed assistant output", () => {
-    expect(sessionUpdateShowsVisibleOutput({ update: { sessionUpdate: "agent_message_chunk" } })).toBe(true);
+    expect(sessionUpdateShowsVisibleOutput({ update: { sessionUpdate: "agent_message_chunk" } })).toBe(false);
     expect(shouldRejectBlankTurn({ stopReason: "end_turn" }, false)).toBe(true);
     expect(shouldRejectBlankTurn({ stopReason: "end_turn" }, true)).toBe(false);
     expect(blankTurnError(7).error.code).toBe(-32000);
+  });
+
+  it.each(["agent_message_chunk", "agent_message", "message", "agent_thought_chunk"])("%s 只把实际内容计为输出", kind => {
+    for (const text of ["", " \t\n"]) {
+      expect(sessionUpdateShowsVisibleOutput({ update: { sessionUpdate: kind, content: { type: "text", text } } })).toBe(false);
+    }
+    expect(sessionUpdateShowsVisibleOutput({ update: { sessionUpdate: kind, content: { type: "text", text: "正文" } } })).toBe(true);
+    expect(sessionUpdateShowsVisibleOutput({ update: { sessionUpdate: kind, content: { type: "image", mimeType: "image/png", data: "AAAA" } } })).toBe(true);
+    expect(sessionUpdateShowsVisibleOutput({ update: { sessionUpdate: "tool_call", toolCallId: "tool" } })).toBe(true);
   });
 
   it("overlays product identity onto the official initialize payload", () => {

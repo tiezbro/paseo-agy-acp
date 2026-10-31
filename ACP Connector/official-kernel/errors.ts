@@ -2,15 +2,6 @@ import { AgyTerminalProviderError } from "../admission/dispatch-boundary.js";
 import { classifyProviderFailure } from "../admission/errors.js";
 import { isRecord, jsonRpcError, type JsonRpcFailure, type JsonRpcId } from "./json-rpc.js";
 
-const VISIBLE_UPDATE_KINDS = new Set([
-  "agent_message_chunk",
-  "agent_message",
-  "message",
-  "agent_thought_chunk",
-  "tool_call",
-  "tool_call_update"
-]);
-
 export function sessionUpdateShowsVisibleOutput(params: unknown): boolean {
   if (!isRecord(params)) return false;
   const update = isRecord(params.update) ? params.update : params;
@@ -19,7 +10,10 @@ export function sessionUpdateShowsVisibleOutput(params: unknown): boolean {
     (typeof update.session_update === "string" && update.session_update) ||
     (typeof update.type === "string" && update.type) ||
     "";
-  if (VISIBLE_UPDATE_KINDS.has(kind)) return true;
+  if (kind === "tool_call" || kind === "tool_call_update") return true;
+  // 文本事件本身不代表有正文；图片等合法非文本输出仍算可见内容。
+  if (isRecord(update.content) && typeof update.content.type === "string" &&
+      ["image", "audio", "resource", "resource_link"].includes(update.content.type)) return true;
   if (isRecord(update.content) && typeof update.content.text === "string" && update.content.text.trim()) {
     return true;
   }

@@ -30,6 +30,7 @@ const INITIALIZE_METHOD = "initialize";
 const SESSION_NEW_METHOD = "session/new";
 const SESSION_LOAD_METHOD = "session/load";
 const SESSION_RESUME_METHOD = "session/resume";
+const SESSION_CLOSE_METHOD = "session/close";
 const SESSION_PROMPT_METHOD = "session/prompt";
 const SESSION_SET_MODE_METHOD = "session/set_mode";
 const SESSION_SET_CONFIG_METHOD = "session/set_config_option";
@@ -589,6 +590,17 @@ export class OfficialKernelProxy {
           if (setup?.token) this.#skillTokens.set(sessionId, setup.token);
           else this.#skillTokens.delete(sessionId);
         } else if (setup?.token) this.#skillMcp.release(setup.token);
+      } else if (pending.method === SESSION_CLOSE_METHOD && isJsonRpcSuccess(message) && pending.sessionId) {
+        // 只在内核确认关闭后撤销该会话的能力，不能影响同进程的其他会话。
+        const sessionId = pending.sessionId;
+        const token = this.#skillTokens.get(sessionId);
+        if (token) this.#skillMcp.release(token);
+        this.#skillTokens.delete(sessionId);
+        this.#sessionCwds.delete(sessionId);
+        this.#sessionModels.delete(sessionId);
+        this.#sessionModelFallbacks.delete(sessionId);
+        this.#context.forgetSession(sessionId);
+        this.#systemMessageFolder.reset(sessionId);
       } else if (
         pending.method === SESSION_PROMPT_METHOD
       ) {

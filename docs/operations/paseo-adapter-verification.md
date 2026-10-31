@@ -13,13 +13,16 @@ Admission 事务争锁修补完成完整跨主机复测。
 | 层次 | 使用的组件 | 已验证范围 | 范围限制 |
 | --- | --- | --- | --- |
 | 隔离自动测试 | 适配器、隔离内核、本地 MCP 服务 | 协议、技能资源、排队、取消与关闭 | 不使用 Google 账号或真实 daemon |
-| 真实客户端契约 | 固定 `@getpaseo/server@0.13.2` 的 `ACPAgentClient`、隔离内核 | 新建、模型切换、许可、加载、恢复、MCP 透传 | 本地服务模拟远端工具 |
+| 真实客户端契约 | 分别固定 0.13.2 与 0.14.0 的 `ACPAgentClient`、隔离内核 | 新建、模型切换、许可、加载、恢复、MCP 透传 | 本地服务模拟远端工具 |
+| 0.14 daemon 核心契约 | 真实 AgentManager、存储、空闲回收器和适配器，隔离内核 | 回收后的 load/resume、context、动态 MCP、模型与 thinking、排队取消及席位释放 | 注入时钟跨过一小时阈值；不连接 Google 账号，不运行完整网络 daemon |
 | 作者本地跨主机（未纳入 CI） | 两个 Linux VM、两个 Paseo daemon、官方内核及已登录账号 | Gemini / Claude 委派与两轮回传；Gemini 取消、禁用连接错误及重连后继续 | 作者报告修补版本轮零锁错误、零任务重试；未公开原始环境证据 |
 | 尚待专项验收 | UI、双账号、其他系统及旧版本 | 见下文手工清单 | 不从上述结果推定通过 |
 
 复现步骤、代理配置和实测记录见[跨主机端到端验收](paseo-cross-host-e2e.md)。
 
 ## 隔离自动验收
+
+0.14 维护改动修复了空字符串或空白文本分块绕过空轮次检查的问题，保留合法非文本输出和工具事件；成功关闭 ACP 会话时撤销技能 MCP token 并清理对应会话绑定。回归覆盖关闭失败、重复关闭和多会话隔离。Admission 的 `agentId` 类型同步为必填，与运行时校验一致，生产 discovery 仍跳过无 ID 的探测。
 
 在项目根目录运行：
 
@@ -37,21 +40,38 @@ npx vitest run tests/official-kernel-observability.test.ts tests/official-kernel
 
 ### 固定版本真实 Paseo 客户端契约
 
-CI 在独立目录安装 `@getpaseo/server@0.13.2`，使用其真实 `ACPAgentClient` 运行以下套件。该依赖只用于测试，不加入产品依赖，也不启动 daemon 或访问 Google 账号。缺少依赖或版本不符会直接失败，不会跳过。
+CI 在矩阵的独立目录安装 `@getpaseo/server@0.13.2` 和 `@getpaseo/server@0.14.0`，使用其真实 `ACPAgentClient` 运行以下套件。依赖只用于测试，不加入产品依赖，也不访问 Google 账号。缺少依赖或版本不符会直接失败，不会跳过。
 
 ```bash
 node scripts/verify-paseo-client-lock.mjs
 npm ci --prefix tests/fixtures/paseo-client --ignore-scripts --no-audit --no-fund --registry=https://registry.npmjs.org/
+npm ci --prefix tests/fixtures/paseo-client-0.14.0 --ignore-scripts --no-audit --no-fund --registry=https://registry.npmjs.org/
 npm run test:paseo-client
 ```
 
-已有独立安装时，可将 `PASEO_COMPAT_CLIENT_ROOT` 指向能解析 `@getpaseo/server` 的安装根目录。测试仍严格检查版本为 `0.13.2`。
+已有独立安装时，可将 `PASEO_COMPAT_CLIENT_ROOT` 指向能解析 `@getpaseo/server` 的安装根目录，同时用 `PASEO_COMPAT_VERSION` 选择 0.13.2 或 0.14.0。测试严格检查实际包版本与所选版本一致。
 
 `paseo-client-compat.test.mjs` 通过真实客户端、适配器子进程和隔离内核验证新建会话、冷启动加载与恢复、历史读取、`session/set_model`、许可拒绝、等待许可时取消，以及关闭后内核和 MCP 资源释放。
 
 跨主机用例使用本地 MCP 测试服务模拟远端委派工具，验证工具目录、目标主机参数、认证头、会话头、查询参数和协议版本降级。它验证适配器的透传边界，不证明真实的多主机连接或远端 agent 已完成端到端验收。
 
 上述自动测试不证明真实 UI、官方内核或账号隔离已经完成端到端验收。作者报告的真实 daemon 与官方内核本地跨主机观察单独记录在指南中，未纳入 CI；完整 UI、双账号隔离、Paseo `0.12.0` 和其他操作系统仍待验收。
+
+### 0.14 回收、恢复与排队取消
+
+`paseo-daemon-compat.test.mjs` 仅在 0.14.0 矩阵项执行。它使用真实 AgentManager 和 AgentStorage，通过真实 `agent.session_open` 消费路径注入测试 MCP，分别验证 `session/load` 与 `session/resume`。注入的是 hook 返回值，不启动第三方插件进程。真实空闲回收器在一小时阈值前保留进程、阈值后关闭进程；恢复时沿用 session ID，检查动态 daemon context、模型、thinking，并实际调用重新注入的 MCP endpoint。
+
+排队取消用例开启真实 SQLite Admission，保持第一轮活动、第二轮排队，确认两者均不能被空闲回收。取消第二轮后，内核收到的业务 prompt 数为零；取消第一轮后等待数据库结算，确认租约数为零。再运行第二个 agent 的新轮次，验证席位可复用且旧请求未被重放。
+
+显式本机验收脚本另启动完整的独立 daemon 和已安装的官方内核，使用现有账号，结果保存在 gitignored 的 `.tmp-paseo-014-live/<run-id>/result.json`。它只监听 loopback，使用独立配置、工作区和 Admission 状态目录，不修改或重启生产 daemon：
+
+```bash
+PASEO_LIVE_CLI_ROOT=/path/to/node_modules/@getpaseo/cli node scripts/verify-paseo-014-live.mjs
+```
+
+脚本要求已安装的 Paseo server 为 0.14.0，并从默认 `~/.paseo/config.json` 读取 `paseo-agy-acp` 的内核和代理环境配置；其他源目录使用 `PASEO_LIVE_SOURCE_HOME`。两轮真实请求检查同会话历史、daemon context、模型、thinking，以及回收前后成功的 `list_hosts` 工具调用。回收使用注入时钟，不等同于一小时墙钟或 UI 验收；该脚本不在无业务凭据的 CI 中运行。
+
+2026-10-31 当前工作区本机验证：完整产品测试 387 项通过、1 项按原有条件跳过；0.13.2 客户端 4 项、0.14.0 客户端及 daemon 核心 7 项全部通过。独立 Paseo 0.14.0 daemon 与官方 Gemini 内核的两轮验收通过，保留同一 session、历史校验码、context、`gemini-3.8-flash-high` 和 high thinking，回收前后均有成功的 `list_hosts` 调用记录。停止后独立检查确认监听端口已关闭、租约数为零、两轮数据库状态均为 completed。本地证据目录为 `.tmp-paseo-014-live/b8a3923c-8612-4104-babe-7eb54533df18/`，未公开其私有配置；这些结果针对未提交的当前源码，不构成已发布包或完整 UI 验收保证。
 
 ## 排队反馈与诊断
 

@@ -6,14 +6,18 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { setTimeout as delay } from "node:timers/promises";
 import { test } from "node:test";
+import { clientFixtures } from "../scripts/paseo-client-versions.mjs";
 
 // 此套件由 CI 在独立 job 中按提交的 lockfile 安装后必跑；依赖缺失或版本不符必须失败，不能静默跳过。
 const root = fileURLToPath(new URL("../", import.meta.url));
-const clientRoot = path.resolve(process.env.PASEO_COMPAT_CLIENT_ROOT ?? path.join(root, "tests/fixtures/paseo-client"));
+const clientVersion = process.env.PASEO_COMPAT_VERSION ?? "0.14.0";
+const fixture = clientFixtures.find(entry => entry.version === clientVersion);
+assert.ok(fixture, "unsupported compatibility version: " + clientVersion);
+const clientRoot = path.resolve(process.env.PASEO_COMPAT_CLIENT_ROOT ?? fixture.root);
 const require = createRequire(path.join(clientRoot, "package.json"));
 const serverEntry = require.resolve("@getpaseo/server");
 const serverRoot = path.resolve(path.dirname(serverEntry), "../../..");
-assert.equal(JSON.parse(await readFile(path.join(serverRoot, "package.json"), "utf8")).version, "0.13.2");
+assert.equal(JSON.parse(await readFile(path.join(serverRoot, "package.json"), "utf8")).version, clientVersion);
 const { ACPAgentClient } = await import(pathToFileURL(path.join(path.dirname(serverEntry), "agent/providers/acp-agent.js")).href);
 const logger = { child() { return this; }, trace() {}, debug() {}, info() {}, warn() {}, error() {} };
 const provider = "paseo-agy-acp";
@@ -58,7 +62,7 @@ async function harness(t, extraEnv = {}) {
   };
 }
 
-test("Paseo 0.13.2：真实客户端新建、模型切换、权限拒绝、取消与关闭", { timeout: 20_000 }, async t => {
+test(`Paseo ${clientVersion}：真实客户端新建、模型切换、权限拒绝、取消与关闭`, { timeout: 20_000 }, async t => {
   const h = await harness(t);
   const session = await h.create();
   const initialize = (await h.requests()).find(row => row.method === "initialize");
@@ -88,7 +92,7 @@ test("Paseo 0.13.2：真实客户端新建、模型切换、权限拒绝、取�
 });
 
 for (const method of ["session/load", "session/resume"]) {
-  test(`Paseo 0.13.2：冷启动 ${method} 保留 cwd 与 MCP`, { timeout: 20_000 }, async t => {
+  test(`Paseo ${clientVersion}：冷启动 ${method} 保留 cwd 与 MCP`, { timeout: 20_000 }, async t => {
     const h = await harness(t, { PASEO_CONTRACT_RESUME: method === "session/resume" ? "1" : "0" });
     const original = await h.create();
     const handle = original.describePersistence();
@@ -106,7 +110,7 @@ for (const method of ["session/load", "session/resume"]) {
   });
 }
 
-test("Paseo 0.13.2：跨主机委派 MCP 目录、参数、认证头和会话头透传", { timeout: 20_000 }, async t => {
+test(`Paseo ${clientVersion}：跨主机委派 MCP 目录、参数、认证头和会话头透传`, { timeout: 20_000 }, async t => {
   const received = [];
   const tools = [{ name: "delegate_to_host", description: "隔离测试工具，模拟远端主机委派",
     inputSchema: { type: "object", properties: { host: { type: "string" }, prompt: { type: "string" } } } }];

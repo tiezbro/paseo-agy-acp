@@ -48,7 +48,7 @@
     "build": "node scripts/clean-dist.mjs && tsc",
     "typecheck": "tsc -p tsconfig.test.json",
     "test": "npm run typecheck && npm run build && vitest run",
-    "test:paseo-client": "npm run validate:paseo-client-lock && npm run build && node --test tests/paseo-client-compat.test.mjs",
+    "test:paseo-client": "npm run validate:paseo-client-lock && npm run build && node scripts/run-paseo-client-tests.mjs",
     "validate:architecture": "node scripts/verify-import-boundaries.mjs",
     "validate:secrets": "node scripts/verify-no-secrets.mjs",
     "validate": "npm test && npm run validate:architecture && npm run validate:secrets",

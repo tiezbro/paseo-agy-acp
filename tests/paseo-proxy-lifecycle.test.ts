@@ -44,6 +44,61 @@ function harness(env: NodeJS.ProcessEnv = {}) {
 }
 
 describe("Paseo 代理工作区与生命周期", () => {
+  it.each(["", " \t\n"])("空文本分块 %j 仍返回空轮次错误", async text => {
+    const h = harness();
+    try {
+      h.send({ jsonrpc: "2.0", id: 1, method: "session/prompt", params: { sessionId: "s1", prompt: "hello" } });
+      await vi.waitFor(() => expect(h.forwarded).toHaveLength(1));
+      h.reply({ jsonrpc: "2.0", method: "session/update", params: { sessionId: "s1", update: {
+        sessionUpdate: "agent_message_chunk", content: { type: "text", text }
+      } } });
+      h.reply({ jsonrpc: "2.0", id: 1, result: { stopReason: "end_turn" } });
+      expect(h.received.at(-1)).toMatchObject({ id: 1, error: { code: -32000 } });
+    } finally { await h.close(); }
+  });
+
+  it("图片输出可正常结束轮次", async () => {
+    const h = harness();
+    try {
+      h.send({ jsonrpc: "2.0", id: 1, method: "session/prompt", params: { sessionId: "s1", prompt: "image" } });
+      await vi.waitFor(() => expect(h.forwarded).toHaveLength(1));
+      h.reply({ jsonrpc: "2.0", method: "session/update", params: { sessionId: "s1", update: {
+        sessionUpdate: "agent_message_chunk", content: { type: "image", mimeType: "image/png", data: "AAAA" }
+      } } });
+      h.reply({ jsonrpc: "2.0", id: 1, result: { stopReason: "end_turn" } });
+      expect(h.received.at(-1)).toMatchObject({ id: 1, result: { stopReason: "end_turn" } });
+    } finally { await h.close(); }
+  });
+
+  it.each(["session/new", "session/load", "session/resume"])("%s 的技能权限只在成功关闭后撤销，其他会话仍可用", async method => {
+    const h = harness({ PASEO_AGENT_CWD: process.cwd() });
+    const rpc = async (id: number, requestMethod: string, sessionId: string, success = true) => {
+      h.send({ jsonrpc: "2.0", id, method: requestMethod, params: { sessionId } });
+      await vi.waitFor(() => expect(h.forwarded.some(request => request.id === id)).toBe(true));
+      h.reply(success ? { jsonrpc: "2.0", id, result: { sessionId } } : { jsonrpc: "2.0", id, error: { code: -32000, message: "close rejected" } });
+      return h.forwarded.find(request => request.id === id)!;
+    };
+    const list = async (url: string) => (await fetch(url, { method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list", params: {} }) })).status;
+    try {
+      const first = await rpc(1, method, "s1");
+      const second = await rpc(2, method, "s2");
+      const skillUrl = (request: JsonRpcRequest) => (request.params as { mcpServers: Array<{ name: string; url: string }> }).mcpServers.find(server => server.name === "paseo_skills")!.url;
+      const firstUrl = skillUrl(first);
+      const secondUrl = skillUrl(second);
+      expect(await list(firstUrl)).toBe(200);
+      await rpc(3, "session/close", "s1", false);
+      expect(await list(firstUrl)).toBe(200);
+      await rpc(4, "session/close", "s1");
+      expect(await list(firstUrl)).toBe(404);
+      expect(await list(secondUrl)).toBe(200);
+      await rpc(5, "session/close", "s1");
+      expect(await list(secondUrl)).toBe(200);
+      await rpc(6, "session/close", "s2");
+      expect(await list(secondUrl)).toBe(404);
+    } finally { await h.close(); }
+  });
+
   it("exit 后仍接收未排空的最后一条响应，close 后才完成清理", async () => {
     const h = harness();
     h.send({ jsonrpc: "2.0", id: 1, method: "initialize", params: {} });

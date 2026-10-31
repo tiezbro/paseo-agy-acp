@@ -41,6 +41,8 @@ export function createOfficialAdmission(
   if (isAdmissionDiscoveryEnvironment(environment)) return undefined;
   const enabled = environment.AGY_ACP_ADMISSION_ENABLED;
   if (enabled !== "1" && enabled !== "true") return undefined;
+  const agentId = environment.PASEO_AGENT_ID;
+  if (!agentId) return undefined;
   const parentStateDir = environment.AGY_ACP_STATE_DIR;
   const isolated: NodeJS.ProcessEnv = {
     ...environment,
@@ -55,7 +57,7 @@ export function createOfficialAdmission(
     runtime,
     coordinator: new AdmissionTurnCoordinator({
       controller: runtime.controller,
-      agentId: isolated.PASEO_AGENT_ID
+      agentId
     })
   };
 }
