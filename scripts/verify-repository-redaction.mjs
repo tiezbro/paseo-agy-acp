@@ -11,7 +11,10 @@ const mapPath = "docs/operations/repository-redaction-map.json";
 const supportPaths = new Set([
   mapPath, "docs/operations/repository-privacy-cleanup.md",
   ".github/workflows/ci.yml", "scripts/verify-repository-redaction.mjs",
-  "tests/repository-redaction.test.ts"
+  "tests/repository-redaction.test.ts",
+  "package.json", "package-lock.json",
+  "tests/admission-production-composition.test.ts",
+  "tests/official-kernel.test.ts", "tests/package-entry.test.ts"
 ]);
 const scanner = fileURLToPath(new URL("./verify-no-secrets.mjs", import.meta.url));
 
