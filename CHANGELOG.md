@@ -2,27 +2,6 @@
 
 All notable changes to `paseo-agy-acp` are recorded here.
 
-## 2.8.0 - 2026-11-10
-
-### Changed
-
-- Upgrade the managed official Google Antigravity ACP runtime from Registry
-  `antigravity-acp` 1.4.3 to 1.4.5 for every supported platform.
-- Move the managed runtime root to `~/.local/opt/agy-acp-server-1.4.5` and
-  refresh the archive, PAR, harness, compatibility preimage, and fail-closed
-  runtime-integrity pins from the official Registry release.
-- Keep the Linux x86_64 local compatibility lifecycle and its exact patch
-  markers, which remain present once each in the 1.4.5 payload.
-- Set the npm package and ACP product identity version to `2.8.0`.
-
-### Verification
-
-- Official 1.4.5 Linux x86_64 archive SHA-256, extracted payload hashes, and
-  Registry archive pins were checked before updating the managed download map.
-- Real 1.4.5 Linux x86_64 `prepare`, `verify`, and `status` completed with no
-  lifecycle issues; the full Vitest run passed 430 tests with one conditional
-  skip, and build, architecture, and secret checks passed.
-
 ## 2.7.2 - 2026-11-01
 
 ### Fixed
