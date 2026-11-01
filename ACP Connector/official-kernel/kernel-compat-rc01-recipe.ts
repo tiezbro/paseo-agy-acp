@@ -12,7 +12,7 @@ export const RC01_KERNEL_COMPAT_PATCH_PLAN: KernelCompatPatchPlan = Object.freez
     Object.freeze({
       id: "rc01-model-selection-catalog",
       target: "modelSelection" as const,
-      // Official 1.4.3 gates non-Gemini models behind `allow_third_party`, which
+      // Official 1.4.5 gates non-Gemini models behind `allow_third_party`, which
       // only JetBrains/Zed/Xcode clients satisfy. The replacement keeps the
       // 1.2.1 profile behavior: Gemini plus the locally supported third-party
       // catalog ids, for every client.
@@ -38,7 +38,7 @@ export const RC01_KERNEL_COMPAT_PATCH_PLAN: KernelCompatPatchPlan = Object.freez
     Object.freeze({
       id: "skills-tool-presentation",
       target: "proxyAgentConfig" as const,
-      // 1.4.3 默认将内置技能写入工作区；改用技能工具保留发现和读取能力。
+      // 1.4.5 默认将内置技能写入工作区；改用技能工具保留发现和读取能力。
       find: "    harness_config = super()._build_harness_config()\n",
       replacement:
         "    harness_config = super()._build_harness_config()\n" +

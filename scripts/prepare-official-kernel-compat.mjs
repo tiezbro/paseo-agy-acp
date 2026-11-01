@@ -24,7 +24,7 @@ const defaultOfficialKernelRoot = path.join(
   os.homedir(),
   ".local",
   "opt",
-  "agy-acp-server-1.4.3"
+  "agy-acp-server-1.4.5"
 );
 const defaultParPath = path.join(defaultOfficialKernelRoot, "agy_acp_server.par");
 const defaultExternalHarnessPath = path.join(defaultOfficialKernelRoot, "localharness_external");

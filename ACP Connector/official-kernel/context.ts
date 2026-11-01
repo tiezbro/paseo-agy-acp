@@ -57,7 +57,7 @@ export function extractCwd(
   return cwd || environment.PASEO_AGENT_CWD?.trim() || undefined;
 }
 
-/** 官方 1.4.3 原生 append 是会话快照；默认动态模式继续逐轮读取。 */
+/** 官方 1.4.5 原生 append 是会话快照；默认动态模式继续逐轮读取。 */
 export class PaseoSessionContext {
   #nativeSupported = false;
   readonly #nativeSessions = new Set<string>();

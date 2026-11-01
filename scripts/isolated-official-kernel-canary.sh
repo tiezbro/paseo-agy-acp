@@ -5,7 +5,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CLI="$ROOT/dist/ACP Connector/main.js"
-OFFICIAL_BIN="${PASEO_AGY_ACP_OFFICIAL_BIN:-$HOME/.local/opt/agy-acp-server-1.4.3/agy-acp-server-canary}"
+OFFICIAL_BIN="${PASEO_AGY_ACP_OFFICIAL_BIN:-$HOME/.local/opt/agy-acp-server-1.4.5/agy-acp-server-canary}"
 HOST="127.0.0.1:6768"
 MARKER="PASEO_CONTEXT_MARKER_2100"
 TOKEN="CANARY_OK_2100"

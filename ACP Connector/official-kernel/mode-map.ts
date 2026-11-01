@@ -1,6 +1,6 @@
 import { isRecord } from "./json-rpc.js";
 
-/** Official live session modes from antigravity-acp 1.4.3. */
+/** Official live session modes from antigravity-acp 1.4.5. */
 export const OFFICIAL_MODE_IDS = ["default", "auto_edit", "yolo"] as const;
 export type OfficialModeId = (typeof OFFICIAL_MODE_IDS)[number];
 
