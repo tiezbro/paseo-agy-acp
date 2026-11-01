@@ -16,7 +16,7 @@ it.skipIf(process.platform === "win32")("冒烟脚本使用 Paseo 的 clientCapa
         PASEO_AGENT_ID: "", PASEO_AGENT_CWD: "", AGY_ACP_ADMISSION_ENABLED: "false",
         PASEO_AGY_ACP_OFFICIAL_BIN: kernel, PASEO_CONTRACT_TRACE: trace }
     });
-    expect(JSON.parse(stdout)).toMatchObject({ ok: true, agentInfo: { name: "agy-acp", version: "2.7.1" } });
+    expect(JSON.parse(stdout)).toMatchObject({ ok: true, agentInfo: { name: "agy-acp", version: "2.7.2" } });
     const messages = (await readFile(trace, "utf8")).trim().split("\n").map(line => JSON.parse(line));
     const initialize = messages.find(message => message.method === "initialize");
     expect(initialize.params.clientCapabilities).toEqual({ fs: { readTextFile: false, writeTextFile: false }, terminal: true });
