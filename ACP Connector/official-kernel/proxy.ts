@@ -2,7 +2,7 @@ import { performance } from "node:perf_hooks";
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import type { Readable, Writable } from "node:stream";
 import { TurnClaim, raceClaim, isTurnCancelled } from "../acp/session/turn-scheduler.js";
-import { createOfficialAdmission, issueAdmittedOfficialPromptWrite } from "./admission-fence.js";
+import { createOfficialAdmission, isAdmissionDiscoveryEnvironment, issueAdmittedOfficialPromptWrite } from "./admission-fence.js";
 import { extractCwd, extractPromptText, extractSessionId, PaseoSessionContext } from "./context.js";
 import { blankTurnError, officialResponseError, sessionUpdateShowsVisibleOutput, shouldRejectBlankTurn } from "./errors.js";
 import { overlayProductIdentity } from "./identity.js";
@@ -30,6 +30,7 @@ const INITIALIZE_METHOD = "initialize";
 const SESSION_NEW_METHOD = "session/new";
 const SESSION_LOAD_METHOD = "session/load";
 const SESSION_RESUME_METHOD = "session/resume";
+const SESSION_CLOSE_METHOD = "session/close";
 const SESSION_PROMPT_METHOD = "session/prompt";
 const SESSION_SET_MODE_METHOD = "session/set_mode";
 const SESSION_SET_CONFIG_METHOD = "session/set_config_option";
@@ -42,6 +43,7 @@ interface PendingClientRequest {
   sessionId?: string;
   cwd?: string;
   sawVisibleOutput: boolean;
+  closeToken?: string;
   resolve: (message: JsonRpcMessage) => void;
 }
 
@@ -262,6 +264,10 @@ export class OfficialKernelProxy {
 
   async #onClientRequest(request: JsonRpcRequest): Promise<void> {
     let params = request.params;
+    if (request.method === SESSION_CLOSE_METHOD && !extractSessionId(params)?.trim()) {
+      this.#writeClient(jsonRpcError(request.id, "session/close requires sessionId", -32602));
+      return;
+    }
     if (request.method === INITIALIZE_METHOD) {
       this.#notices = supportsSessionNotices(params);
       this.#requestTimings.set(request.id, this.#diagnostics.start("initialize", { requestId: request.id }));
@@ -345,6 +351,9 @@ export class OfficialKernelProxy {
 
   async #handlePrompt(request: JsonRpcRequest, params: unknown): Promise<void> {
     if (this.#closed) return;
+    if (isAdmissionDiscoveryEnvironment(this.#env)) {
+      throw new Error("Admission enabled without PASEO_AGENT_ID: discovery only; session/prompt is blocked");
+    }
     const sessionId = extractSessionId(params);
     if (sessionId && this.#claims.has(sessionId)) throw new Error("session already has an active prompt");
     const claim = new TurnClaim("foreground");
@@ -452,10 +461,12 @@ export class OfficialKernelProxy {
 
   #track(id: JsonRpcId, method: string, params: unknown): Promise<JsonRpcMessage> {
     if (this.#closed) return Promise.resolve(jsonRpcError(id, "official kernel connection closed"));
+    const sessionId = extractSessionId(params);
     return new Promise((resolve) => {
       this.#pending.set(id, {
         method,
-        sessionId: extractSessionId(params),
+        sessionId,
+        closeToken: method === SESSION_CLOSE_METHOD && sessionId ? this.#skillTokens.get(sessionId) : undefined,
         cwd: extractCwd(params, this.#env),
         sawVisibleOutput: false,
         resolve
@@ -589,6 +600,18 @@ export class OfficialKernelProxy {
           if (setup?.token) this.#skillTokens.set(sessionId, setup.token);
           else this.#skillTokens.delete(sessionId);
         } else if (setup?.token) this.#skillMcp.release(setup.token);
+      } else if (pending.method === SESSION_CLOSE_METHOD && isJsonRpcSuccess(message) && pending.sessionId &&
+          this.#skillTokens.get(pending.sessionId) === pending.closeToken) {
+        // 只在内核确认关闭后撤销该会话的能力，不能影响同进程的其他会话。
+        const sessionId = pending.sessionId;
+        const token = this.#skillTokens.get(sessionId);
+        if (token) this.#skillMcp.release(token);
+        this.#skillTokens.delete(sessionId);
+        this.#sessionCwds.delete(sessionId);
+        this.#sessionModels.delete(sessionId);
+        this.#sessionModelFallbacks.delete(sessionId);
+        this.#context.forgetSession(sessionId);
+        this.#systemMessageFolder.reset(sessionId);
       } else if (
         pending.method === SESSION_PROMPT_METHOD
       ) {

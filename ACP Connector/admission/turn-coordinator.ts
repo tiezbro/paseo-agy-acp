@@ -51,7 +51,7 @@ export interface AdmissionTurnInput {
 
 export interface AdmissionTurnCoordinatorOptions {
   readonly controller: AdmissionController;
-  readonly agentId?: string;
+  readonly agentId: string;
   readonly parentId?: string;
   readonly connectorPid?: number;
   readonly now?: () => number;

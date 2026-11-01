@@ -12,7 +12,7 @@ export function isAdmissionDiscoveryEnvironment(environment: NodeJS.ProcessEnv):
   const agentId = environment.PASEO_AGENT_ID;
   return (
     (enabled === "1" || enabled === "true") &&
-    (agentId === undefined || agentId.length === 0)
+    (agentId === undefined || agentId.trim().length === 0)
   );
 }
 
@@ -38,9 +38,14 @@ export function issueAdmittedOfficialPromptWrite(
 export function createOfficialAdmission(
   environment: NodeJS.ProcessEnv
 ): { runtime: AdmissionRuntime; coordinator: AdmissionTurnCoordinator } | undefined {
-  if (isAdmissionDiscoveryEnvironment(environment)) return undefined;
+  if (isAdmissionDiscoveryEnvironment(environment)) {
+    process.stderr.write("Admission enabled without PASEO_AGENT_ID: discovery only; session/prompt is blocked until an agent identity is provided.\n");
+    return undefined;
+  }
   const enabled = environment.AGY_ACP_ADMISSION_ENABLED;
   if (enabled !== "1" && enabled !== "true") return undefined;
+  const agentId = environment.PASEO_AGENT_ID;
+  if (!agentId) return undefined;
   const parentStateDir = environment.AGY_ACP_STATE_DIR;
   const isolated: NodeJS.ProcessEnv = {
     ...environment,
@@ -55,7 +60,7 @@ export function createOfficialAdmission(
     runtime,
     coordinator: new AdmissionTurnCoordinator({
       controller: runtime.controller,
-      agentId: isolated.PASEO_AGENT_ID
+      agentId
     })
   };
 }
