@@ -13,6 +13,7 @@ export interface RunOfficialKernelOptions {
   stdin?: Readable;
   stdout?: Writable;
   version: string;
+  platform?: NodeJS.Platform;
 }
 
 export async function runOfficialKernel(options: RunOfficialKernelOptions): Promise<void> {
@@ -23,7 +24,7 @@ export async function runOfficialKernel(options: RunOfficialKernelOptions): Prom
   // skips Admission entirely.
   if (isAdmissionEnabled(env) && !isAdmissionDiscoveryEnvironment(env)) {
     parseAdmissionRuntimeConfig(env);
-    assertAdmissionPlatformSupported();
+    assertAdmissionPlatformSupported(options.platform);
   }
   const binary = await ensureManagedOfficialKernel(env);
   const child = spawnOfficialKernel({ ...env, PASEO_AGY_ACP_OFFICIAL_BIN: binary });

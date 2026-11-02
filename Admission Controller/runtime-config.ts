@@ -134,7 +134,11 @@ function requirePaseoAgentId(value: string | undefined): string {
   return value;
 }
 
-function isAdmissionExplicitlyEnabled(value: string | undefined): boolean {
+/**
+ * The single reading of AGY_ACP_ADMISSION_ENABLED. Unknown values throw instead
+ * of reading as disabled, so a typo cannot fall back to an unfenced provider.
+ */
+export function isAdmissionExplicitlyEnabled(value: string | undefined): boolean {
   if (value === undefined || value === "" || value === "0" || value === "false") return false;
   if (value === "1" || value === "true") return true;
   throw new AdmissionRuntimeConfigError("AGY_ACP_ADMISSION_ENABLED must be one of 1, true, 0, or false");

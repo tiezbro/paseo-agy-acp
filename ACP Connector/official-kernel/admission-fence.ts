@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import { isAdmissionExplicitlyEnabled } from "../../Admission Controller/runtime-config.js";
 import { createAdmissionRuntime, type AdmissionRuntime } from "../admission/runtime.js";
 import { AdmissionTurnCoordinator } from "../admission/turn-coordinator.js";
 import type { AgyAdmissionDispatchBoundary } from "../admission/dispatch-boundary.js";
@@ -7,9 +8,9 @@ export function officialAdmissionStateDir(stateDir: string): string {
   return join(stateDir, "official-kernel");
 }
 
+/** Throws AdmissionRuntimeConfigError for values other than 1, true, 0, false or empty. */
 export function isAdmissionEnabled(environment: NodeJS.ProcessEnv): boolean {
-  const enabled = environment.AGY_ACP_ADMISSION_ENABLED;
-  return enabled === "1" || enabled === "true";
+  return isAdmissionExplicitlyEnabled(environment.AGY_ACP_ADMISSION_ENABLED);
 }
 
 export function isAdmissionDiscoveryEnvironment(environment: NodeJS.ProcessEnv): boolean {
