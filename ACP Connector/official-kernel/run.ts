@@ -13,18 +13,16 @@ export interface RunOfficialKernelOptions {
   stdin?: Readable;
   stdout?: Writable;
   version: string;
+  /** Test seam for the preflight only; the proxy's Admission runtime always checks process.platform. */
   platform?: NodeJS.Platform;
 }
 
 export async function runOfficialKernel(options: RunOfficialKernelOptions): Promise<void> {
   const env = options.env ?? process.env;
-  // Reject an unsupported Admission platform before the managed kernel download
-  // and before a kernel child is spawned, so a misconfiguration cannot leave a
-  // half-started provider behind. Discovery runs without an agent identity and
-  // skips Admission entirely.
+  // Fail on bad Admission settings before the kernel download or spawn.
   if (isAdmissionEnabled(env) && !isAdmissionDiscoveryEnvironment(env)) {
-    parseAdmissionRuntimeConfig(env);
     assertAdmissionPlatformSupported(options.platform);
+    parseAdmissionRuntimeConfig(env);
   }
   const binary = await ensureManagedOfficialKernel(env);
   const child = spawnOfficialKernel({ ...env, PASEO_AGY_ACP_OFFICIAL_BIN: binary });

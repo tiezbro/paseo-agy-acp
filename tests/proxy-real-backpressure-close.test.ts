@@ -22,6 +22,7 @@ async function bounded<T>(promise: Promise<T>, label: string): Promise<T> {
   } finally { if (timer) clearTimeout(timer); }
 }
 
+// Linux-only: enables Admission, whose fence needs /proc. Do not narrow to win32.
 it.skipIf(process.platform !== "linux").each(["close", "EOF", "child SIGTERM"])("真实 child stdout 背压暂停后 %s 仍完成 close 和全部资源清理", async mode => {
   const directory = await mkdtemp(path.join(os.tmpdir(), "real-pipe-close-"));
   const coordinatorClose = vi.spyOn(AdmissionTurnCoordinator.prototype, "close");
@@ -89,6 +90,7 @@ it.skipIf(process.platform !== "linux").each(["close", "EOF", "child SIGTERM"])(
   }
 });
 
+// Linux-only: enables Admission, whose fence needs /proc. Do not narrow to win32.
 it.skipIf(process.platform !== "linux")("真实 adapter 收到 SIGTERM 后退出，即使 client 永远不 drain", async () => {
   const directory = await mkdtemp(path.join(os.tmpdir(), "adapter-signal-close-"));
   const kernel = path.join(directory, "fake-kernel.mjs");

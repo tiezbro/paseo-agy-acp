@@ -121,8 +121,9 @@ CI 使用真实 Paseo 0.13.2 ACP 客户端、隔离内核和本地 HTTP MCP 服�
 - 可以完成官方 `oauth-personal` 的 Antigravity 账号
 - **仅 Admission fence 需要 Linux。** 适配器本身和普通 provider 模式可在 Linux、
   macOS 和 Windows 上运行。Admission fence 依赖 `/proc` 进程证据确认回合归属，
-  并要求 Linux 的文件 owner 与 mode 支持；在 macOS 或 Windows 上启用 Admission
-  会立即以指明平台的错误退出，而不是在未加锁的情况下启动。详见
+  并要求 Linux 的文件 owner 与 mode 支持；在 macOS 或 Windows 上带 agent 身份启用
+  Admission 会立即以指明平台的错误退出，而不是在未加锁的情况下启动（没有
+  `PASEO_AGENT_ID` 的 discovery 仍可启动）。详见
   [Admission 平台支持](docs/operations/admission.md#platform-support)。
 
 首次启动时，适配器按当前操作系统从 Google 下载对应的官方 Antigravity ACP 1.4.3
@@ -149,7 +150,8 @@ OAuth 由官方内核完成。Token 保留在内核自己的状态中，本适�
 
 ### 2. 准备 Admission 状态
 
-单 agent 可以不启用 Admission；多 agent 委派建议启用。
+单 agent 可以不启用 Admission；多 agent 委派建议启用。**Admission 仅支持 Linux**；
+在 macOS 和 Windows 上请跳过此步骤（见[平台支持](docs/operations/admission.md#platform-support)）。
 
 ```bash
 export AGY_ACP_STATE_DIR="$HOME/.local/state/paseo-agy-acp/account-name"
@@ -184,6 +186,9 @@ provider id 是 `agents.providers` 下的键：
 }
 ```
 
+此示例是 Linux 多 agent 配置。在 macOS 和 Windows 上，请同时省略
+`AGY_ACP_ADMISSION_ENABLED` 和 `AGY_ACP_STATE_DIR`。
+
 自定义 ACP provider 需要声明 `extends: "acp"` 和 `label`。
 provider id 必须匹配 `^[a-z][a-z0-9-]*$`，`paseo-agy-acp` 符合。
 
@@ -214,7 +219,7 @@ Paseo 会向 provider 进程提供 `PASEO_AGENT_ID` 和 `PASEO_AGENT_CWD`。只�
 | --- | --- |
 | `PASEO_AGY_ACP_OFFICIAL_BIN` | 官方 kernel wrapper 或 `.par` 的绝对路径 |
 | `PASEO_HOME` | 可选 Paseo home；默认 `~/.paseo` |
-| `AGY_ACP_ADMISSION_ENABLED` | `true` / `1` 启用 prompt fence |
+| `AGY_ACP_ADMISSION_ENABLED` | `true` / `1` 启用 prompt fence（仅 Linux）；`false` / `0` / 空值关闭；其他值会导致启动失败 |
 | `AGY_ACP_STATE_DIR` | 一个账号共享的 owner-only 绝对状态目录 |
 
 高级席位、启动限速、排队超时、cooldown、权限、恢复和 policy 变更流程见

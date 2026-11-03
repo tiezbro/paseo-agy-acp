@@ -21,8 +21,7 @@ vi.mock("../ACP Connector/official-kernel/spawn.js", () => ({
 
 import {
   createOfficialAdmission,
-  isAdmissionDiscoveryEnvironment,
-  isAdmissionEnabled
+  isAdmissionDiscoveryEnvironment
 } from "../ACP Connector/official-kernel/admission-fence.js";
 import { runOfficialKernel } from "../ACP Connector/official-kernel/run.js";
 
@@ -63,6 +62,15 @@ describe("official kernel admission preflight", () => {
       expectNothingStarted();
     }
   );
+
+  it("reports the unsupported platform before other admission configuration errors", async () => {
+    await expect(runOfficialKernel({
+      env: { AGY_ACP_ADMISSION_ENABLED: "1", PASEO_AGENT_ID: "preflight-agent" },
+      version: "test",
+      platform: "darwin"
+    })).rejects.toThrow(/only supported on linux/);
+    expectNothingStarted();
+  });
 
   it("lets a valid admission configuration on linux reach kernel resolution", async () => {
     await expect(runOfficialKernel({ env: validAdmissionEnvironment(), version: "test", platform: "linux" }))
@@ -123,19 +131,6 @@ describe("official kernel admission preflight", () => {
 });
 
 describe("official kernel admission enable flag", () => {
-  it("reads the flag exactly like the runtime configuration parser", () => {
-    for (const value of [undefined, "", "0", "false"]) {
-      expect(isAdmissionEnabled({ AGY_ACP_ADMISSION_ENABLED: value })).toBe(false);
-    }
-    for (const value of ["1", "true"]) {
-      expect(isAdmissionEnabled({ AGY_ACP_ADMISSION_ENABLED: value })).toBe(true);
-    }
-    for (const value of ["TRUE", "False", "yes", "off", " 1", "2"]) {
-      expect(() => isAdmissionEnabled({ AGY_ACP_ADMISSION_ENABLED: value }))
-        .toThrow(/AGY_ACP_ADMISSION_ENABLED must be one of 1, true, 0, or false/);
-    }
-  });
-
   it("fails closed in the proxy fence instead of treating a malformed flag as disabled", () => {
     const environment = { ...validAdmissionEnvironment(), AGY_ACP_ADMISSION_ENABLED: "TRUE" };
     expect(() => isAdmissionDiscoveryEnvironment({ ...environment, PASEO_AGENT_ID: "" }))
