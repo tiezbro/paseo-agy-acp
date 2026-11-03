@@ -136,7 +136,13 @@ isolation, Paseo 0.12.0 and other operating systems were not retested. See the
 - **Node.js 22 or newer**
 - A non-root Linux user for the managed Linux x86_64 compatibility lifecycle
 - An Antigravity account able to complete official `oauth-personal`
-- Linux filesystem ownership and mode support when Admission is enabled
+- **Linux, only for the Admission fence.** The adapter and ordinary provider
+  mode run on Linux, macOS and Windows. The Admission fence proves turn
+  ownership with `/proc` process evidence and requires Linux filesystem
+  ownership and mode support, so enabling Admission on macOS or Windows with an
+  agent identity fails fast with an explanatory error instead of starting
+  unfenced (discovery without `PASEO_AGENT_ID` still starts). See
+  [Admission platform support](docs/operations/admission.md#platform-support).
 
 On first start the adapter downloads the official Antigravity ACP 1.4.3 archive
 for the current operating system from Google. The npm package does not contain
@@ -167,7 +173,8 @@ for both login and the provider as described below.
 ### 2. Prepare Admission state
 
 Admission is optional for a single agent and recommended for multi-agent
-delegation.
+delegation. **Admission is Linux-only**; on macOS and Windows skip this step
+(see [platform support](docs/operations/admission.md#platform-support)).
 
 ```bash
 export AGY_ACP_STATE_DIR="$HOME/.local/state/paseo-agy-acp/account-name"
@@ -202,6 +209,9 @@ Add or update the provider in `$PASEO_HOME/config.json` or
 }
 ```
 
+This sample is the Linux multi-agent configuration. On macOS and Windows, omit
+both `AGY_ACP_ADMISSION_ENABLED` and `AGY_ACP_STATE_DIR`.
+
 A custom ACP provider needs `extends: "acp"` and a `label`. Provider ids must
 match `^[a-z][a-z0-9-]*$`; `paseo-agy-acp` does.
 
@@ -234,7 +244,7 @@ server for Paseo; it is not a standalone chat application.
 | --- | --- |
 | `PASEO_AGY_ACP_OFFICIAL_BIN` | Absolute official kernel wrapper or `.par` path |
 | `PASEO_HOME` | Optional Paseo home; defaults to `~/.paseo` |
-| `AGY_ACP_ADMISSION_ENABLED` | `true` / `1` enables the prompt fence |
+| `AGY_ACP_ADMISSION_ENABLED` | `true` / `1` enables the prompt fence (Linux only); `false` / `0` / empty disable it; any other value is a startup error |
 | `AGY_ACP_STATE_DIR` | Absolute owner-only state directory shared by one account |
 
 Advanced seat, start-rate, queue-timeout, cooldown, permission, recovery, and

@@ -30,6 +30,24 @@ export class AdmissionRuntimeConfigError extends Error {
   }
 }
 
+/**
+ * Admission proves that a turn still belongs to the connector that admitted it
+ * by reading `/proc`, so enabled configuration is only valid on Linux.
+ */
+export const ADMISSION_SUPPORTED_PLATFORM: NodeJS.Platform = "linux";
+
+/** Reject enabled Admission on platforms whose process evidence cannot be read. */
+export function assertAdmissionPlatformSupported(
+  platform: NodeJS.Platform = process.platform
+): void {
+  if (platform === ADMISSION_SUPPORTED_PLATFORM) return;
+  throw new AdmissionRuntimeConfigError(
+    `admission is only supported on ${ADMISSION_SUPPORTED_PLATFORM} because it verifies turns with ` +
+      `/proc process evidence; current platform is ${platform}. ` +
+      "Unset AGY_ACP_ADMISSION_ENABLED to run without admission."
+  );
+}
+
 export const DEFAULT_ADMISSION_POLICY: Readonly<AdmissionPolicy> = Object.freeze({
   maxActiveTurns: DEFAULT_ADMISSION_ACTIVE_TURNS,
   maxConcurrentStarts: DEFAULT_ADMISSION_CONCURRENT_STARTS,
@@ -116,7 +134,11 @@ function requirePaseoAgentId(value: string | undefined): string {
   return value;
 }
 
-function isAdmissionExplicitlyEnabled(value: string | undefined): boolean {
+/**
+ * The single reading of AGY_ACP_ADMISSION_ENABLED. Unknown values throw instead
+ * of reading as disabled, so a typo cannot fall back to an unfenced provider.
+ */
+export function isAdmissionExplicitlyEnabled(value: string | undefined): boolean {
   if (value === undefined || value === "" || value === "0" || value === "false") return false;
   if (value === "1" || value === "true") return true;
   throw new AdmissionRuntimeConfigError("AGY_ACP_ADMISSION_ENABLED must be one of 1, true, 0, or false");

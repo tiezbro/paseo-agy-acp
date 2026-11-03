@@ -10,6 +10,7 @@ import {
   type AdmissionKeyBundle
 } from "../../Admission Controller/key-derivation.js";
 import {
+  assertAdmissionPlatformSupported,
   parseAdmissionRuntimeConfig,
   type AdmissionRuntimeEnvironment,
   type EnabledAdmissionRuntimeConfig
@@ -26,6 +27,7 @@ export interface AdmissionRuntimeOptions {
   readonly reaperReaders?: AdmissionRuntimeReaperReaders;
   readonly reaperIntervalMs?: number;
   readonly now?: () => number;
+  readonly platform?: NodeJS.Platform;
 }
 
 export class AdmissionRuntimeError extends Error {
@@ -92,6 +94,8 @@ export function createAdmissionRuntime(
 ): AdmissionRuntime | null {
   const config = parseAdmissionRuntimeConfig(environment);
   if (!config.enabled) return null;
+
+  assertAdmissionPlatformSupported(options.platform);
 
   rejectUnsafeExistingDatabase(config.databasePath);
   const key = loadOrCreateAdmissionKey(config.stateDir);

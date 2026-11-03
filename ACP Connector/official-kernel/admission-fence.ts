@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import { isAdmissionExplicitlyEnabled } from "../../Admission Controller/runtime-config.js";
 import { createAdmissionRuntime, type AdmissionRuntime } from "../admission/runtime.js";
 import { AdmissionTurnCoordinator } from "../admission/turn-coordinator.js";
 import type { AgyAdmissionDispatchBoundary } from "../admission/dispatch-boundary.js";
@@ -7,13 +8,14 @@ export function officialAdmissionStateDir(stateDir: string): string {
   return join(stateDir, "official-kernel");
 }
 
+/** Throws AdmissionRuntimeConfigError for values other than 1, true, 0, false or empty. */
+export function isAdmissionEnabled(environment: NodeJS.ProcessEnv): boolean {
+  return isAdmissionExplicitlyEnabled(environment.AGY_ACP_ADMISSION_ENABLED);
+}
+
 export function isAdmissionDiscoveryEnvironment(environment: NodeJS.ProcessEnv): boolean {
-  const enabled = environment.AGY_ACP_ADMISSION_ENABLED;
   const agentId = environment.PASEO_AGENT_ID;
-  return (
-    (enabled === "1" || enabled === "true") &&
-    (agentId === undefined || agentId.trim().length === 0)
-  );
+  return isAdmissionEnabled(environment) && (agentId === undefined || agentId.trim().length === 0);
 }
 
 export function issueAdmittedOfficialPromptWrite(
@@ -42,8 +44,7 @@ export function createOfficialAdmission(
     process.stderr.write("Admission enabled without PASEO_AGENT_ID: discovery only; session/prompt is blocked until an agent identity is provided.\n");
     return undefined;
   }
-  const enabled = environment.AGY_ACP_ADMISSION_ENABLED;
-  if (enabled !== "1" && enabled !== "true") return undefined;
+  if (!isAdmissionEnabled(environment)) return undefined;
   const agentId = environment.PASEO_AGENT_ID;
   if (!agentId) return undefined;
   const parentStateDir = environment.AGY_ACP_STATE_DIR;
