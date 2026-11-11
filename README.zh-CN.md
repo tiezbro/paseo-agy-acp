@@ -44,6 +44,23 @@ Admission 加固。
 <!-- readme:value -->
 ## 为什么需要 paseo-agy-acp
 
+### 核心架构与实战对比矩阵（内置 Antigravity vs Antigravity Pro）
+
+Paseo 内置的 `antigravity` provider 本质是通过终端包装调用宿主机 `agy` CLI，在工程实践与多 Agent 协作中存在大输出卡死、并发冲突和看门狗缺失等问题。专用适配器 `paseo-agy-acp`（Antigravity Pro）基于官方专用 ACP 协议内核解耦设计，具备显著的架构与稳定性优势：
+
+| 维度 | Paseo 内置 `antigravity` | 专用适配器 `paseo-agy-acp` | 差距影响 |
+| :--- | :--- | :--- | :--- |
+| **底层内核** | 宿主机通用 CLI (`~/.local/bin/agy`) | 官方专用 ACP 内核 (`agy_acp_server`) | 内置版依赖完整的 TUI/终端套件，易受 CLI 工具层 Bug 牵连；ACP 版是专门的无头 RPC 内核。 |
+| **驱动协议** | 非标伪终端流 (`--input-format stream-json --output-format stream-json`) | 行业标准 **ACP (Agent Client Protocol - JSON-RPC v1)** | 内置版是强行把终端交互式工具当无头服务用；ACP 版是协议级解耦。 |
+| **大输出抗灾能力 (卡死根因)** | ❌ **严重缺陷**：走 `oneharness` 的 `commandOutputStreamer`，耗时命令大输出时在定时器中全量遍历 Buffer，导致 **100% CPU 死循环、2.4GB 内存泄露、永久卡死** | ✅ **协议层解耦**：工具执行走 ACP 异步请求/响应管道，不走 CLI 本地流式定时器的全量 UTF-8 扫描 | 内置版遇到未加 `head` 的 grep / 日志命令必然 100% 崩溃假死。 |
+| **死锁与超时看门狗** | ❌ **完全缺失**：仅有 30 秒启动超时。一旦 turn 陷入死循环，Paseo 永久显示 `running`，UI 挂起，所有后续请求被拒 | ✅ **具备超时控制**：配置包含 `AGY_PROMPT_TIMEOUT_SECS="600"`，超时自动熔断并向上层报告失败 | 内置版一旦卡死只能在宿主机手工执行 `kill` 进程；ACP 版具备自动异常收口能力。 |
+| **突发与并发治理 (Admission)** | ❌ **零治理**：多 Agent 并发同时将 Prompt 打入 `agy`，极易发生本地端口争抢、SQLite 锁死与限流 | ✅ **内置 Admission 队列**：跨进程 SQLite 事务锁治理，严格控制最大并发（默认 8 路并发、2s 启动间隔） | 多 Agent 协作（Committee/Swarm）时，内置版极易大面积溃崩。 |
+| **权限审批模型** | ❌ **粗暴裸奔**：强制启动 `--dangerously-skip-permissions`，只能运行在 `full-access` 模式，无法精细化审批 | ✅ **完整映射**：完整支持 `default`, `auto_edit`, `yolo`，支持对接 Paseo 的权限卡片（`permit`） | 内置版无法在需要安全审计的场景下工作。 |
+| **空白回合 (Empty Turn) 处理** | ❌ **静默失败/伪成功**：若模型无输出直接 `end_turn`，内置版易记录为虚假的“成功”空回合 | ✅ **协议严防**：对无输出空白 turn 返回明确 JSON-RPC 错误，防止假成功 | 保证自动化测试和主控流程不会被脏数据污染。 |
+| **技能扩展机制 (Skills)** | ❌ **简陋注入**：直接依赖 `agy` 本身的目录扫描，缺乏沙箱和并发隔离 | ✅ **专属 MCP Server**：内置 `paseo_skills` MCP server，隔离合并各类 skills 并硬性限制单文件 ≤ 1MB | 防止大体积 Skill 文档撑爆 Context。 |
+
+### 相比通用 ACP 裸连的产品能力
+
 ACP 提供协议，但一条可用于生产的 Paseo provider 仍需要协议之外的产品行为：
 
 | 需求 | 直接连接 Generic ACP | 使用 `paseo-agy-acp` |

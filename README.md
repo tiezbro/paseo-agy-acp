@@ -50,6 +50,23 @@ proxy; you install and authenticate the official kernel separately.
 <!-- readme:value -->
 ## Why paseo-agy-acp
 
+### Core Architecture & Field Comparison Matrix (Built-in Antigravity vs Antigravity Pro)
+
+Paseo's built-in `antigravity` provider essentially wraps the host `agy` CLI via a terminal stream. In practical engineering and multi-agent collaboration, it suffers from command output freezes, concurrency contention, and a lack of watchdog protection. The dedicated `paseo-agy-acp` (Antigravity Pro) adapter decouples execution using the official headless ACP kernel, providing major architectural and stability advantages:
+
+| Dimension | Paseo Built-in `antigravity` | Dedicated Adapter `paseo-agy-acp` | Impact / Difference |
+| :--- | :--- | :--- | :--- |
+| **Underlying Kernel** | Host generic CLI (`~/.local/bin/agy`) | Official headless ACP kernel (`agy_acp_server`) | Built-in relies on full TUI/terminal stack, vulnerable to CLI bugs; ACP version is a dedicated headless RPC kernel. |
+| **Driver Protocol** | Non-standard pseudo-terminal stream (`--input-format stream-json --output-format stream-json`) | Industry standard **ACP (Agent Client Protocol - JSON-RPC v1)** | Built-in forces an interactive terminal tool into headless service mode; ACP version is decoupled at the protocol level. |
+| **Large Output Resilience (Root Cause of Freezes)** | ❌ **Severe defect**: Uses `oneharness`'s `commandOutputStreamer`, repeatedly scanning the entire buffer in a timer during large command outputs, resulting in **100% CPU loops, 2.4GB memory leak, and permanent freezes** | ✅ **Protocol-level decoupling**: Tool execution uses the ACP async request/response pipe without full-buffer UTF-8 timer scans | Built-in version is prone to 100% hang on untruncated grep or log commands. |
+| **Deadlock & Timeout Watchdog** | ❌ **Completely missing**: Only has a 30s startup timeout. Once a turn loops, Paseo permanently displays `running`, the UI hangs, and subsequent requests are rejected | ✅ **Built-in timeout control**: Configurable `AGY_PROMPT_TIMEOUT_SECS="600"`, automatically fusing timeouts and reporting failure upstream | Built-in requires manual host `kill`; ACP version features automated failure recovery. |
+| **Burst & Concurrency Governance (Admission)** | ❌ **Zero governance**: Multiple concurrent agents blasting prompts into `agy` easily trigger port contention, SQLite lockups, and rate limits | ✅ **Built-in Admission queue**: Cross-process SQLite transaction lock governance, strictly managing concurrency (default 8 turns, 2s start spacing) | Built-in collapses under multi-agent collaboration (Committee/Swarm). |
+| **Permission Approval Model** | ❌ **Unrestricted bypass**: Forces `--dangerously-skip-permissions`, running only in `full-access` mode without fine-grained approval | ✅ **Full mapping**: Supports `default`, `auto_edit`, and `yolo`, fully integrating with Paseo permission cards (`permit`) | Built-in cannot operate in environments requiring security audit trails. |
+| **Empty Turn Handling** | ❌ **Silent pseudo-success**: If the model emits `end_turn` without output, built-in records a false "successful" turn | ✅ **Strict protocol check**: Returns an explicit JSON-RPC error on output-free turns to prevent dirty state | Keeps automated workflows and orchestrators clean. |
+| **Skill Extension Mechanism** | ❌ **Crude injection**: Relies directly on `agy`'s own directory scan without sandboxing or concurrency isolation | ✅ **Dedicated MCP Server**: Embedded `paseo_skills` MCP server, isolating and merging skills with a strict 1MB per-file limit | Prevents massive skill files from overflowing model context. |
+
+### Product Capabilities Beyond Generic ACP
+
 ACP provides the protocol. A production Paseo provider still needs product
 behavior around that protocol:
 
