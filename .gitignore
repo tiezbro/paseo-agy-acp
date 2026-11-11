@@ -28,3 +28,6 @@ coverage/
 # local GitNexus/Claude copies — not product source
 .claude/
 CLAUDE.md
+
+# local agent skill scratch/discovery copies
+skills/
