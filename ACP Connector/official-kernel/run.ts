@@ -1,4 +1,9 @@
 import type { Readable, Writable } from "node:stream";
+import {
+  assertAdmissionPlatformSupported,
+  parseAdmissionRuntimeConfig
+} from "../../Admission Controller/runtime-config.js";
+import { isAdmissionDiscoveryEnvironment, isAdmissionEnabled } from "./admission-fence.js";
 import { ensureManagedOfficialKernel } from "./ensure-managed-kernel.js";
 import { OfficialKernelProxy } from "./proxy.js";
 import { spawnOfficialKernel } from "./spawn.js";
@@ -8,10 +13,17 @@ export interface RunOfficialKernelOptions {
   stdin?: Readable;
   stdout?: Writable;
   version: string;
+  /** Test seam for the preflight only; the proxy's Admission runtime always checks process.platform. */
+  platform?: NodeJS.Platform;
 }
 
 export async function runOfficialKernel(options: RunOfficialKernelOptions): Promise<void> {
   const env = options.env ?? process.env;
+  // Fail on bad Admission settings before the kernel download or spawn.
+  if (isAdmissionEnabled(env) && !isAdmissionDiscoveryEnvironment(env)) {
+    assertAdmissionPlatformSupported(options.platform);
+    parseAdmissionRuntimeConfig(env);
+  }
   const binary = await ensureManagedOfficialKernel(env);
   const child = spawnOfficialKernel({ ...env, PASEO_AGY_ACP_OFFICIAL_BIN: binary });
   const proxy = new OfficialKernelProxy({

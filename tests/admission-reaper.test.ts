@@ -46,6 +46,7 @@ type CreateAdmissionRuntimeWithReaper = (
   options: {
     readonly reaperReaders: AdmissionRuntimeReaperReaders;
     readonly reaperIntervalMs: number;
+    readonly platform?: NodeJS.Platform;
   }
 ) => ReturnType<typeof createAdmissionRuntime>;
 
@@ -318,7 +319,8 @@ describe("S3-T14 heartbeat suspect and runtime reaper", () => {
       PASEO_AGENT_ID: "runtime-reaper-agent"
     }, {
       reaperReaders: readers({ processState: "gone", processIds: [] }),
-      reaperIntervalMs: 1_000
+      reaperIntervalMs: 1_000,
+      platform: "linux"
     });
     expect(runtime).not.toBeNull();
 

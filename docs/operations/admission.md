@@ -11,6 +11,37 @@ Enable Admission when multiple Paseo agents can use the same Antigravity
 account concurrently. A deliberately isolated single-agent connector can run
 without it.
 
+## Platform support
+
+Linux-only applies to the **Admission fence**, not to the adapter. The adapter,
+ordinary provider mode (`AGY_ACP_ADMISSION_ENABLED` unset, empty, `0` or
+`false`) and provider discovery without `PASEO_AGENT_ID` run on Linux, macOS and
+Windows; CI covers them on all three (`npm run test:paseo-provider`).
+
+The fence itself proves that a turn still belongs to the connector that
+admitted it by reading `/proc/<pid>/stat`, the pid namespace and the kernel
+boot id. There is no equivalent reader on macOS or Windows yet.
+
+Enabling Admission with an agent identity on another platform fails fast with
+`admission runtime configuration error: admission is only supported on linux
+because it verifies turns with /proc process evidence; current platform is
+<platform>. Unset AGY_ACP_ADMISSION_ENABLED to run without admission.`
+The connector rejects it before resolving or downloading the official kernel,
+spawning a kernel child, or creating the state directory, key or database, so a
+misconfiguration cannot leave a half-started provider behind.
+
+`AGY_ACP_ADMISSION_ENABLED` accepts exactly `1`, `true`, `0`, `false` or an
+empty value. Anything else, including case variants such as `TRUE`, is a
+configuration error on every platform rather than a silent fallback to an
+unfenced provider.
+
+Cross-platform Admission is not implemented. It would need an ownership
+proof with the same guarantees as the Linux one: a stable process start
+identity that survives pid reuse (for example `proc_pidinfo` start time on
+macOS or the process creation time on Windows), plus an equivalent of the boot
+id and pid-namespace checks. Until then, multi-agent deployments that need the
+fence should run the connector on Linux.
+
 All connector processes that share one account must use the same
 `AGY_ACP_STATE_DIR`. Different accounts should use different directories.
 

@@ -5,8 +5,10 @@ vi.mock("node:fs", () => {
 });
 
 import {
+  ADMISSION_SUPPORTED_PLATFORM,
   AdmissionRuntimeConfigError,
   DEFAULT_ADMISSION_POLICY,
+  assertAdmissionPlatformSupported,
   parseAdmissionRuntimeConfig
 } from "../Admission Controller/runtime-config.js";
 
@@ -17,6 +19,14 @@ const enabledEnvironment = {
 };
 
 describe("Admission Controller runtime configuration", () => {
+  it("accepts /proc-backed admission only on Linux", () => {
+    expect(ADMISSION_SUPPORTED_PLATFORM).toBe("linux");
+    expect(() => assertAdmissionPlatformSupported("linux")).not.toThrow();
+    expect(() => assertAdmissionPlatformSupported("darwin")).toThrow(AdmissionRuntimeConfigError);
+    expect(() => assertAdmissionPlatformSupported("darwin")).toThrow(/only supported on linux/);
+    expect(() => assertAdmissionPlatformSupported("win32")).toThrow(/current platform is win32/);
+  });
+
   it("is disabled by default without loading or validating runtime state", () => {
     const config = parseAdmissionRuntimeConfig({
       AGY_ACP_STATE_DIR: "relative-and-intentionally-invalid",
