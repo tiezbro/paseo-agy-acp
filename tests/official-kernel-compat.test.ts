@@ -107,7 +107,13 @@ describe("official kernel RC01 model compatibility profile", () => {
     expect(unknown.result).toEqual(body);
     expect(gemini.supported).toEqual([
       "claude-opus-4-6-thinking",
+      "claude-opus-5-5-high",
+      "claude-opus-5-5-low",
+      "claude-opus-5-5-medium",
       "claude-sonnet-4-6",
+      "claude-sonnet-5-5-high",
+      "claude-sonnet-5-5-low",
+      "claude-sonnet-5-5-medium",
       "gpt-oss-120b-medium"
     ]);
   });
@@ -116,6 +122,16 @@ describe("official kernel RC01 model compatibility profile", () => {
     const claudeMissing = transform("claude-sonnet-4-6", {});
     const claudeClamped = transform("claude-opus-4-6-thinking", {
       generationConfig: { maxOutputTokens: 64001, temperature: 0.4 }
+    });
+    const opus55Clamped = transform("claude-opus-5-5-high", {
+      generationConfig: { maxOutputTokens: 150000, temperature: 0.4 }
+    });
+    const opus55Small = transform("claude-opus-5-5-medium", {
+      generationConfig: { maxOutputTokens: 1024 }
+    });
+    const opus55Missing = transform("claude-opus-5-5-low", {});
+    const sonnet55Clamped = transform("claude-sonnet-5-5-high", {
+      generationConfig: { maxOutputTokens: 200000 }
     });
     const claudeBoolean = transform("claude-sonnet-4-6", {
       generationConfig: { maxOutputTokens: true }
@@ -157,6 +173,18 @@ describe("official kernel RC01 model compatibility profile", () => {
     expect(claudeMissing.result).toEqual({ generationConfig: { maxOutputTokens: 64000 } });
     expect(claudeClamped.result).toEqual({
       generationConfig: { maxOutputTokens: 64000, temperature: 0.4 }
+    });
+    expect(opus55Clamped.result).toEqual({
+      generationConfig: { maxOutputTokens: 128000, temperature: 0.4 }
+    });
+    expect(opus55Small.result).toEqual({
+      generationConfig: { maxOutputTokens: 1024 }
+    });
+    expect(opus55Missing.result).toEqual({
+      generationConfig: { maxOutputTokens: 128000 }
+    });
+    expect(sonnet55Clamped.result).toEqual({
+      generationConfig: { maxOutputTokens: 128000 }
     });
     expect(claudeBoolean.result).toEqual({ generationConfig: { maxOutputTokens: 64000 } });
     expect(claudeFalseBoolean.result).toEqual({ generationConfig: { maxOutputTokens: 64000 } });

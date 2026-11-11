@@ -3,7 +3,7 @@
 与 Paseo 内置 Antigravity 共存，同时登录两个 Antigravity Pro 账号
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue?style=flat-square)](./LICENSE)
-[![Version](https://img.shields.io/badge/version-2.8.0-blue?style=flat-square)](./package.json)
+[![Version](https://img.shields.io/badge/version-2.8.1-blue?style=flat-square)](./package.json)
 [![npm](https://img.shields.io/npm/v/paseo-agy-acp?style=flat-square)](https://www.npmjs.com/package/paseo-agy-acp)
 [![Node](https://img.shields.io/badge/node-%3E%3D22-brightgreen?style=flat-square)](./package.json)
 [![ACP](https://img.shields.io/badge/ACP-NDJSON%20v1-8A2BE2?style=flat-square)](https://agentclientprotocol.com)
@@ -14,9 +14,9 @@ Paseo 从 v0.11.0 起内置了 Antigravity provider。`paseo-agy-acp` 作为独�
 provider 和它共存，Paseo 就可以同时登录两个 Antigravity Pro 账号，把日常工作
 分给不同的账号来调度。
 
-**上游运行时：Registry `antigravity-acp` 1.4.5。** v2.8.0 升级托管官方内核，
-刷新归档、解包载荷、兼容源码与运行时完整性固定值，同时保留 2.7.x 的 Paseo 生命周期和
-Admission 加固。
+**上游运行时：Registry `antigravity-acp` 1.4.5。** v2.8.1 增加 Claude Opus 5.5
+与 Sonnet 5.5 系列模型支持，结合账号级订阅资格动态发现，同时保留 1.4.5 官方内核
+生命周期与 2.8.0 的 Admission 加固。
 
 ![Paseo 中 Antigravity 与 Antigravity Pro 同时可用](./docs/images/antigravity-and-antigravity-pro.png)
 
@@ -149,7 +149,7 @@ CI 使用真实 Paseo 0.13.2 ACP 客户端、隔离内核和本地 HTTP MCP 服�
 ### 1. 完成认证
 
 ```bash
-npx -y paseo-agy-acp@2.8.0 --login
+npx -y paseo-agy-acp@2.8.1 --login
 ```
 
 第一次运行会下载并配置官方内核 1.4.5。下载约 307 MiB，放在 `~/.local/opt/`。
@@ -167,7 +167,7 @@ OAuth 由官方内核完成。Token 保留在内核自己的状态中，本适�
 ```bash
 export AGY_ACP_STATE_DIR="$HOME/.local/state/paseo-agy-acp/account-name"
 install -d -m 700 "$AGY_ACP_STATE_DIR"
-npx -y --package=paseo-agy-acp@2.8.0 \
+npx -y --package=paseo-agy-acp@2.8.1 \
   agy-acp-prepare-state "$AGY_ACP_STATE_DIR"
 ```
 
@@ -186,7 +186,7 @@ provider id 是 `agents.providers` 下的键：
       "paseo-agy-acp": {
         "extends": "acp",
         "label": "Antigravity Pro",
-        "command": ["npx", "-y", "paseo-agy-acp@2.8.0"],
+        "command": ["npx", "-y", "paseo-agy-acp@2.8.1"],
         "env": {
           "AGY_ACP_ADMISSION_ENABLED": "true",
           "AGY_ACP_STATE_DIR": "/home/YOU/.local/state/paseo-agy-acp/account-name"

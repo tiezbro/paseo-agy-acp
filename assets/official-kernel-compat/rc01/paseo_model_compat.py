@@ -9,6 +9,12 @@ SUPPORTED_NON_GEMINI_MODEL_IDS = frozenset(
     {
         "claude-sonnet-4-6",
         "claude-opus-4-6-thinking",
+        "claude-opus-5-5-low",
+        "claude-opus-5-5-medium",
+        "claude-opus-5-5-high",
+        "claude-sonnet-5-5-low",
+        "claude-sonnet-5-5-medium",
+        "claude-sonnet-5-5-high",
         "gpt-oss-120b-medium",
     }
 )
@@ -16,6 +22,12 @@ SUPPORTED_NON_GEMINI_MODEL_IDS = frozenset(
 _MAX_OUTPUT_TOKENS_BY_MODEL_ID = {
     "claude-sonnet-4-6": 64000,
     "claude-opus-4-6-thinking": 64000,
+    "claude-opus-5-5-low": 128000,
+    "claude-opus-5-5-medium": 128000,
+    "claude-opus-5-5-high": 128000,
+    "claude-sonnet-5-5-low": 128000,
+    "claude-sonnet-5-5-medium": 128000,
+    "claude-sonnet-5-5-high": 128000,
     "gpt-oss-120b-medium": 32768,
 }
 _GPT_OSS_MODEL_ID = "gpt-oss-120b-medium"

@@ -7,7 +7,7 @@ const child = spawn(process.execPath, [fileURLToPath(new URL("./paseo-contract-k
 });
 child.stderr.pipe(process.stderr);
 const proxy = new OfficialKernelProxy({ child, stdin: process.stdin, stdout: process.stdout,
-  env: process.env, version: "2.8.0" });
+  env: process.env, version: "2.8.1" });
 const stop = () => proxy.close();
 process.on("SIGTERM", stop);
 process.on("SIGINT", stop);
