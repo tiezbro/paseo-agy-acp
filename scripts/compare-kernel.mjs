@@ -67,7 +67,7 @@ function launch(group, ordinal) {
     cwd: group === "native" ? path.dirname(kernel) : root, env, stdio: ["pipe", "pipe", "pipe"], detached: process.platform !== "win32"
   });
   const pending = new Map();
-  const row = { ordinal, status: "initializing", sessionId: null, model: null, firstTextMs: null, thoughtChunks: 0, toolCalls: 0, firstKernelOutputMs: null };
+  const row = { ordinal, status: "initializing", sessionId: null, model: null, firstTextMs: null, thoughtChunks: 0, toolCalls: 0, firstKernelOutputMs: null, daemonContextMs: null };
   let nextId = 0, dead = false, text = "", promptStarted, stopping;
   const closed = new Promise(resolve => child.once("close", resolve));
   const fail = () => { dead = true; for (const p of pending.values()) p.reject(new Error("kernel-exited")); pending.clear(); };
@@ -102,7 +102,9 @@ function launch(group, ordinal) {
   const diagnostics = createInterface({ input: child.stderr });
   diagnostics.on("line", line => {
     let event; try { event = JSON.parse(line); } catch { return; }
-    if (event.component === "official-kernel" && event.event === "first_kernel_output" && Number.isFinite(event.durationMs)) row.firstKernelOutputMs = event.durationMs;
+    if (event.component !== "official-kernel" || !Number.isFinite(event.durationMs)) return;
+    if (event.event === "first_kernel_output") row.firstKernelOutputMs = event.durationMs;
+    if (event.event === "daemon_context") row.daemonContextMs = event.durationMs;
   });
   const request = (method, params) => new Promise((resolve, reject) => {
     const id = ++nextId;

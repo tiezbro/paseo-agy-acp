@@ -91,5 +91,49 @@
     "newErrorCode": -32000,
     "newNamesMissingKey": true,
     "logoutAccepted": true
+  },
+  "contextTiming": {
+    "setupMs": 12099.335157000001,
+    "daemonContextMs": 489.3885989999999,
+    "firstKernelOutputMs": 13113.118486000001,
+    "firstTextMs": 13114.877609,
+    "elapsedMs": 13191.016173,
+    "status": "passed"
+  },
+  "timingNote": "The adapter firstKernelOutput timer starts before daemon context collection. firstText uses the probe clock and begins before submission. Their difference is not an exact forwarding delay.",
+  "execution": {
+    "stack": "Paseo ACPAgentClient, local adapter, managed 1.5.0 compatibility build. Temporary workspaces, actual inference. Elapsed times include session setup.",
+    "additionalDirectory": {
+      "randomFileContentMatched": true,
+      "elapsedMs": 90934,
+      "mode": "yolo"
+    },
+    "uploadedPdf": {
+      "randomPrintedCodeMatched": true,
+      "elapsedMs": 27747,
+      "enabledTools": []
+    },
+    "coldRestoreStdioMcp": {
+      "trials": 2,
+      "verifiedServerCalls": [
+        1,
+        1
+      ],
+      "exactFinalText": [
+        false,
+        false
+      ],
+      "codePresentInSecondFinalText": true,
+      "elapsedMs": [
+        54141,
+        96212
+      ]
+    },
+    "alternateModel": {
+      "id": "gemini-4-hydrogen",
+      "thinkingOptionId": "high",
+      "expectedTextMatched": true,
+      "elapsedMs": 21369
+    }
   }
 }
