@@ -6,6 +6,10 @@ All notable changes to `paseo-agy-acp` are recorded here.
 
 ### Changed
 
+- Document companion Paseo support for official control labels, grouped model
+  choices and session-specific thinking updates. Record real 1.5.0 initialization
+  evidence; this does not claim inference latency or full capability acceptance.
+
 - Pin managed official artifacts to 1.5.0, including all six registry archive
   checksums and Linux x64 compatibility preimages. Keep installed production unchanged.
 - Remove the `plan` to `default` alias; preserve the native `/plan` command.

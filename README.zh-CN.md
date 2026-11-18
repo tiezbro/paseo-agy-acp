@@ -15,12 +15,14 @@ Google 官方 Antigravity ACP 内核的轻量 Paseo 适配器。
 
 独立 provider id 为 `paseo-agy-acp`，显示名称为 `Antigravity Pro`，可与 Paseo 内置 `antigravity` 共存。官方 ACP 登录状态位于 `~/.gemini/antigravity-acp`。Google 内核单独下载，不随本 Apache-2.0 包分发。本项目由社区维护。
 
+配套 Paseo 分支保留官方模式与思考选项名称，按会话配置展示模型系列，并随官方确认的回包刷新档位。这需要配套客户端改动，单独更新适配器不会更新界面。
+
 <!-- readme:value -->
 ## 适配能力
 
 | 能力 | 适配行为 |
 | --- | --- |
-| 模型与思考 | 转发目录、选择、配置及原生思考摘要；另保留第三方模型兼容补丁 |
+| 模型与思考 | 转发官方名称、模型系列／配置及原生思考摘要；另保留第三方模型兼容补丁 |
 | 工具与权限 | 保留工具事件、权限请求及客户端答复 |
 | 会话生命周期 | 支持新建、加载、恢复、取消与进程关闭；session/close按内核能力协商 |
 | Paseo 上下文 | 注入 daemon context；显式启用时协商原生 context 能力 |

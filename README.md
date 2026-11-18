@@ -15,12 +15,14 @@ The target is to make every official-kernel capability usable in Paseo. Coverage
 
 The independent provider id is `paseo-agy-acp`, with display name `Antigravity Pro`. It can coexist with Paseo’s built-in `antigravity`. Official ACP login state lives under `~/.gemini/antigravity-acp`. Google’s kernel is downloaded separately and is not redistributed in this Apache-2.0 package. This is a community project.
 
+The companion Paseo branch preserves official mode and thinking labels, uses session config model families, and refreshes thinking choices from confirmed kernel responses. This requires the companion client changes; updating this adapter alone does not update the UI.
+
 <!-- readme:value -->
 ## Capabilities
 
 | Capability | Adapter behavior |
 | --- | --- |
-| Models and thinking | Forward catalogs, selection, config and native thoughts; retain local third-party model compatibility patches |
+| Models and thinking | Forward official names, grouped model/config choices and native thoughts; retain local third-party model compatibility patches |
 | Tools and permissions | Preserve tool events, approval requests and client replies |
 | Session lifecycle | Support new/load/resume, cancellation and process cleanup; session/close is capability-gated |
 | Paseo context | Inject daemon context; negotiate native context when explicitly enabled |

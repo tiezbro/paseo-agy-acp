@@ -28,14 +28,14 @@
 | new／load／resume | 补 cwd、daemon context、技能 MCP；返回字段保留 | 已有新建、冷恢复及历史加载路径 | 1.5.0 原生恢复、技能／MCP恢复验收 |
 | 会话列表、导入 | session/list 及字段透传 | 已有 listImportableSessions／importSession | 官方1.5.0忽略cursor、无分页；验列表与历史完整性，不虚构分页能力 |
 | additionalDirectories | new／load／resume 可透传该字段 | 客户端三条调用目前仅组装 cwd、mcpServers（恢复另有 sessionId） | Paseo 配置、持久化与选择入口缺口 |
-| 模型目录、切换、自动替换通知 | 转发 model/config；另有本地目录与请求补丁 | 已有目录、setModel 与配置更新 | 原生目录与兼容扩展分开记录；升级后模型／工具实测 |
-| thinking_level | 原样转发 configOptions 与配置请求 | 按 thought_level category 映射思考选项 | 本轮补真实客户端配置契约；各模型实测待做 |
+| 模型目录、切换、自动替换通知 | 转发 model/config；另有本地目录与请求补丁 | 配套客户端优先configOptions模型系列，运行中使用会话实时目录；官方确认后同步模型与档位 | 真实初始化已验，推理／工具与更多模型仍待验 |
+| thinking_level | 原样转发 configOptions 与配置请求 | 配套客户端保留官方名称、顺序、当前值及Thinking Level标题；换模型后更新档位，官方移除时清空 | 初始目录真实核验通过；交互见配套浏览器规格，真实多模型推理待验 |
 | default／auto_edit／yolo | 已知模式／别名映射 | ACP mode/config 选择已有 | 原生工具权限验收 |
 | 未知／未来官方模式 | 本轮改为原值传递，由官方接受或报错 | 可保留官方动态目录 | 不得静默降级 default；plan 历史别名已按确认移除 |
 | 工具审批与拒绝 | request_permission 和返回原样转发 | 已有 permission 请求与操作选择 | 真实工具、持久许可、管理员策略验收 |
 | 官方问答选择 | 官方通过 interaction_* 工具调用和 permission options 表达 | 0.16 有 chooser 识别：重复allow种类才阻止自动批准，并非所有交互都能识别；不能等同任意自由文本问答 | 用官方选项形状验证 UI；保留原生单选边界 |
 | 文字与图片输入 | 内容块保留 | 真实客户端组装 text／image | 代理与客户端契约覆盖；真实多模态待验 |
-| 音频、embedded context、resource link | 内容块保留 | toACPContentBlocks 对非文字／图片走文本附件转换 | Paseo 原生内容块入口与类型缺口；官方_parse_prompt1249起实际解析音频和资源，但模型支持仍有条件 |
+| 音频、embedded context、resource link | 内容块保留 | 配套客户端复用上传入口，协商embeddedContext后发送resource_link／嵌入文本resource；无该能力时保留旧文本附件 | 上传、拒绝后继续输入已通过页面验收；真实模型媒体理解待验 |
 | 正文、思考摘要、工具开始／结束 | 原生 thought/tool 事件保留；正文有展示转换 | 映射 assistant_message、reasoning、tool_call 等 timeline | 原生帧→Paseo UI同轮对照；上游没发摘要不能制造 |
 | 官方 `/plan` 命令 | 命令及正文／工具产物转发 | slash列表可达；ACP plan事件也可映射timeline | 官方1.5.0本身不发plan事件；不能把通用客户端支持当官方现有能力，更不能等同只读模式 |
 | 使用量、上下文占用 | usage_update 与扩展保留 | 有 usage 状态处理 | 1.5.0 tracker语义、恢复基线与UI核验；官方不发session_info_update，不支持原生改标题 |
@@ -61,13 +61,14 @@
 
 ## 已确认的实施决策
 
-用户已确认以下五项；第5项以最新“无人值守全自动、最大权限”要求为准，取代此前问答／信任必须人工的建议。
+用户已确认以下六项；第5项以最新“无人值守全自动、最大权限”要求为准，取代此前问答／信任必须人工的建议。
 
 1. **Paseo自身的能力入口**：在配套 MAACS 源码独立分支补认证、附加目录、原生音频／资源块及状态／UI；本仓库保留轻量协议桥。配套工作树 `/home/tiezbro/projects/MAACS-agy-capabilities`，分支 `feat/antigravity-official-capabilities`，基线 `240a073357a0e027a9aac64506b82a367447defa`。不改生产安装或重启 daemon。
 2. **移除 `plan → default`**：保留官方 `/plan` 命令；不存在的模式交由官方明确报错，不伪装成只读模式。
 3. **系统信息独立展示**：在 Paseo 保留系统／状态身份后，移除适配器 SYSTEM_MESSAGE→thought 转换；思考区只展示官方思考摘要，不制造上游未发送的思考。
 4. **模型兼容扩展**：先保留仍必要的第三方模型兼容补丁并明确标记；对照1.5.0实测后删除官方已覆盖的部分。不能绕过管理员策略。
 5. **模式决定自动化**：明确选择官方 `yolo`（无人值守）时，全自动处理工具授权、workspace trust与问答单选，使用可用的最大许可。普通 `default`／`auto_edit` 保留官方审批语义，旧 `auto_accept` 开关不能覆盖它们。ACP没有自由回答或推荐选项的标准字段；问答按官方选项顺序选择第一个允许项，工具许可优先 `allow_always`，再 `allow_once`；无允许选项时返回 `cancelled`，不伪造选项或无限等待。模式切换以官方成功确认的当前值为准。
+6. **官方名称与交互语义**：开关／模式、模型与思考等级使用官方显示名，不更改大小写、重命名或造档位；优先configOptions的模型系列与当前值，切换后读取完整回包。ACP内核没有独立GUI，控件由Paseo呈现；官方当前会话未提供其他模型的档位时不推测，进入该模型会话后再展示。
 
 上述决策尚不等于能力矩阵全部实现或通过验收。仍有语义冲突时共同讨论，不重复询问已授权事项。
 
@@ -103,3 +104,11 @@
 - 本仓库与配套MAACS都保持独立分支，未发布、推送、合并或切生产。剩余能力入口、真实工具／多模型／长任务以及错误终态仍须继续。
 
 - 本阶段最终验证：`npm run validate` 36文件324测试通过；三版本Paseo客户端18项、provider2项通过；配套客户端128项、浏览器2条规格通过。浏览器记录为配套工作树 `tmp/e2e-release/spec-2026-11-18T05-41-39-831Z/partial.txt`。这些记录覆盖模式与系统信息，本表剩余能力并未因此完成。
+
+## 配套客户端：官方选项名称与模型联动
+
+配套分支已修正旧models优先导致的模型系列展开、思考选项被复制到所有模型、官方移除档位后旧值残留，以及显示名被强制转小写。会话实时目录通过可选协议字段送达UI，模式与思考选择器保留官方标题。模型选择被内核拒绝时保持已确认状态；恢复保存最后确认的模型和思考值。
+
+真实1.5.0初始化经本地适配器和配套Paseo客户端完成，约12.33秒：6个模型系列，当前gemini-3.8-flash/high，模式Default、Auto Edit、YOLO，没有额外运行时Auto Accept。见[脱敏收据](2026-11-17-official-selection-smoke.json)。这次没有发推理或工具请求，不证明延迟问题已解决，也不证明其他能力完成。客户端、浏览器与lint基线记录以配套仓库docs/antigravity-acp-capability-canary.md为准。
+
+配套浏览器单规格 `acp-mode-policy.spec.ts` 最终6/6通过、退出码0，收据为 `tmp/e2e-release/spec-2026-11-18T06-41-20-273Z/partial.txt`。覆盖官方名称、模型切换后的动态档位、移除档位与拒绝后保留原选择，并复验既有模式、系统通知和附件流程。此为隔离daemon与模拟ACP内核的界面验收，不是生产或真实推理验收。

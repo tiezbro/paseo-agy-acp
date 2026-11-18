@@ -1,0 +1,92 @@
+{
+  "capturedAt": "2026-11-18T06:26:54.684Z",
+  "kernelVersion": "1.5.0",
+  "scope": "Real official kernel via local adapter and revised Paseo ACP client; session setup only, no inference or tools.",
+  "elapsedMs": 12330.31996,
+  "model": "gemini-3.8-flash",
+  "thinkingOptionId": "high",
+  "modes": [
+    {
+      "id": "default",
+      "label": "Default",
+      "selectorLabel": "Session Mode",
+      "description": "Default permission prompt flow",
+      "isUnattended": false
+    },
+    {
+      "id": "auto_edit",
+      "label": "Auto Edit",
+      "selectorLabel": "Session Mode",
+      "description": "Auto-approve file edit tools",
+      "isUnattended": false
+    },
+    {
+      "id": "yolo",
+      "label": "YOLO",
+      "selectorLabel": "Session Mode",
+      "description": "Auto-approve all tools",
+      "isUnattended": true
+    }
+  ],
+  "models": [
+    {
+      "provider": "acp",
+      "id": "gemini-4-argon",
+      "label": "Gemini 4 Argon",
+      "isDefault": false
+    },
+    {
+      "provider": "acp",
+      "id": "gemini-4-hydrogen",
+      "label": "Gemini 4 Hydrogen",
+      "isDefault": false
+    },
+    {
+      "provider": "acp",
+      "id": "gemini-3.8-flash",
+      "label": "Gemini 3.8 Flash",
+      "isDefault": true,
+      "thinkingOptions": [
+        {
+          "id": "low",
+          "label": "Low",
+          "selectorLabel": "Thinking Level",
+          "isDefault": false
+        },
+        {
+          "id": "medium",
+          "label": "Medium",
+          "selectorLabel": "Thinking Level",
+          "isDefault": false
+        },
+        {
+          "id": "high",
+          "label": "High",
+          "selectorLabel": "Thinking Level",
+          "isDefault": true
+        }
+      ],
+      "defaultThinkingOptionId": "high"
+    },
+    {
+      "provider": "acp",
+      "id": "claude-opus-5-5",
+      "label": "Claude Opus 5.5",
+      "isDefault": false
+    },
+    {
+      "provider": "acp",
+      "id": "claude-sonnet-5-5",
+      "label": "Claude Sonnet 5.5",
+      "isDefault": false
+    },
+    {
+      "provider": "acp",
+      "id": "gpt-oss-120b-medium",
+      "label": "GPT-OSS 120B (Medium)",
+      "description": "gpt-oss-120b-medium",
+      "isDefault": false
+    }
+  ],
+  "features": []
+}
