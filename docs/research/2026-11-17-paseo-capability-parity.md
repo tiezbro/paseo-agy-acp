@@ -27,7 +27,7 @@
 | logout／官方退出命令 | 原生 RPC 与命令可透传 | 通用 ACP 客户端未发现 logout 调用；slash 命令可作为原生入口 | 退出后的会话／凭据状态和重新登录交互验收 |
 | new／load／resume | 补 cwd、daemon context、技能 MCP；返回字段保留 | 已有新建、冷恢复及历史加载路径 | 1.5.0 原生恢复、技能／MCP恢复验收 |
 | 会话列表、导入 | session/list 及字段透传 | 已有 listImportableSessions／importSession | 官方1.5.0忽略cursor、无分页；验列表与历史完整性，不虚构分页能力 |
-| additionalDirectories | new／load／resume 可透传该字段 | 客户端三条调用目前仅组装 cwd、mcpServers（恢复另有 sessionId） | Paseo 配置、持久化与选择入口缺口 |
+| additionalDirectories | new／load／resume可透传 | 配套Provider设置页已提供会话参数入口，三条调用均发送；持久化完整参数块，恢复不混入新的默认目录 | 真实1.5.0新建／冷恢复已接受；目录实际读取和信任流程待验 |
 | 模型目录、切换、自动替换通知 | 转发 model/config；另有本地目录与请求补丁 | 配套客户端优先configOptions模型系列，运行中使用会话实时目录；官方确认后同步模型与档位 | 真实初始化已验，推理／工具与更多模型仍待验 |
 | thinking_level | 原样转发 configOptions 与配置请求 | 配套客户端保留官方名称、顺序、当前值及Thinking Level标题；换模型后更新档位，官方移除时清空 | 初始目录真实核验通过；交互见配套浏览器规格，真实多模型推理待验 |
 | default／auto_edit／yolo | 已知模式／别名映射 | ACP mode/config 选择已有 | 原生工具权限验收 |
@@ -47,7 +47,7 @@
 | 原生 systemPrompt.append | 能力协商且显式启用时使用 | 默认动态 daemon context 每轮注入 | 官方session快照与Paseo动态变化不能直接互换 |
 | fs客户端请求；原生命令执行 | 通用双向转发，亦兼容terminal RPC | 有终端生命周期；fs方法存在但默认能力声明关闭 | 官方1.5.0不调用客户端terminal，命令在harness执行；fs声明会替换部分原生工具，不能未经分析强开 |
 | 浏览器、文件编辑、命令执行等官方工具 | 执行留在官方；转发工具事件／权限 | 通用工具展示、审批、终端支持 | 官方账号／策略／宿主条件依赖；真实工作流待验 |
-| 原生工具过滤、MCP加载及输出参数 | 保留会话`_meta.antigravity`中的enabledTools／disabledTools、eagerMcpServers、mcpMaxOutputBytes | new／load／resume未提供这些metadata的通用入口 | 纳入Paseo会话配置与持久化，按官方条件暴露 |
+| 原生工具过滤、MCP加载及输出参数 | 保留会话`_meta.antigravity`中的enabledTools／disabledTools、eagerMcpServers、mcpMaxOutputBytes | 配套会话参数入口支持原生metadata，新建／加载／恢复及保存值已验证 | 真实初始化已接受；工具限制与MCP执行效果待验 |
 | 官方hooks与workspace trust | 留在官方加载／执行，转发其审批请求 | 通用permission卡可呈现；Auto Accept可能自动选trust，需验原生交互形状 | 尊重官方信任和企业策略；决定自动批准与交互问答的边界 |
 | cancel、断连、清理 | 原生取消+本地终态修补；同会话互斥；退出清理 | 客户端取消、工具收尾、进程生命周期已有 | 取消超时会关闭共享连接，不能承诺异常超时完全隔离 |
 | session/close的能力边界 | 兼容支持close的内核；不伪造能力声明 | 0.16关闭时按close能力位决定是否调用，再回收进程 | 官方1.5.0未声明／未实现close；不能把模拟内核close成功算作官方能力 |
@@ -112,3 +112,19 @@
 真实1.5.0初始化经本地适配器和配套Paseo客户端完成，约12.33秒：6个模型系列，当前gemini-3.8-flash/high，模式Default、Auto Edit、YOLO，没有额外运行时Auto Accept。见[脱敏收据](2026-11-17-official-selection-smoke.json)。这次没有发推理或工具请求，不证明延迟问题已解决，也不证明其他能力完成。客户端、浏览器与lint基线记录以配套仓库docs/antigravity-acp-capability-canary.md为准。
 
 配套浏览器单规格 `acp-mode-policy.spec.ts` 最终6/6通过、退出码0，收据为 `tmp/e2e-release/spec-2026-11-18T06-41-20-273Z/partial.txt`。覆盖官方名称、模型切换后的动态档位、移除档位与拒绝后保留原选择，并复验既有模式、系统通知和附件流程。此为隔离daemon与模拟ACP内核的界面验收，不是生产或真实推理验收。
+
+## 配套客户端：原生会话参数
+
+Provider设置页增加会话参数入口，使用 `options.session` 配置官方 `additionalDirectories` 与 `_meta`。保留字段名、顺序、空数组与未知metadata，原有cwd、sessionId与mcpServers仍由其现有入口管理。未协商附加目录的内核会收到明确的客户端错误。只保存session参数块，冷恢复不混入后来修改的provider默认目录或metadata；显式恢复覆盖仍优先。
+
+完整服务端构建、服务端和界面typecheck通过；针对性服务端87项、界面表单与翻译43项、浏览器单规格8/8通过。浏览器收据：配套工作树 `tmp/e2e-release/spec-2026-11-18T07-42-06-554Z/partial.txt`。界面设置页6项lint错误与原HEAD基线一致，新增表单代码lint通过。
+
+真实官方1.5.0接受带附加目录和原生metadata的新建及冷恢复：新建11.264秒、恢复15.053秒，恢复后本地参数快照一致。见[脱敏收据](2026-11-17-official-session-options-smoke.json)。未发推理或工具请求；不证明工具过滤、目录访问、MCP加载效果、长任务或性能问题已完成验收。认证入口与其余真实执行证据仍需补齐。
+
+## 11月18日补验
+
+没有保存参数的旧会话也已加入回归，配置的新目录、MCP 和工具参数仅用于新会话。服务端针对性用例 87/87 和类型检查通过。
+
+同一个未经修改的官方 1.5.0 可执行文件、同一模型、同一句无工具请求，交换直连与适配器顺序。直连完成用时 9.61、9.89 秒，适配器为 42.43、11.90 秒。两条适配器路径首个内核输出与首段正文的计时差约 1.5 毫秒。四轮均返回指定正文与 `end_turn`，均无思考摘要。这两对样本不能区分远端波动与适配器对请求上下文的影响。
+
+在全新的临时主目录中，官方内核公布四种认证方式和 logout 能力。未提供密钥时 `authenticate(gemini-api-key)` 返回成功，`session/new` 随即返回 -32000 并提示缺少 GEMINI_API_KEY。页面不能仅凭 authenticate 的成功回包宣称账号可用。临时环境 logout RPC 返回成功。官方源码还区分 OAuth 凭据、已选方式和仍可用的外部凭据；跨会话账号状态不能单从 logout 回包推断。详见[脱敏实测记录](2026-11-18-kernel-comparison.json)。

@@ -1,0 +1,28 @@
+{
+  "capturedAt": "2026-11-18T07:47:05.545Z",
+  "kernelVersion": "1.5.0",
+  "scope": "Real official 1.5.0 kernel accepts new and load with additionalDirectories and native metadata; local persistence snapshot verified. No inference, tools, or enforcement validation.",
+  "newMs": 11263.510116000001,
+  "restoreMs": 15052.825183999998,
+  "sessionOptions": {
+    "additionalDirectories": [
+      "<temporary-extra-directory>"
+    ],
+    "_meta": {
+      "antigravity": {
+        "disabledTools": [
+          "run_command"
+        ],
+        "eagerMcpServers": [],
+        "mcpMaxOutputBytes": 8192,
+        "systemPrompt": {
+          "append": "Use the existing project conventions."
+        }
+      }
+    }
+  },
+  "restoredOptionsMatch": true,
+  "elapsedMs": 28400.815423,
+  "model": "gemini-3.8-flash",
+  "thinkingOptionId": "high"
+}

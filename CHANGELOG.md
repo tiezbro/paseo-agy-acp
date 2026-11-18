@@ -6,6 +6,10 @@ All notable changes to `paseo-agy-acp` are recorded here.
 
 ### Changed
 
+- Record companion Paseo session parameter configuration and new/load/resume
+  forwarding, with saved scope preserved across provider default changes.
+  Real official 1.5.0 initialization and cold restoration accepted the parameters.
+
 - Document companion Paseo support for official control labels, grouped model
   choices and session-specific thinking updates. Record real 1.5.0 initialization
   evidence; this does not claim inference latency or full capability acceptance.

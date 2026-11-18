@@ -1,0 +1,95 @@
+{
+  "kernel": "1.5.0",
+  "kernelSha256": "8a35f63dd2284e3790a1d97dd0cb2236057c55a0c598b26f3bde022b843d5c04",
+  "probe": "scripts/compare-kernel.mjs; concurrency 1, no tools; identical official executable on both paths. Independent cloud requests, one host, sequential groups. setup includes initialize and session/new. Prompt clocks exclude setup.",
+  "runs": [
+    {
+      "start": "2026-11-18T08:03:37.064Z",
+      "order": [
+        {
+          "path": "native",
+          "model": "gemini-3.8-flash-high",
+          "setupMs": 14735.233647000001,
+          "firstTextMs": 9538.892139000001,
+          "firstKernelOutputMs": null,
+          "elapsedMs": 9613.422722000001,
+          "stopReason": "end_turn",
+          "markerReceived": true,
+          "status": "passed",
+          "toolCalls": 0,
+          "thoughtChunks": 0
+        },
+        {
+          "path": "adapter",
+          "model": "gemini-3.8-flash-high",
+          "setupMs": 11644.137904000003,
+          "firstTextMs": 42358.553961,
+          "firstKernelOutputMs": 42357.012675,
+          "elapsedMs": 42432.33682899999,
+          "stopReason": "end_turn",
+          "markerReceived": true,
+          "status": "passed",
+          "toolCalls": 0,
+          "thoughtChunks": 0
+        }
+      ]
+    },
+    {
+      "start": "2026-11-18T08:06:25.714Z",
+      "order": [
+        {
+          "path": "adapter",
+          "model": "gemini-3.8-flash-high",
+          "setupMs": 10147.355276,
+          "firstTextMs": 11353.26707,
+          "firstKernelOutputMs": 11351.726083999998,
+          "elapsedMs": 11896.812286000002,
+          "stopReason": "end_turn",
+          "markerReceived": true,
+          "status": "passed",
+          "toolCalls": 0,
+          "thoughtChunks": 0
+        },
+        {
+          "path": "native",
+          "model": "gemini-3.8-flash-high",
+          "setupMs": 9474.880552999999,
+          "firstTextMs": 9719.687428000001,
+          "firstKernelOutputMs": null,
+          "elapsedMs": 9891.952268999998,
+          "stopReason": "end_turn",
+          "markerReceived": true,
+          "status": "passed",
+          "toolCalls": 0,
+          "thoughtChunks": 0
+        }
+      ]
+    }
+  ],
+  "isolatedAuth": {
+    "kernel": "1.5.0",
+    "methods": [
+      {
+        "id": "oauth-personal",
+        "name": "Log in with Google"
+      },
+      {
+        "id": "oauth-business",
+        "name": "Log in with Gemini Enterprise"
+      },
+      {
+        "id": "gemini-api-key",
+        "name": "Gemini API key"
+      },
+      {
+        "id": "agent-platform",
+        "name": "Gemini Enterprise Agent Platform"
+      }
+    ],
+    "logoutAdvertised": true,
+    "selectionAccepted": true,
+    "newErrorCode": -32000,
+    "newNamesMissingKey": true,
+    "logoutAccepted": true
+  }
+}
