@@ -6,6 +6,11 @@ All notable changes to `paseo-agy-acp` are recorded here.
 
 ### Changed
 
+- Preserve unknown and future mode IDs for official-kernel validation instead of
+  silently replacing them with `default`; ignore inherited object properties
+  when resolving compatibility aliases.
+- Add locked Paseo 0.16.0 client contracts and document the full official-capability
+  coverage target, client-side gaps, and decisions required before changing semantics.
 - Remove the complete Admission subsystem: cross-process queues, active/start
   seats, minimum start spacing, cooldowns, leases, heartbeats, process recovery,
   encrypted queued payloads and the dedicated SQLite ledger.

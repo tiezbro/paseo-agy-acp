@@ -1,10 +1,12 @@
 # paseo-agy-acp
 
-Official Google Antigravity ACP kernel, fully adapted for Paseo.
+A lightweight Paseo adapter for the official Google Antigravity ACP kernel.
 
 [English](./README.md) | [中文](./README.zh-CN.md) | [Changelog](./CHANGELOG.md)
 
 This branch is an unreleased lightweight iteration. The managed kernel remains pinned to 1.4.5; the separate 1.5.0 experiments do not change the installed runtime.
+
+The target is to make every official-kernel capability usable in Paseo. Coverage is not complete: protocol forwarding, client entry points and UI acceptance are tracked separately in the [capability and decision inventory](docs/research/2026-11-17-paseo-capability-parity.md).
 
 <!-- readme:positioning -->
 ## Purpose
@@ -18,15 +20,15 @@ The independent provider id is `paseo-agy-acp`, with display name `Antigravity P
 
 | Capability | Adapter behavior |
 | --- | --- |
-| Models and thinking | Forward native catalogs, selection, config options and emitted thought summaries |
+| Models and thinking | Forward catalogs, selection, config and native thoughts; retain local third-party model compatibility patches |
 | Tools and permissions | Preserve tool events, approval requests and client replies |
-| Session lifecycle | Support new/load/resume/close, per-session isolation and cancellation |
+| Session lifecycle | Support new/load/resume, cancellation and process cleanup; session/close is capability-gated |
 | Paseo context | Inject daemon context; negotiate native context when explicitly enabled |
 | Skills | Merge slash command metadata and expose session-scoped skill resources through MCP |
 | MCP | Preserve HTTP/SSE endpoints and apply required protocol compatibility |
 | Errors | Preserve JSON-RPC failures and reject successful turns with no visible output |
 
-Independent sessions dispatch without adapter queueing, seat limits, start spacing or cooldowns. A second prompt for the same active session is rejected. This does not establish an unlimited backend concurrency entitlement. Thought summaries are visible only when the kernel emits them; the adapter does not synthesize reasoning.
+Independent sessions dispatch without adapter queueing, seat limits, start spacing or cooldowns. A second prompt for the same active session is rejected. This does not establish an unlimited backend concurrency entitlement. Thought summaries are visible only when the kernel emits them; the adapter does not synthesize reasoning. Existing display compatibility also folds certain system messages into the thought channel, so that area is not exclusively model summaries. This behavior is pending a product decision.
 
 <!-- readme:architecture -->
 ## Architecture
@@ -101,6 +103,8 @@ Apply provider configuration to future agent launches. Production rollout and a 
 | `accept-edits` | `auto_edit` |
 | `dangerously-skip-permissions` | `yolo` |
 | `plan` | `default` |
+
+The legacy `plan` alias currently selects `default`; it does not enforce a read-only Plan mode. Removing it is pending a joint decision. Unknown modes are passed to the kernel for validation.
 
 Permission requests remain active until answered or cancelled. Native `yolo` and Paseo Auto Accept are distinct settings. For network proxies, configure HTTP/HTTPS proxy variables on the provider and include local MCP endpoints in `NO_PROXY`.
 

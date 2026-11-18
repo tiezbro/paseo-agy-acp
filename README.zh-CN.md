@@ -1,10 +1,12 @@
 # paseo-agy-acp
 
-Google 官方 Antigravity ACP 内核，完整适配 Paseo。
+Google 官方 Antigravity ACP 内核的轻量 Paseo 适配器。
 
 [English](./README.md) | [中文](./README.zh-CN.md) | [Changelog](./CHANGELOG.md)
 
 本分支为尚未发布的轻量化迭代。托管内核仍固定为 1.4.5；独立的 1.5.0 实验不代表安装版本已升级。
+
+本轮目标是让官方内核全部能力在 Paseo 中可用；当前尚未全部完成。协议透传、客户端入口和 UI 验收分别记录在[能力覆盖与待决策清单](docs/research/2026-11-17-paseo-capability-parity.md)。
 
 <!-- readme:positioning -->
 ## 产品定位
@@ -18,15 +20,15 @@ Google 官方 Antigravity ACP 内核，完整适配 Paseo。
 
 | 能力 | 适配行为 |
 | --- | --- |
-| 模型与思考 | 透传原生目录、选择、配置选项及内核实际发送的思考摘要 |
+| 模型与思考 | 转发目录、选择、配置及原生思考摘要；另保留第三方模型兼容补丁 |
 | 工具与权限 | 保留工具事件、权限请求及客户端答复 |
-| 会话生命周期 | 支持新建、加载、恢复、关闭、单会话隔离与取消 |
+| 会话生命周期 | 支持新建、加载、恢复、取消与进程关闭；session/close按内核能力协商 |
 | Paseo 上下文 | 注入 daemon context；显式启用时协商原生 context 能力 |
 | 技能 | 合并 slash command 元数据，通过会话级 MCP 暴露技能资源 |
 | MCP | 保留 HTTP/SSE 端点并提供必要协议兼容 |
 | 错误 | 保留 JSON-RPC 错误，拒绝完全没有可见输出的成功空轮次 |
 
-独立会话直接派发，不再增加适配器排队、席位限制、启动间隔或冷却。同一活动会话的第二个 prompt 会被拒绝。这不代表上游账号拥有无限并发额度。只有内核实际发送思考摘要时才能显示，适配器不会生成替代推理内容。
+独立会话直接派发，不再增加适配器排队、席位限制、启动间隔或冷却。同一活动会话的第二个 prompt 会被拒绝。这不代表上游账号拥有无限并发额度。只有内核实际发送思考摘要时才能显示，适配器不会生成替代推理内容。现有展示兼容仍将特定系统消息折叠到思考区，因此思考区内容不全是模型摘要；该行为列入待决策清单。
 
 <!-- readme:architecture -->
 ## 架构
@@ -101,6 +103,8 @@ provider 配置对新启动的 agent 生效。本分支通过验收后，再安�
 | `accept-edits` | `auto_edit` |
 | `dangerously-skip-permissions` | `yolo` |
 | `plan` | `default` |
+
+`plan` 当前仅是 `default` 的历史别名，不提供只读 Plan 权限；是否删除该别名待共同决策。未知模式原样交官方校验。
 
 权限请求在答复或取消前保持活动。原生 `yolo` 与 Paseo Auto Accept 是独立配置。网络代理需配置在 provider 环境中，并将本地 MCP 端点加入 `NO_PROXY`。
 

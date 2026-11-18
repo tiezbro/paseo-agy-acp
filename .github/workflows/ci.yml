@@ -42,6 +42,8 @@ jobs:
             fixture: tests/fixtures/paseo-client
           - version: 0.14.0
             fixture: tests/fixtures/paseo-client-0.14.0
+          - version: 0.16.0
+            fixture: tests/fixtures/paseo-client-0.16.0
     env:
       PASEO_COMPAT_VERSION: ${{ matrix.paseo.version }}
       PASEO_COMPAT_CLIENT_ROOT: ${{ matrix.paseo.fixture }}

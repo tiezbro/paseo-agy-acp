@@ -152,3 +152,22 @@ test(`Paseo ${clientVersion}：跨主机委派 MCP 目录、参数、认证头�
   await session.close();
   await assert.rejects(fetch(forwarded.url, { signal: AbortSignal.timeout(1000) }));
 });
+
+
+test(`Paseo ${clientVersion}：官方 thinking 配置通过真实客户端生效并保留图片输入`, { timeout: 20_000 }, async t => {
+  const h = await harness(t);
+  const session = await h.create();
+  await session.setThinkingOption("high");
+  const result = JSON.parse((await session.run([
+    { type: "image", data: "aW1hZ2U=", mimeType: "image/png" },
+    { type: "text", text: "inspect" }
+  ])).finalText);
+  const setting = (await h.requests()).find(row => row.method === "session/set_config_option");
+  assert.equal(setting.params.configId, "thinking_level");
+  assert.equal(setting.params.value, "high");
+  assert.equal(result.state.configOptions[0].currentValue, "high");
+  assert.deepEqual(result.prompt, [
+    { type: "image", data: "aW1hZ2U=", mimeType: "image/png" },
+    { type: "text", text: "inspect" }
+  ]);
+});

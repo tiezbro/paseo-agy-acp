@@ -1,11 +1,11 @@
 # Paseo 真实客户端测试依赖与信任边界
 
-真实客户端契约测试使用两个独立私有 npm 项目：`tests/fixtures/paseo-client/` 固定 0.13.2 基线，`tests/fixtures/paseo-client-0.14.0/` 固定 0.14.0。它们只用于 CI 和显式运行的本地测试，不属于适配器运行依赖，也不进入 npm 发布包。
+真实客户端契约测试使用三个独立私有 npm 项目：`tests/fixtures/paseo-client/` 固定 0.13.2 基线，`tests/fixtures/paseo-client-0.14.0/` 固定 0.14.0，`tests/fixtures/paseo-client-0.16.0/` 固定本机安装客户端对应的 0.16.0。它们只用于 CI 和显式运行的本地测试，不属于适配器运行依赖，也不进入 npm 发布包。
 
 ## 固定与完整性
 
-- 直接依赖分别固定为 `@getpaseo/server@0.13.2` 和 `@getpaseo/server@0.14.0`，不使用 semver 范围或浮动 tag。
-- 分别提交专用 `package-lock.json`，每个版本固定全部 336 个依赖工件的版本、下载 URL 和 SHA-512 integrity，包括当前平台不会安装的可选依赖。版本目录映射集中在 `scripts/paseo-client-versions.mjs`。
+- 直接依赖分别固定为 `@getpaseo/server@0.13.2` 、`@getpaseo/server@0.14.0` 和 `@getpaseo/server@0.16.0`，不使用 semver 范围或浮动 tag。
+- 分别提交专用 `package-lock.json`，0.13.2／0.14.0 各固定 336 个、0.16.0 固定 344 个依赖工件的版本、下载 URL 和 SHA-512 integrity，包括当前平台不会安装的可选依赖。版本目录映射集中在 `scripts/paseo-client-versions.mjs`。
 - 所有工件来自 `https://registry.npmjs.org/`，不接受 Git、file、link、带凭据或查询参数的来源。
 - 安装前运行 `scripts/verify-paseo-client-lock.mjs`，只解析 JSON 和配置，不导入外部包。检查失败时停止安装。
 - 通过 `npm ci` 安装；manifest 与 lock 不一致会失败，工件内容不匹配已锁定 integrity 也会失败。fixture 的 `.npmrc` 与 CI 命令均禁用安装生命周期脚本，不执行该依赖的 postinstall、原生构建或自动下载。
@@ -28,9 +28,10 @@
 node scripts/verify-paseo-client-lock.mjs
 npm ci --prefix tests/fixtures/paseo-client --ignore-scripts --no-audit --no-fund --registry=https://registry.npmjs.org/
 npm ci --prefix tests/fixtures/paseo-client-0.14.0 --ignore-scripts --no-audit --no-fund --registry=https://registry.npmjs.org/
+npm ci --prefix tests/fixtures/paseo-client-0.16.0 --ignore-scripts --no-audit --no-fund --registry=https://registry.npmjs.org/
 npm run test:paseo-client
 ```
 
-默认命令验证两个锁文件并依次运行两个版本。只运行单个版本时使用 `PASEO_COMPAT_VERSION=0.14.0 npm run test:paseo-client`；未知版本会直接报错。
+默认命令验证三个锁文件并依次运行三个版本。只运行单个版本时使用 `PASEO_COMPAT_VERSION=0.14.0 npm run test:paseo-client`；未知版本会直接报错。
 
 更新客户端时必须显式修改固定版本、重建并审查专用 lockfile、同步测试版本断言和预检策略，再运行完整测试及真实客户端契约。不要在日常 CI 中用 `npm install` 重新解析依赖或自动改写 lockfile。

@@ -15,8 +15,9 @@ const LEGACY_TO_OFFICIAL: Readonly<Record<string, OfficialModeId>> = Object.free
   dangerously_skip_permissions: "yolo"
 });
 
-export function mapToOfficialModeId(mode: string): OfficialModeId {
-  return LEGACY_TO_OFFICIAL[mode] ?? "default";
+export function mapToOfficialModeId(mode: string): string {
+  // Only translate known aliases. The kernel owns validation and future modes.
+  return Object.hasOwn(LEGACY_TO_OFFICIAL, mode) ? LEGACY_TO_OFFICIAL[mode] : mode;
 }
 
 export function rewriteModeFields(params: unknown): unknown {
