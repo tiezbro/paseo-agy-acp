@@ -57,7 +57,7 @@ describe("独立正文消息的 ID", () => {
   it("系统事件前后的正文各自使用独立 ID", () => {
     const folder = new SystemMessageFolder();
     const output = folder.transform(textMessage("Intro.\n<SYSTEM_MESSAGE>\n[Message] sender=test-task content=ok\n</SYSTEM_MESSAGE>\n\n### Result"));
-    expect(output.map(message => update(message).sessionUpdate)).toEqual(["agent_message_chunk", "agent_thought_chunk", "agent_message_chunk"]);
+    expect(output.map(message => update(message).sessionUpdate)).toEqual(["agent_message_chunk", "agent_message_chunk", "agent_message_chunk"]);
     expect(update(output[0]).messageId).not.toBe(update(output[2]).messageId);
   });
 

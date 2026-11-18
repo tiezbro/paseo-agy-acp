@@ -121,8 +121,8 @@ export class SystemMessageFolder {
           ...update,
           ...(messageId === undefined ? {} : { messageId }),
           ...(isSystem ? {
-            sessionUpdate: "agent_thought_chunk",
-            messageId: `${messageId ?? "system"}:system-folded`
+            _meta: { ...(isRecord(update._meta) ? update._meta : {}), "paseo.dev/messageKind": "system" },
+            messageId: `${messageId ?? "system"}:system`
           } : {}),
           content: { ...content, text }
         }
@@ -164,7 +164,7 @@ export class SystemMessageFolder {
     return segments;
   }
 
-  // undefined 表示需要更多分块；0 表示普通文本。确认闭合后才允许输出 Thinking。
+  // undefined 表示需要更多分块；0 表示普通文本。确认闭合后才标记为系统信息。
   #eventLength(text: string): number | undefined {
     let opening = 0;
     if (text.startsWith(SYSTEM_MESSAGE_START_PREFIX)) {

@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "startedAt": "2026-11-18T05:25:08.985Z",
+  "kernel": "isolated/agy-acp-kernel-compat",
+  "kernelSha256": "a65e65441cc97272977e76ba35041a5629b1160b3b7a131800f8d5a1168f4e91",
+  "adapterVersion": "2.8.1",
+  "concurrency": 1,
+  "timeoutMs": 120000,
+  "cancelAfterMs": null,
+  "scope": "Short text ACP probe; submitted turns are not measured model concurrency. Same inherited login; local state isolated, cloud quota shared. No automatic retries.",
+  "groups": [
+    {
+      "group": "adapter",
+      "rows": [
+        {
+          "ordinal": 1,
+          "status": "passed",
+          "model": "gemini-3.8-flash-high",
+          "firstTextMs": 61807.355594,
+          "thoughtChunks": 0,
+          "toolCalls": 0,
+          "firstKernelOutputMs": 61805.956638,
+          "reportedVersion": "2.8.1",
+          "setupMs": 10804.693068999999,
+          "submittedMs": 0.1270440000007511,
+          "stopReason": "end_turn",
+          "markerReceived": true,
+          "elapsedMs": 61849.10062599999,
+          "cancelAckMs": null,
+          "finishedMs": 61849.230540000004
+        }
+      ],
+      "wallMs": 61849.239451
+    }
+  ],
+  "finishedAt": "2026-11-18T05:26:21.703Z",
+  "interrupted": false
+}

@@ -26,7 +26,7 @@ function harness() {
 }
 
 describe("official capability transport parity", () => {
-  it.each(["future_official_mode", "constructor", "__proto__"])("delegates mode %s validation to the kernel", async mode => {
+  it.each(["plan", "future_official_mode", "constructor", "__proto__"])("delegates mode %s validation to the kernel", async mode => {
     const h = harness();
     try {
       for (const [id, method, params] of [
@@ -41,6 +41,26 @@ describe("official capability transport parity", () => {
       }
     } finally { await h.close(); }
   });
+
+  it.each(["session/new", "session/load", "session/resume", "session/set_config_option"])(
+    "describes official mode permission policy in %s without changing mode ids", async method => {
+      const h = harness();
+      try {
+        h.send({ jsonrpc: "2.0", id: 11, method, params: { sessionId: "s", cwd: process.cwd(), mcpServers: [] } });
+        await vi.waitFor(() => expect(h.toKernel).toContainEqual(expect.objectContaining({ id: 11 })));
+        const modes = ["default", "auto_edit", "yolo", "future_mode"].map(id => ({ id, name: id, _meta: { vendor: "kept" } }));
+        const result = { sessionId: "s", modes: { currentModeId: "default", availableModes: modes },
+          configOptions: [{ id: "mode", category: "mode", type: "select", currentValue: "default",
+            options: modes.map(({ id, ...rest }) => ({ ...rest, value: id })) }] };
+        h.reply({ jsonrpc: "2.0", id: 11, result });
+        const policies = [false, false, true, undefined];
+        const expectedModes = modes.map((mode, index) => ({ ...mode, _meta: { vendor: "kept",
+          ...(policies[index] === undefined ? {} : { "paseo.dev/unattended": policies[index] }) } }));
+        expect(h.toClient).toContainEqual({ jsonrpc: "2.0", id: 11, result: { ...result,
+          modes: { ...result.modes, availableModes: expectedModes },
+          configOptions: [{ ...result.configOptions[0], options: expectedModes.map(({ id, ...rest }) => ({ ...rest, value: id })) }] } });
+      } finally { await h.close(); }
+    });
 
   it("preserves negotiated capabilities, auth methods and vendor metadata", async () => {
     const h = harness();

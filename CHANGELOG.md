@@ -6,6 +6,14 @@ All notable changes to `paseo-agy-acp` are recorded here.
 
 ### Changed
 
+- Pin managed official artifacts to 1.5.0, including all six registry archive
+  checksums and Linux x64 compatibility preimages. Keep installed production unchanged.
+- Remove the `plan` to `default` alias; preserve the native `/plan` command.
+- Describe official mode automation with namespaced metadata for the companion
+  Paseo client: `yolo` is unattended; interactive modes retain their approvals.
+- Keep system envelopes out of the thought stream. Mark them as system text for
+  Paseo notification display, with readable text fallback for older clients.
+
 - Preserve unknown and future mode IDs for official-kernel validation instead of
   silently replacing them with `default`; ignore inherited object properties
   when resolving compatibility aliases.
@@ -32,7 +40,7 @@ All notable changes to `paseo-agy-acp` are recorded here.
 
 ### Scope
 
-- Experimental branch only. Managed kernel pins remain 1.4.5, package version
+- Experimental branch only. Managed kernel pins are now 1.5.0, package version
   remains 2.8.1, and production entrypoints are unchanged. The final version,
   rollout and merge to main depend on the recorded acceptance results.
 - Upstream quota failures encoded as normal text/end_turn and the real-time

@@ -18,7 +18,7 @@ import {
 } from "./json-rpc.js";
 import { bridgeOfficialMcpServers, McpProtocolBridge } from "./mcp-protocol-bridge.js";
 import { rewriteMcpServers } from "./mcp-rewrite.js";
-import { rewriteModeFields } from "./mode-map.js";
+import { describeOfficialModes, rewriteModeFields } from "./mode-map.js";
 import { createNdjsonParser, encodeNdjson } from "./ndjson.js";
 import { augmentAvailableCommands, type AvailableCommand } from "./skill-commands.js";
 import { SessionSkillMcpServer } from "./skill-mcp.js";
@@ -434,6 +434,9 @@ export class OfficialKernelProxy {
         };
       }
 
+      if (isRecord(message.params) && isRecord(message.params.update) && message.params.update.sessionUpdate === "config_option_update") {
+        message = { ...message, params: { ...message.params, update: describeOfficialModes(message.params.update) } };
+      }
       const outboundUpdates = this.#systemMessageFolder.transform(message);
       for (const updateMessage of outboundUpdates) {
         this.#writeClient(updateMessage);
@@ -508,6 +511,9 @@ export class OfficialKernelProxy {
         ) {
           outbound = blankTurnError(message.id);
         }
+      }
+      if (isJsonRpcSuccess(outbound) && [SESSION_NEW_METHOD, SESSION_LOAD_METHOD, SESSION_RESUME_METHOD, SESSION_SET_CONFIG_METHOD].includes(pending.method)) {
+        outbound = { ...outbound, result: describeOfficialModes(outbound.result) };
       }
       this.#writeClient(outbound);
       pending.resolve(outbound);

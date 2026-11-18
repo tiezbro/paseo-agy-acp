@@ -51,7 +51,7 @@ describe("系统消息折叠回归", () => {
         ...folder.finish("test-session")
       ]);
       expect(output.map(update => update.content.text).join(""), `split=${split}`).toBe(text);
-      expect(output.filter(update => update.sessionUpdate === "agent_thought_chunk").map(update => update.content.text).join(""), `split=${split}`).toBe(folded);
+      expect(output.filter(update => (update as { _meta?: Record<string, unknown> })._meta?.["paseo.dev/messageKind"] === "system").map(update => update.content.text).join(""), `split=${split}`).toBe(folded);
     }
   });
 
@@ -60,7 +60,7 @@ describe("系统消息折叠回归", () => {
     const text = `~~~text\n${event}\n~~~\n\n${event}\n\n### 正文`;
     const output = updates([...Array.from(text).flatMap(char => folder.transform(chunk(char))), ...folder.finish("test-session")]);
     expect(output.map(update => update.content.text).join("")).toBe(text);
-    expect(output.filter(update => update.sessionUpdate === "agent_thought_chunk").map(update => update.content.text).join("")).toBe(event);
+    expect(output.filter(update => (update as { _meta?: Record<string, unknown> })._meta?.["paseo.dev/messageKind"] === "system").map(update => update.content.text).join("")).toBe(event);
   });
 
   it.each(["T", "<SYSTEM_", "```", "<SYSTEM_MESSAGE>\n[Message] sender=test-task\n\n### 正文"])("结束时刷新未完成片段 %s", text => {

@@ -4,6 +4,7 @@ import type { JsonRpcMessage } from "../ACP Connector/official-kernel/json-rpc.j
 
 interface SessionUpdatePayload {
   sessionUpdate?: string;
+  _meta?: Record<string, unknown>;
   messageId?: string;
   content?: {
     type?: string;
@@ -34,7 +35,7 @@ describe("SystemMessageFolder", () => {
     expect(results).toEqual([msg]);
   });
 
-  it("rewrites complete <SYSTEM_MESSAGE> block to agent_thought_chunk", () => {
+  it("marks a complete <SYSTEM_MESSAGE> block as system text without inventing thought", () => {
     const folder = new SystemMessageFolder();
     const rawSystemMessage = `The following is a <SYSTEM_MESSAGE> not actually sent by the user. It is provided by the system as important information to pay attention to.
 
@@ -57,8 +58,9 @@ Output: {"status": "ok"}
     const results = folder.transform(msg);
     expect(results).toHaveLength(1);
     const update = getUpdate(results[0]);
-    expect(update.sessionUpdate).toBe("agent_thought_chunk");
-    expect(update.messageId).toBe("m1:system-folded");
+    expect(update.sessionUpdate).toBe("agent_message_chunk");
+    expect(update.messageId).toBe("m1:system");
+    expect(update._meta).toEqual({ "paseo.dev/messageKind": "system" });
     expect(update.content?.text).toBe(rawSystemMessage);
   });
 
@@ -85,10 +87,10 @@ Output: {"status": "ok"}
     expect(up1.sessionUpdate).toBe("agent_message_chunk");
     expect(up1.content?.text).toBe("Start text.\n");
 
-    // Segment 2: system message as thought chunk
+    // Segment 2: system message keeps a distinct identity
     const up2 = getUpdate(results[1]);
-    expect(up2.sessionUpdate).toBe("agent_thought_chunk");
-    expect(up2.messageId).toBe("m1:system-folded");
+    expect(up2.sessionUpdate).toBe("agent_message_chunk");
+    expect(up2.messageId).toBe("m1:system");
     expect(up2.content?.text).toBe("<SYSTEM_MESSAGE>[Message] sender=test-task content=Task output</SYSTEM_MESSAGE>");
 
     // Segment 3: regular message after
@@ -148,7 +150,7 @@ Output: {"status": "ok"}
     const res3 = folder.transform(chunk3);
     expect(res3).toHaveLength(2);
     const up3_1 = getUpdate(res3[0]);
-    expect(up3_1.sessionUpdate).toBe("agent_thought_chunk");
+    expect(up3_1.sessionUpdate).toBe("agent_message_chunk");
     expect(up3_1.content?.text).toBe("<SYSTEM_MESSAGE>\n[Message] sender=test-task\ncontent=Task finished with code 0\n</SYSTEM_MESSAGE>");
     const up3_2 = getUpdate(res3[1]);
     expect(up3_2.sessionUpdate).toBe("agent_message_chunk");
@@ -189,7 +191,7 @@ Output: {"status": "ok"}
     };
     const res2 = folder.transform(chunk2);
     expect(res2).toHaveLength(1);
-    expect(getUpdate(res2[0]).sessionUpdate).toBe("agent_thought_chunk");
+    expect(getUpdate(res2[0]).sessionUpdate).toBe("agent_message_chunk");
     expect(getUpdate(res2[0]).content?.text).toBe("<SYSTEM_MESSAGE>\n[Message] sender=test-task content=body\n</SYSTEM_MESSAGE>");
   });
 

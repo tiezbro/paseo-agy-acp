@@ -9,7 +9,7 @@
 用户于本轮明确要求：官方内核当前全部能力都需要适配到 Paseo；出现语义或产品冲突时共同决策。
 精简对象是重复实现和无必要的中间层，不能以减少代码为理由删除、降级或隐藏官方能力。
 
-以官方 ACP Registry 实时核验的 1.5.0 为本轮能力目标（托管版本仍为 1.4.5，升级尚未完成）。
+以官方 ACP Registry 实时核验的 1.5.0 为本轮能力目标（分支托管 pins 已升级，生产未切换）。
 “全部”包括条件式能力：账号、模型、认证方式、管理员策略与客户端能力协商允许时，应可在
 Paseo 中使用；不代表绕过官方策略或让每个模型支持所有输入类型。
 
@@ -71,7 +71,7 @@ node scripts/compare-kernel.mjs --run --kernel /absolute/path/agy_acp_server.par
 并记录真实内核并发/取消结果、异常和范围。不能用删除测试后的数量下降当作质量退化，
 也不能把单次短文本成功当成所有模型、工具和长任务都已验收。
 
-托管 pins 仍为官方 1.4.5。本轮真实实验可显式指定已校验的官方 1.5.0；正式升级须另行
+分支托管 pins 已更新为官方 1.5.0；六个平台归档按 Registry 固定 SHA-256，Linux x64 补丁前像已重核。原升级要求仍需
 校验各平台产物与现有模型兼容补丁，不由实验路径隐式修改生产。
 
 上游将 429 等终止错误编码为普通正文加 `end_turn` 的问题尚未解决。已有工具输出时，
@@ -92,5 +92,14 @@ node scripts/compare-kernel.mjs --run --kernel /absolute/path/agy_acp_server.par
 
 真实实验均只做一轮，不证明提速比例、持续吞吐、全部模型/工具或 UI 验收通过。
 脱敏固定字段收据：`../research/2026-11-17-lightweight-runtime-results.json`。
-生产未切换；官方 1.5.0 托管升级、非取消终止错误语义及完整 UI/长任务验收仍待后续工作。
+生产未切换；非取消终止错误语义及完整能力入口、UI/长任务验收仍待后续工作。
 GitNexus 旧索引的变更分析为 CRITICAL（整模块删除涉及大量旧执行流程），新增文件由源码与进程测试补充审查。
+
+## 配套客户端的模式与系统信息协议
+
+配套源码工作树：`/home/tiezbro/projects/MAACS-agy-capabilities`，分支 `feat/antigravity-official-capabilities`。
+
+- 官方模式／mode config选项的 `_meta["paseo.dev/unattended"]` 为布尔值。`yolo=true`，`default/auto_edit=false`，未知模式保留原值与元数据。new/load/resume、配置回包和配置通知使用同一处理。
+- Paseo 只读取显式布尔值，不通过名字猜测权限。按官方确认的当前模式自动批准；true允许问答，优先allow_always，再allow_once；没有允许项返回cancelled。false保留人工审批，不受旧auto_accept覆盖。未提供该扩展的provider沿用原行为。
+- 系统封套仍是 `agent_message_chunk`，附 `_meta["paseo.dev/messageKind"]="system"`。配套客户端生成info通知；原生thought保持不变。旧客户端不识别标记时保留可读正文。
+- 这些是Paseo适配扩展，不冒充官方原生字段，不自动改变官方模式或管理员限制。已发布客户端只通过传输回归，不代表已具备新展示与模式策略。

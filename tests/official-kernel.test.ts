@@ -80,35 +80,36 @@ describe("official kernel selection", () => {
     expect(officialSpawnArgs(fakeOfficialAgent, "linux")).toEqual([]);
     expect(officialSpawnArgs(fakeOfficialAgent, "darwin")).toEqual([]);
     expect(resolveOfficialBinary({ PASEO_AGY_ACP_OFFICIAL_BIN: fakeOfficialAgent })).toBe(fakeOfficialAgent);
-    expect(managedOfficialKernelRoot("/home/user")).toBe("/home/user/.local/opt/agy-acp-server-1.4.5");
+    expect(managedOfficialKernelRoot("/home/user")).toBe("/home/user/.local/opt/agy-acp-server-1.5.0");
     expect(usesManagedOfficialKernel(undefined, "/home/user")).toBe(true);
     expect(usesManagedOfficialKernel("", "/home/user")).toBe(true);
+    expect(usesManagedOfficialKernel("/home/user/.local/opt/agy-acp-server-1.4.5/agy-acp-server-canary", "/home/user")).toBe(true);
     expect(usesManagedOfficialKernel("/home/user/.local/opt/paseo-agy-acp-kernel-compat/agy-acp-kernel-compat-active", "/home/user")).toBe(true);
     expect(usesManagedOfficialKernel("/home/user/.local/opt/agy-acp-server-agy_acp_server_20260818_01_RC01/agy-acp-server-canary", "/home/user")).toBe(true);
     expect(usesManagedOfficialKernel(fakeOfficialAgent, "/home/user")).toBe(false);
     expect(officialKernelDownload("linux", "x64")).toMatchObject({
-      url: expect.stringContaining("agy-acp-server-1.4.5-linux-x86_64.zip"),
-      sha256: "923923a0d7dc8073f66cc6f78647a3107e3a7ee2b7e1a24df8b3927b5188013b"
+      url: expect.stringContaining("agy-acp-server-1.5.0-linux-x86_64.zip"),
+      sha256: "36f373e8948edf1727b39c7d62b5722d6a4474bdfd72b04ad3d6def571808c9f"
     });
     expect(officialKernelDownload("linux", "arm64")).toMatchObject({
-      url: expect.stringContaining("agy-acp-server-1.4.5-linux-arm64.zip"),
-      sha256: "7d64246633ae094f67e3bbcd2d679e89048f91346d5339313336e7483f40f056"
+      url: expect.stringContaining("agy-acp-server-1.5.0-linux-arm64.zip"),
+      sha256: "1e184f439477b54138e94440056b26a78c0a8075a8fd2ffda637ec31267c6459"
     });
     expect(officialKernelDownload("darwin", "arm64")).toMatchObject({
-      url: expect.stringContaining("agy-acp-server-1.4.5-darwin-arm64.zip"),
-      sha256: "886fff7767d08994ca39eb02c3d01a7532c7325a94aa33aaf52d52068733284"
+      url: expect.stringContaining("agy-acp-server-1.5.0-darwin-arm64.zip"),
+      sha256: "c82ecb4ef476bfc35cbe5b2745cdddef873b99c9f5bd7fd11e5ca1fc1667a3fc"
     });
     expect(officialKernelDownload("darwin", "x64")).toMatchObject({
-      url: expect.stringContaining("agy-acp-server-1.4.5-darwin-x86_64.zip"),
-      sha256: "b39f3573c03b9acb9df028853f647527f1f3133f32bd77e78b796e48a205114a"
+      url: expect.stringContaining("agy-acp-server-1.5.0-darwin-x86_64.zip"),
+      sha256: "86a94e33b25d4a38ff30526ad844546860aa9ed98698498d9e87d30eb794426e"
     });
     expect(officialKernelDownload("win32", "x64")).toMatchObject({
       binaryName: "agy_acp_server.exe",
-      sha256: "d24f4c73c9f96d4f44384e281c855a56c72d8eaa9c5b0fad7ccb1635c6b63f50"
+      sha256: "6163f6b59b381bae419652dbae167bc8cda0ef29d665c0ba8af3d8c7fddd8867"
     });
     expect(officialKernelDownload("win32", "arm64")).toMatchObject({
-      url: expect.stringContaining("agy-acp-server-1.4.5-windows-arm64.zip"),
-      sha256: "ab0a9aac8349e08ef289be6d16da8f89e3abe60eba5158032ef78c4a1220261c"
+      url: expect.stringContaining("agy-acp-server-1.5.0-windows-arm64.zip"),
+      sha256: "340092b8af6dafc71eb15f4a8ec54b4d1f0bce16d1fa4d163b562c50b905f8f4"
     });
     expect(officialKernelDownload("linux", "x64").compat).toBe(true);
     expect(officialKernelDownload("darwin", "arm64").compat).toBe(false);
@@ -175,10 +176,10 @@ describe("official kernel adapters", () => {
   it("maps Paseo/scraper modes onto the official live mode ids", () => {
     expect(mapToOfficialModeId("accept-edits")).toBe("auto_edit");
     expect(mapToOfficialModeId("dangerously-skip-permissions")).toBe("yolo");
-    expect(mapToOfficialModeId("plan")).toBe("default");
+    expect(mapToOfficialModeId("plan")).toBe("plan");
     expect(rewriteModeFields({ modeId: "accept-edits", currentModeId: "plan" })).toEqual({
       modeId: "auto_edit",
-      currentModeId: "default"
+      currentModeId: "plan"
     });
   });
 

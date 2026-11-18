@@ -8,7 +8,7 @@
 
 - 实时读取官方 Registry `https://raw.githubusercontent.com/agentclientprotocol/registry/main/antigravity-acp/agent.json`，版本仍为 1.5.0。
 - 官方源码取自已按 Registry SHA-256 校验的 Linux 归档；本机 `/tmp/agy-acp-150-audit/server-0.py` 与 `runtime/agy_acp_server.par`。PAR SHA-256 `8a35f63dd2284e3790a1d97dd0cb2236057c55a0c598b26f3bde022b843d5c04`。长期上游定位及下载证据见 [版本核验](2026-11-17-kernel-150-adapter-repair-plan.md)。
-- 仓库托管 pins 仍为 1.4.5。1.5.0 的历史显式实验不等于已升级托管产品。
+- 初始盘点时仓库托管 pins 为 1.4.5；后续分支已升级至 1.5.0 并完成临时目录 prepare／verify。生产未切换，详见下方后续实施记录。
 - 仓库此前只锁定 Paseo 0.13.2／0.14.0。现场本机安装 CLI 所依赖的 `@getpaseo/server` 是 0.16.0；本轮增加独立锁定 fixture，不声称它是最新 Paseo，也不据此推断当前 daemon 的进程版本。
 - 下表 Paseo 源码以 `tests/fixtures/paseo-client-0.16.0/node_modules/@getpaseo/server/dist/server/server/agent/providers/acp-agent.js` 为准。安装目录不是产品源码，不在其中打补丁。Paseo UI 与生产尚未验收。
 - 官方npm锁定0.16.0客户端 `acp-agent.js` SHA-256为`f600f3dc3fdb0db729aa3883a1ebac293a1f492a32a0eecce36cee9422e22c95`；现场同版本文件为`337960861c95a9a9d2c9e2b65337b2c940d373f8c5f038d680e4d8cfd1734e18`，二者内容不同，不能用版本号代替源码一致性证明。以下明确采用锁定npm版；现场版另行运行相同隔离客户端契约。
@@ -31,7 +31,7 @@
 | 模型目录、切换、自动替换通知 | 转发 model/config；另有本地目录与请求补丁 | 已有目录、setModel 与配置更新 | 原生目录与兼容扩展分开记录；升级后模型／工具实测 |
 | thinking_level | 原样转发 configOptions 与配置请求 | 按 thought_level category 映射思考选项 | 本轮补真实客户端配置契约；各模型实测待做 |
 | default／auto_edit／yolo | 已知模式／别名映射 | ACP mode/config 选择已有 | 原生工具权限验收 |
-| 未知／未来官方模式 | 本轮改为原值传递，由官方接受或报错 | 可保留官方动态目录 | 不得静默降级 default；plan 历史别名仍待共同决定 |
+| 未知／未来官方模式 | 本轮改为原值传递，由官方接受或报错 | 可保留官方动态目录 | 不得静默降级 default；plan 历史别名已按确认移除 |
 | 工具审批与拒绝 | request_permission 和返回原样转发 | 已有 permission 请求与操作选择 | 真实工具、持久许可、管理员策略验收 |
 | 官方问答选择 | 官方通过 interaction_* 工具调用和 permission options 表达 | 0.16 有 chooser 识别：重复allow种类才阻止自动批准，并非所有交互都能识别；不能等同任意自由文本问答 | 用官方选项形状验证 UI；保留原生单选边界 |
 | 文字与图片输入 | 内容块保留 | 真实客户端组装 text／image | 代理与客户端契约覆盖；真实多模态待验 |
@@ -59,22 +59,24 @@
 - Paseo 0.16 `acp-agent.js`：能力默认151、new1211、load/resume1240附近、权限1943、事件转换2327、输入转换2822。`GenericACPAgentClient`是否暴露某配置必须另查其构造参数，不能只看到基类支持就认定UI可用。
 - 本仓库：`ACP Connector/official-kernel/proxy.ts`（请求、回包、生命周期）、`mode-map.ts`、`context.ts`、`system-message-fold.ts`、`mcp-protocol-bridge.ts`、`skill-mcp.ts`、`login.ts`、`kernel-compat-rc01-recipe.ts`。
 
-## 当前需要共同决策的事项
+## 已确认的实施决策
 
-以下先记录方案，本轮不静默改变这些既有语义，也不改另一仓库或生产配置。
+用户已确认以下五项；第5项以最新“无人值守全自动、最大权限”要求为准，取代此前问答／信任必须人工的建议。
 
-1. **Paseo自身的能力入口**。推荐在用户指定的 Paseo／MAACS 源码分支补认证、附加目录、原生音频／资源块及相应状态／UI；本仓库保留轻量协议桥。仅在这里增加slash命令或拼接文字会损失原生语义，不能视为达到完整适配。需确定跨仓库实施范围及目标产品源码分支。
-2. **`plan → default`**。官方当前没有对应的只读Plan模式，官方对未知模式会报错。推荐移除该别名并使用官方模式名称，让不支持的plan明确不可用；计划事件仍正常展示。如果产品确实要只读Plan，需要在Paseo设计真实权限边界，不能保留同名但有不同权限的映射。
-3. **系统提示伪装成思考摘要**。推荐在Paseo为系统／状态信息保留清晰身份，原生thinking才进思考区，再删除适配器的SYSTEM_MESSAGE→thought转换。仅此仓库可先恢复正文，但那会改变阅读体验，需要确认过渡方式。
-4. **原生目录与本地模型扩展**。当前补丁扩大特定第三方模型对Paseo的可见范围，并修整请求；严格原版目录与保留历史兼容扩展是不同产品策略。推荐先保留并明确标为兼容扩展，按1.5.0逐项实测，官方已覆盖的部分再删除；不得把固定本地白名单当作官方完整目录或擅自扩大管理员授权。
-5. **自动批准与交互问答**。官方把工具授权、workspace trust和用户单选共用permission请求；Paseo的Auto Accept只用选项kind识别部分chooser。建议普通工具审批可按用户配置自动批准，原生问答／信任决策保留人工选择；需要对实际官方请求形状建立可靠识别，再共同决定边界，不能自动替用户回答问题。
+1. **Paseo自身的能力入口**：在配套 MAACS 源码独立分支补认证、附加目录、原生音频／资源块及状态／UI；本仓库保留轻量协议桥。配套工作树 `/home/tiezbro/projects/MAACS-agy-capabilities`，分支 `feat/antigravity-official-capabilities`，基线 `240a073357a0e027a9aac64506b82a367447defa`。不改生产安装或重启 daemon。
+2. **移除 `plan → default`**：保留官方 `/plan` 命令；不存在的模式交由官方明确报错，不伪装成只读模式。
+3. **系统信息独立展示**：在 Paseo 保留系统／状态身份后，移除适配器 SYSTEM_MESSAGE→thought 转换；思考区只展示官方思考摘要，不制造上游未发送的思考。
+4. **模型兼容扩展**：先保留仍必要的第三方模型兼容补丁并明确标记；对照1.5.0实测后删除官方已覆盖的部分。不能绕过管理员策略。
+5. **模式决定自动化**：明确选择官方 `yolo`（无人值守）时，全自动处理工具授权、workspace trust与问答单选，使用可用的最大许可。普通 `default`／`auto_edit` 保留官方审批语义，旧 `auto_accept` 开关不能覆盖它们。ACP没有自由回答或推荐选项的标准字段；问答按官方选项顺序选择第一个允许项，工具许可优先 `allow_always`，再 `allow_once`；无允许选项时返回 `cancelled`，不伪造选项或无限等待。模式切换以官方成功确认的当前值为准。
+
+上述决策尚不等于能力矩阵全部实现或通过验收。仍有语义冲突时共同讨论，不重复询问已授权事项。
 
 ## 可直接推进的工作及本轮改动
 
 - 已修复未知模式静默降级；只映射自有的已知别名，其他值原样交官方校验。同时避免`constructor`／`__proto__`命中原型属性而损坏字段。
 - 新增代理契约覆盖：能力与认证元数据、附加目录、原生context、多模态块、config与未来扩展、原生事件、权限与客户端fs/terminal往返。模拟事件仅证明协议保真，不证明官方执行或UI消费。
 - 新增Paseo0.16.0私有锁定fixture及CI矩阵，继续保留旧版本回归；所有客户端版本增加thinking配置和图片输入契约。运行时npm依赖没有增加。
-- 1.5.0正式托管升级、补丁去重、原生工具与多模型、长任务、UI端到端验证仍需继续；本轮未合并、发布或切换生产。
+- 1.5.0托管产物已升级并做单轮冒烟；补丁去重、原生工具与多模型、长任务、全部能力的UI端到端验证仍需继续；本轮未合并、发布或切换生产。
 
 ## 验收门槛
 
@@ -91,3 +93,13 @@
 
 这些测试使用模拟内核；本轮未新发Google推理请求，也未做生产／浏览器UI验收。
 现有功能通过不代表全能力目标已经达成。
+
+## 后续实施记录：模式、系统信息、托管1.5.0
+
+- 删除plan→default；公开官方模式元数据，默认／自动编辑=false，无人值守=true；配套Paseo以成功确认的模式决策，处理已有待答问题并保存最后模式，普通模式不继承旧Auto Accept权限。
+- 系统封套保留文字并标记为系统，由配套客户端映射notification；原生thought不变，旧客户端保留正文。没有伪造上游不存在的思考。
+- 六个平台的1.5.0归档URL／SHA256取自实时Registry。Linux x64 PAR、harness及四个前像哈希重新核对，五个补丁锚点在临时目录全部匹配，prepare／指定artifact verify通过。其他平台本机未执行。
+- 真实托管兼容产物冒烟：Gemini 3.8 Flash High，1/1通过，首个内核输出约61.806秒，无工具／thought帧。该结果说明本地队列删除后上游首响应仍可能很慢，不证明低延迟或完整能力通过。脱敏收据见 `2026-11-17-managed-150-smoke.json`。
+- 本仓库与配套MAACS都保持独立分支，未发布、推送、合并或切生产。剩余能力入口、真实工具／多模型／长任务以及错误终态仍须继续。
+
+- 本阶段最终验证：`npm run validate` 36文件324测试通过；三版本Paseo客户端18项、provider2项通过；配套客户端128项、浏览器2条规格通过。浏览器记录为配套工作树 `tmp/e2e-release/spec-2026-11-18T05-41-39-831Z/partial.txt`。这些记录覆盖模式与系统信息，本表剩余能力并未因此完成。
