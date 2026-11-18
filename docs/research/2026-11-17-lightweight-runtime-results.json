@@ -1,0 +1,226 @@
+{
+  "scope": "One short-text trial per group using official 1.5.0, same existing account; no throughput or quota-limit claim. No session identifiers, local paths, raw model text or stderr retained.",
+  "reports": [
+    {
+      "sourceReceipt": "lightweight-compare-4.json",
+      "kernelSha256": "8a35f63dd2284e3790a1d97dd0cb2236057c55a0c598b26f3bde022b843d5c04",
+      "concurrency": 4,
+      "cancelAfterMs": null,
+      "groups": [
+        {
+          "group": "adapter",
+          "wallMs": 61604.901807999995,
+          "rows": [
+            {
+              "ordinal": 1,
+              "status": "passed",
+              "model": "gemini-3.8-flash-high",
+              "firstTextMs": 39758.115819,
+              "thoughtChunks": 0,
+              "toolCalls": 0,
+              "firstKernelOutputMs": 39756.411214,
+              "reportedVersion": "2.8.1",
+              "setupMs": 9602.394669,
+              "submittedMs": 0.13047999999980675,
+              "stopReason": "end_turn",
+              "markerReceived": true,
+              "elapsedMs": 39838.231717,
+              "cancelAckMs": null,
+              "finishedMs": 39838.365226
+            },
+            {
+              "ordinal": 2,
+              "status": "passed",
+              "model": "gemini-3.8-flash-high",
+              "firstTextMs": 60566.32111,
+              "thoughtChunks": 0,
+              "toolCalls": 0,
+              "firstKernelOutputMs": 60564.90641699999,
+              "reportedVersion": "2.8.1",
+              "setupMs": 14310.414429999999,
+              "submittedMs": 0.253061000001253,
+              "stopReason": "end_turn",
+              "markerReceived": true,
+              "elapsedMs": 61604.614979,
+              "cancelAckMs": null,
+              "finishedMs": 61604.87048
+            },
+            {
+              "ordinal": 3,
+              "status": "passed",
+              "model": "gemini-3.8-flash-high",
+              "firstTextMs": 59595.653274,
+              "thoughtChunks": 0,
+              "toolCalls": 0,
+              "firstKernelOutputMs": 59594.395452000004,
+              "reportedVersion": "2.8.1",
+              "setupMs": 14857.457172999999,
+              "submittedMs": 0.34867099999974016,
+              "stopReason": "end_turn",
+              "markerReceived": true,
+              "elapsedMs": 60427.316036000004,
+              "cancelAckMs": null,
+              "finishedMs": 60427.667077000006
+            },
+            {
+              "ordinal": 4,
+              "status": "passed",
+              "model": "gemini-3.8-flash-high",
+              "firstTextMs": 39989.86395100001,
+              "thoughtChunks": 0,
+              "toolCalls": 0,
+              "firstKernelOutputMs": 39988.31606899999,
+              "reportedVersion": "2.8.1",
+              "setupMs": 14367.814558999999,
+              "submittedMs": 0.390811000001122,
+              "stopReason": "end_turn",
+              "markerReceived": true,
+              "elapsedMs": 40057.20368599999,
+              "cancelAckMs": null,
+              "finishedMs": 40057.595926
+            }
+          ]
+        },
+        {
+          "group": "native",
+          "wallMs": 109492.66677800001,
+          "rows": [
+            {
+              "ordinal": 1,
+              "status": "passed",
+              "model": "gemini-3.8-flash-high",
+              "firstTextMs": 107444.48960400002,
+              "thoughtChunks": 0,
+              "toolCalls": 0,
+              "firstKernelOutputMs": null,
+              "reportedVersion": "1.5.0",
+              "setupMs": 9074.366723,
+              "submittedMs": 0.002649999994901009,
+              "stopReason": "end_turn",
+              "markerReceived": true,
+              "elapsedMs": 109492.65610800001,
+              "cancelAckMs": null,
+              "finishedMs": 109492.660088
+            },
+            {
+              "ordinal": 2,
+              "status": "passed",
+              "model": "gemini-3.8-flash-high",
+              "firstTextMs": 58687.894589999996,
+              "thoughtChunks": 0,
+              "toolCalls": 0,
+              "firstKernelOutputMs": null,
+              "reportedVersion": "1.5.0",
+              "setupMs": 9755.649967999998,
+              "submittedMs": 0.09692500000528526,
+              "stopReason": "end_turn",
+              "markerReceived": true,
+              "elapsedMs": 58758.03531699999,
+              "cancelAckMs": null,
+              "finishedMs": 58758.134212000004
+            },
+            {
+              "ordinal": 3,
+              "status": "passed",
+              "model": "gemini-3.8-flash-high",
+              "firstTextMs": 75611.59360000001,
+              "thoughtChunks": 0,
+              "toolCalls": 0,
+              "firstKernelOutputMs": null,
+              "reportedVersion": "1.5.0",
+              "setupMs": 10412.857997,
+              "submittedMs": 0.1181639999995241,
+              "stopReason": "end_turn",
+              "markerReceived": true,
+              "elapsedMs": 75707.65655999999,
+              "cancelAckMs": null,
+              "finishedMs": 75707.776674
+            },
+            {
+              "ordinal": 4,
+              "status": "passed",
+              "model": "gemini-3.8-flash-high",
+              "firstTextMs": 92050.45819800001,
+              "thoughtChunks": 0,
+              "toolCalls": 0,
+              "firstKernelOutputMs": null,
+              "reportedVersion": "1.5.0",
+              "setupMs": 9353.126638000002,
+              "submittedMs": 0.1384529999922961,
+              "stopReason": "end_turn",
+              "markerReceived": true,
+              "elapsedMs": 92154.56010900001,
+              "cancelAckMs": null,
+              "finishedMs": 92154.700362
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "sourceReceipt": "lightweight-cancel-3.json",
+      "kernelSha256": "8a35f63dd2284e3790a1d97dd0cb2236057c55a0c598b26f3bde022b843d5c04",
+      "concurrency": 3,
+      "cancelAfterMs": 1000,
+      "groups": [
+        {
+          "group": "adapter",
+          "wallMs": 1916.1913209999984,
+          "rows": [
+            {
+              "ordinal": 1,
+              "status": "cancelled",
+              "model": "gemini-3.8-flash-high",
+              "firstTextMs": 1915.787995999999,
+              "thoughtChunks": 0,
+              "toolCalls": 0,
+              "firstKernelOutputMs": 1914.0837100000026,
+              "reportedVersion": "2.8.1",
+              "setupMs": 11557.155992,
+              "submittedMs": 0.1461139999992156,
+              "stopReason": "cancelled",
+              "markerReceived": false,
+              "elapsedMs": 1916.0379169999978,
+              "cancelAckMs": 915.389906999997,
+              "finishedMs": 1916.1857809999965
+            },
+            {
+              "ordinal": 2,
+              "status": "cancelled",
+              "model": "gemini-3.8-flash-high",
+              "firstTextMs": 1864.004836,
+              "thoughtChunks": 0,
+              "toolCalls": 0,
+              "firstKernelOutputMs": 1862.2845420000012,
+              "reportedVersion": "2.8.1",
+              "setupMs": 16822.754576,
+              "submittedMs": 0.2546799999981886,
+              "stopReason": "cancelled",
+              "markerReceived": false,
+              "elapsedMs": 1864.2444170000017,
+              "cancelAckMs": 863.5384090000007,
+              "finishedMs": 1864.5005969999984
+            },
+            {
+              "ordinal": 3,
+              "status": "cancelled",
+              "model": "gemini-3.8-flash-high",
+              "firstTextMs": 1862.1660360000024,
+              "thoughtChunks": 0,
+              "toolCalls": 0,
+              "firstKernelOutputMs": 1860.4338410000018,
+              "reportedVersion": "2.8.1",
+              "setupMs": 16691.990405,
+              "submittedMs": 0.3266979999971227,
+              "stopReason": "cancelled",
+              "markerReceived": false,
+              "elapsedMs": 1862.4092359999995,
+              "cancelAckMs": 861.7502370000002,
+              "finishedMs": 1862.7398639999992
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

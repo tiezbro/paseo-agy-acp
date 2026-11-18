@@ -2,6 +2,37 @@
 
 All notable changes to `paseo-agy-acp` are recorded here.
 
+## Unreleased
+
+### Changed
+
+- Remove the complete Admission subsystem: cross-process queues, active/start
+  seats, minimum start spacing, cooldowns, leases, heartbeats, process recovery,
+  encrypted queued payloads and the dedicated SQLite ledger.
+- Remove `better-sqlite3`, its native build requirements, `agy-acp-prepare-state`,
+  Admission-only tests and queue stress tools. The adapter has no runtime npm
+  dependencies. Legacy scheduling environment settings are ignored.
+- Dispatch independent sessions directly to the official kernel. Preserve
+  same-session prompt exclusion, cancellation, permissions, context, skills,
+  model/config forwarding, native thought updates and process cleanup.
+- Replace Admission comparison tooling with bounded native/adapter comparison.
+  Historical research and experiment results are retained; production ledgers
+  and official conversation databases are not migrated or deleted.
+
+### Fixed
+
+- Normalize a locally cancelled prompt's native `end_turn` to `cancelled` before
+  the blank-output check; preserve explicit RPC errors and result metadata.
+- Declare Node types explicitly after removing the SQLite type dependency.
+
+### Scope
+
+- Experimental branch only. Managed kernel pins remain 1.4.5, package version
+  remains 2.8.1, and production entrypoints are unchanged. The final version,
+  rollout and merge to main depend on the recorded acceptance results.
+- Upstream quota failures encoded as normal text/end_turn and the real-time
+  thought-summary pipeline remain separate acceptance items.
+
 ## 2.7.2 - 2026-11-01
 
 ### Fixed

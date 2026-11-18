@@ -79,8 +79,7 @@ function isExpectedPublishedPath(entry: string): boolean {
     entry === "README.zh-CN.md" ||
     entry === "CHANGELOG.md" ||
     entry === "LICENSE" ||
-    entry === "scripts/prepare-admission-state-dir.mjs" ||
     entry === "scripts/prepare-official-kernel-compat.mjs" ||
     entry === "assets/official-kernel-compat/rc01/paseo_model_compat.py" ||
-    /^dist\/(?:ACP Connector|Admission Controller)\/.+\.(?:js|d\.ts|js\.map)$/.test(entry);
+    /^dist\/ACP Connector\/.+\.(?:js|d\.ts|js\.map)$/.test(entry);
 }

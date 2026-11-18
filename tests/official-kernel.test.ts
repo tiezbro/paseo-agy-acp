@@ -6,13 +6,6 @@ import path from "node:path";
 import { PassThrough } from "node:stream";
 import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
-import type { AgyAdmissionDispatchBoundary } from "../ACP Connector/admission/dispatch-boundary.js";
-import {
-  createOfficialAdmission,
-  isAdmissionDiscoveryEnvironment,
-  issueAdmittedOfficialPromptWrite,
-  officialAdmissionStateDir
-} from "../ACP Connector/official-kernel/admission-fence.js";
 import { injectPaseoContext } from "../ACP Connector/official-kernel/context.js";
 import {
   blankTurnError,
@@ -257,42 +250,7 @@ describe("official kernel adapters", () => {
     expect(JSON.stringify(injected)).toContain("hello");
   });
 
-  it("issues the official prompt write in Admission order", () => {
-    const calls: string[] = [];
-    const boundary = {
-      prepare(processId: number) {
-        calls.push(`prepare:${processId}`);
-      },
-      commitDispatchIntent() {
-        calls.push("commitDispatchIntent");
-      },
-      beforePromptWrite() {
-        calls.push("beforePromptWrite");
-      },
-      afterPromptWrite() {
-        calls.push("afterPromptWrite");
-      },
-      markDispatchAmbiguous() {
-        calls.push("markDispatchAmbiguous");
-      }
-    } as AgyAdmissionDispatchBoundary & {
-      commitDispatchIntent(): void;
-      markDispatchAmbiguous(): void;
-    };
-    issueAdmittedOfficialPromptWrite(boundary, 42, () => {
-      calls.push("write");
-    });
-    expect(calls).toEqual([
-      "prepare:42",
-      "commitDispatchIntent",
-      "beforePromptWrite",
-      "write",
-      "afterPromptWrite"
-    ]);
-    expect(officialAdmissionStateDir("/tmp/state")).toBe(path.join("/tmp/state", "official-kernel"));
-    expect(isAdmissionDiscoveryEnvironment({ AGY_ACP_ADMISSION_ENABLED: "true" })).toBe(true);
-    expect(createOfficialAdmission({ AGY_ACP_ADMISSION_ENABLED: "true" })).toBeUndefined();
-  });
+
 });
 
 describe("official kernel proxy", () => {

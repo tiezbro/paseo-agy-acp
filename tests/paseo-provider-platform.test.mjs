@@ -9,13 +9,13 @@ import { setTimeout as delay } from "node:timers/promises";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 
-async function providerHarness(t, enabled) {
+async function providerHarness(t, legacyEnvironment) {
   const home = await mkdtemp(path.join(root, ".tmp-provider-platform-"));
   const trace = path.join(home, "requests.ndjson");
   const child = spawn(process.execPath, [path.join(root, "tests/helpers/run-paseo-contract-adapter.mjs")], {
     cwd: root, stdio: ["pipe", "pipe", "pipe"],
-    env: { ...process.env, HOME: home, PASEO_HOME: home, PASEO_AGENT_ID: enabled ? undefined : "", PASEO_AGENT_CWD: home,
-      AGY_ACP_ADMISSION_ENABLED: String(enabled), AGY_ACP_STATE_DIR: path.join(home, "admission"), PASEO_CONTRACT_TRACE: trace }
+    env: { ...process.env, HOME: home, PASEO_HOME: home, PASEO_AGENT_ID: "", PASEO_AGENT_CWD: home,
+      AGY_ACP_ADMISSION_ENABLED: String(legacyEnvironment), AGY_ACP_STATE_DIR: path.join(home, "admission"), PASEO_CONTRACT_TRACE: trace }
   });
   let stderr = "";
   child.stderr.setEncoding("utf8").on("data", text => { stderr += text; });
@@ -46,9 +46,9 @@ async function providerHarness(t, enabled) {
   return { home, rpc, send, requests, updates, stderr: () => stderr };
 }
 
-for (const enabled of [false, true]) {
-  test(`${process.platform}：${enabled ? "无身份 discovery 告警且拒绝业务 prompt" : "Admission 关闭时普通 provider 可用"}`, { timeout: 20_000 }, async t => {
-    const h = await providerHarness(t, enabled);
+for (const legacyEnvironment of [false, true]) {
+  test(`${process.platform}：普通 provider 无身份也可派发（遗留环境=${legacyEnvironment}）`, { timeout: 20_000 }, async t => {
+    const h = await providerHarness(t, legacyEnvironment);
     assert.ok((await h.rpc("initialize", { protocolVersion: 1, clientCapabilities: { terminal: true, fs: {} } })).result);
     const created = await h.rpc("session/new", { cwd: h.home, mcpServers: [] });
     const sessionId = created.result.sessionId;
@@ -58,13 +58,6 @@ for (const enabled of [false, true]) {
     const tools = await fetch(url, { method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ jsonrpc: "2.0", id: 1, method: "tools/list", params: {} }) });
     assert.equal(tools.status, 200);
-    if (enabled) {
-      assert.match(h.stderr(), /Admission enabled without PASEO_AGENT_ID.*discovery only.*session\/prompt is blocked/);
-      const rejected = await h.rpc("session/prompt", { sessionId, prompt: [{ type: "text", text: "inspect" }] });
-      assert.match(rejected.error.message, /session\/prompt is blocked/);
-      assert.equal((await h.requests()).filter(row => row.method === "session/prompt").length, 0);
-      await assert.rejects(stat(path.join(h.home, "admission")), { code: "ENOENT" });
-    } else {
       await h.rpc("session/set_model", { sessionId, modelId: "model-b" });
       assert.equal((await h.rpc("session/prompt", { sessionId, prompt: [{ type: "text", text: "inspect" }] })).result.stopReason, "end_turn");
       assert.match(JSON.stringify(h.updates), /model-b/);
@@ -78,7 +71,7 @@ for (const enabled of [false, true]) {
       h.send({ jsonrpc: "2.0", method: "session/cancel", params: { sessionId } });
       assert.equal((await held).result.stopReason, "cancelled");
       assert.equal(h.stderr().includes("Admission enabled"), false);
-    }
+    await assert.rejects(stat(path.join(h.home, "admission")), { code: "ENOENT" });
     await h.rpc("session/close", { sessionId });
     assert.equal((await fetch(url, { method: "POST", headers: { "content-type": "application/json" },
       body: JSON.stringify({ jsonrpc: "2.0", id: 2, method: "tools/list", params: {} }) })).status, 404);

@@ -1,5 +1,7 @@
 # Paseo 跨主机部署与端到端验收
 
+> 轻量化分支已删除 Admission；下方旧版 Admission 数据库与排队结果仅是历史收据。当前验收见 [轻量适配器](lightweight-adapter.md)。
+
 本文面向 Linux VM，说明普通用户部署、代理、无桌面登录和远端委派的手工验收方法。
 第 6 节属于**作者本地验收，未纳入 CI**；原始环境证据未公开，维护者尚未独立复现，
 表中结果为作者报告的现场观察，不是产品保证。
@@ -15,7 +17,7 @@
 - 在实际运行 provider 的用户下登录 Google，每台机器独立授权。root 登录成功不代表普通用户已登录。
 - 两端使用同一适配器版本或同一源码提交。复测未发布补丁时，分别运行 `npm ci`、`npm run validate`，将 provider 的 `command` 指向该构建的 `node` 和 `dist/ACP Connector/main.js` 绝对路径；固定的 npm 发布包不会自动包含分支补丁。
 
-先在两端确认版本，再按 [README](../../README.zh-CN.md) 配置 provider 和账户共享的 Admission 状态目录。
+先在两端确认版本，再按 [README](../../README.zh-CN.md) 配置 provider。
 
 ```bash
 node --version
@@ -63,7 +65,7 @@ npx -y paseo-agy-acp@2.7.1 --login
 
 ### Provider 进程的代理
 
-把以下字段合并到每端 `agents.providers["paseo-agy-acp"].env`，保留已有 Admission 等字段：
+把以下字段合并到每端 `agents.providers["paseo-agy-acp"].env`，保留其他必要 provider 字段：
 
 ```json
 {

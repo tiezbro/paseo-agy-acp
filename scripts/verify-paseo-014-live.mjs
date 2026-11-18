@@ -1,4 +1,4 @@
-// 显式本机验收：使用现有登录账号，另开 loopback daemon 和 Admission 状态目录。
+// 显式本机验收：使用现有登录账号，另开 loopback daemon。
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
@@ -19,7 +19,7 @@ const { createPaseoDaemon } = await load("bootstrap.js");
 const { resolveConfigFromPersisted } = await load("config.js");
 const { createIdleRuntimeCleanup } = await load("agent/idle-runtime-cleanup/index.js");
 const home = path.join(root, ".tmp-paseo-014-live", randomUUID());
-await mkdir(path.join(home, "admission/official-kernel"), { recursive: true, mode: 0o700 });
+await mkdir(home, { recursive: true, mode: 0o700 });
 await mkdir(path.join(home, "work"));
 const configHome = process.env.PASEO_LIVE_SOURCE_HOME ?? path.join(process.env.HOME, ".paseo");
 const source = JSON.parse(await readFile(path.join(configHome, "config.json"), "utf8"));
@@ -33,7 +33,7 @@ const persisted = { version: 1, pluginsEnabled: false,
   agents: { idleRuntimeCleanup: false, providers: {
     ...Object.fromEntries(["claude", "codex", "copilot", "opencode", "pi", "omp", "antigravity", "muse"].map(id => [id, { enabled: false }])),
     [provider]: { enabled: true, extends: "acp", label: "Isolated ACP verification", command: [process.execPath, path.join(root, "dist/ACP Connector/main.js")], env: {
-      ...liveProviderEnvironment(original.env), PASEO_HOME: home, AGY_ACP_ADMISSION_ENABLED: "true", AGY_ACP_STATE_DIR: path.join(home, "admission")
+      ...liveProviderEnvironment(original.env), PASEO_HOME: home
     } }
   } }, features: { voiceMode: { enabled: false } } };
 // 真实值仅传入内存配置；磁盘诊断配置的全部环境变量值均脱敏，并保证删除。

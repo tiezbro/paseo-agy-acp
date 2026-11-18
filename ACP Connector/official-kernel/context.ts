@@ -24,22 +24,6 @@ export async function injectPaseoContext(
   };
 }
 
-export function extractPromptText(params: unknown): string {
-  if (!isRecord(params)) return "";
-  const prompt = params.prompt;
-  if (typeof prompt === "string") return prompt;
-  if (!Array.isArray(prompt)) return "";
-  return prompt
-    .map((block) => {
-      if (!isRecord(block)) return "";
-      if (typeof block.text === "string") return block.text;
-      if (isRecord(block.content) && typeof block.content.text === "string") return block.content.text;
-      return "";
-    })
-    .filter((part) => part.length > 0)
-    .join("\n");
-}
-
 export function extractSessionId(params: unknown): string | undefined {
   if (!isRecord(params)) return undefined;
   return typeof params.sessionId === "string"

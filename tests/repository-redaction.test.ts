@@ -15,7 +15,7 @@ afterEach(() => {
   for (const root of roots.splice(0)) rmSync(root, { recursive: true, force: true });
 });
 
-function fixture() {
+function fixture(changelog = false) {
   const parent = path.join(process.cwd(), "node_modules", ".cache", "repository-redaction");
   mkdirSync(parent, { recursive: true });
   const root = mkdtempSync(path.join(parent, "fixture-"));
@@ -27,6 +27,7 @@ function fixture() {
   }).trim();
   git(["init"]);
   const names = Array.from({ length: 89 }, (_, index) => "docs/design/receipts/item-" + index + ".ndjson");
+  if (changelog) names[0] = "CHANGELOG.md";
   mkdirSync(path.join(root, "docs/design/receipts"), { recursive: true });
   mkdirSync(path.join(root, "docs/operations"), { recursive: true });
   for (const name of names) writeFileSync(path.join(root, name), "original evidence\n", "utf8");
@@ -35,7 +36,7 @@ function fixture() {
   const sourceCommit = git(["rev-parse", "HEAD"]);
   const map: Map = { schemaVersion: 1, sourceCommit, redactionCommit: "", files: names.map(name => {
     const originalBlob = git(["rev-parse", sourceCommit + ":" + name]);
-    const redacted = "redacted evidence\n";
+    const redacted = name === "CHANGELOG.md" ? "# Changelog\n\n## 1.0.0\n\nredacted evidence\n" : "redacted evidence\n";
     writeFileSync(path.join(root, name), redacted, "utf8");
     return { path: name, reason: "maintainer-home", originalBlob,
       redactedBlob: git(["hash-object", "-w", "--stdin"], redacted),
@@ -62,6 +63,27 @@ describe("只读脱敏映射校验", () => {
     expect(f.git(["status", "--porcelain"])).toBe(before);
     expect(readFileSync(path.join(f.root, mapPath), "utf8")).toBe(bytes);
   }, 30_000);
+
+  it("允许 CHANGELOG 顶部追加新版本，但拒绝修改历史条目", () => {
+    const f = fixture(true);
+    const file = path.join(f.root, "CHANGELOG.md");
+    const previous = readFileSync(file, "utf8");
+    writeFileSync(file, previous.replace("## 1.0.0", "## Unreleased\n\nNew behavior.\n\n## 1.0.0"));
+    expect(f.run().status).toBe(0);
+    writeFileSync(file, readFileSync(file, "utf8").replace("redacted evidence", "modified history"));
+    expect(f.run().status).toBe(1);
+  }, 30000);
+
+  it("CHANGELOG 新记录仍须通过秘密扫描且不输出凭据", () => {
+    const f = fixture(true);
+    const file = path.join(f.root, "CHANGELOG.md");
+    const value = ["fixture", "not", "live", "0123456789abcdef0123456789abcdef"].join("_");
+    writeFileSync(file, readFileSync(file, "utf8").replace("## 1.0.0", '## Unreleased\n\nPASEO_API_TOKEN="' + value + '"\n\n## 1.0.0'));
+    const result = f.run();
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("secret scan failed");
+    expect(result.stderr + result.stdout).not.toContain(value);
+  }, 30000);
 
   it.each([
     ["不可读取的 sourceCommit", (f: ReturnType<typeof fixture>) => { f.map.sourceCommit = "0".repeat(40); }, "Git object/path unavailable"],

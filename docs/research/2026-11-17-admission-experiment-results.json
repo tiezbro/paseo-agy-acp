@@ -1,0 +1,517 @@
+{
+  "kernelVersion": "1.5.0",
+  "model": "gemini-3.8-flash-high",
+  "comparisons": [
+    {
+      "concurrency": 1,
+      "kernelSha256": "8a35f63dd2284e3790a1d97dd0cb2236057c55a0c598b26f3bde022b843d5c04",
+      "groups": [
+        {
+          "group": "native",
+          "wallMs": 23344,
+          "plannerWindowPeak": 1,
+          "rows": [
+            {
+              "ordinal": 1,
+              "status": "passed",
+              "durationMs": 23344,
+              "queueMs": null,
+              "plannerSeconds": [
+                21.554
+              ],
+              "nativeErrors": {},
+              "traceFound": true
+            }
+          ]
+        },
+        {
+          "group": "off",
+          "wallMs": 15195,
+          "plannerWindowPeak": 1,
+          "rows": [
+            {
+              "ordinal": 1,
+              "status": "passed",
+              "durationMs": 15195,
+              "queueMs": null,
+              "plannerSeconds": [
+                12.901
+              ],
+              "nativeErrors": {},
+              "traceFound": true
+            }
+          ]
+        },
+        {
+          "group": "on",
+          "wallMs": 39248,
+          "plannerWindowPeak": 1,
+          "rows": [
+            {
+              "ordinal": 1,
+              "status": "passed",
+              "durationMs": 39248,
+              "queueMs": 5.980812000001606,
+              "plannerSeconds": [
+                36.904
+              ],
+              "nativeErrors": {},
+              "traceFound": true
+            }
+          ]
+        }
+      ],
+      "source": "compare-1.json"
+    },
+    {
+      "concurrency": 3,
+      "kernelSha256": "8a35f63dd2284e3790a1d97dd0cb2236057c55a0c598b26f3bde022b843d5c04",
+      "groups": [
+        {
+          "group": "off",
+          "wallMs": 76007,
+          "plannerWindowPeak": 3,
+          "rows": [
+            {
+              "ordinal": 1,
+              "status": "passed",
+              "durationMs": 17563,
+              "queueMs": null,
+              "plannerSeconds": [
+                14.222
+              ],
+              "nativeErrors": {},
+              "traceFound": true
+            },
+            {
+              "ordinal": 2,
+              "status": "passed",
+              "durationMs": 19304,
+              "queueMs": null,
+              "plannerSeconds": [
+                16.097
+              ],
+              "nativeErrors": {},
+              "traceFound": true
+            },
+            {
+              "ordinal": 3,
+              "status": "passed",
+              "durationMs": 76007,
+              "queueMs": null,
+              "plannerSeconds": [
+                72.798
+              ],
+              "nativeErrors": {},
+              "traceFound": true
+            }
+          ]
+        },
+        {
+          "group": "on",
+          "wallMs": 0,
+          "plannerWindowPeak": 0,
+          "rows": [],
+          "setupError": "rpc-error",
+          "rpcCode": -32603
+        }
+      ],
+      "source": "compare-3.json"
+    },
+    {
+      "concurrency": 3,
+      "kernelSha256": "8a35f63dd2284e3790a1d97dd0cb2236057c55a0c598b26f3bde022b843d5c04",
+      "groups": [
+        {
+          "group": "on",
+          "wallMs": 17925,
+          "plannerWindowPeak": 3,
+          "rows": [
+            {
+              "ordinal": 1,
+              "status": "passed",
+              "durationMs": 17924,
+              "queueMs": 2043.8111260000005,
+              "plannerSeconds": [
+                13.534
+              ],
+              "nativeErrors": {},
+              "traceFound": true
+            },
+            {
+              "ordinal": 2,
+              "status": "passed",
+              "durationMs": 11547,
+              "queueMs": 4086.425729999999,
+              "plannerSeconds": [
+                5.143
+              ],
+              "nativeErrors": {},
+              "traceFound": true
+            },
+            {
+              "ordinal": 3,
+              "status": "passed",
+              "durationMs": 15439,
+              "queueMs": 7.458339000000706,
+              "plannerSeconds": [
+                13.038
+              ],
+              "nativeErrors": {},
+              "traceFound": true
+            }
+          ]
+        },
+        {
+          "group": "native",
+          "wallMs": 28159,
+          "plannerWindowPeak": 3,
+          "rows": [
+            {
+              "ordinal": 1,
+              "status": "passed",
+              "durationMs": 16552,
+              "queueMs": null,
+              "plannerSeconds": [
+                14.671
+              ],
+              "nativeErrors": {},
+              "traceFound": true
+            },
+            {
+              "ordinal": 2,
+              "status": "passed",
+              "durationMs": 8843,
+              "queueMs": null,
+              "plannerSeconds": [
+                6.934
+              ],
+              "nativeErrors": {},
+              "traceFound": true
+            },
+            {
+              "ordinal": 3,
+              "status": "passed",
+              "durationMs": 28159,
+              "queueMs": null,
+              "plannerSeconds": [
+                26.218
+              ],
+              "nativeErrors": {},
+              "traceFound": true
+            }
+          ]
+        }
+      ],
+      "source": "compare-3-followup.json"
+    },
+    {
+      "concurrency": 4,
+      "kernelSha256": "8a35f63dd2284e3790a1d97dd0cb2236057c55a0c598b26f3bde022b843d5c04",
+      "groups": [
+        {
+          "group": "on",
+          "wallMs": 24961,
+          "plannerWindowPeak": 4,
+          "rows": [
+            {
+              "ordinal": 1,
+              "status": "passed",
+              "durationMs": 13464,
+              "queueMs": 6.791193999997631,
+              "plannerSeconds": [
+                11.132
+              ],
+              "nativeErrors": {},
+              "traceFound": true
+            },
+            {
+              "ordinal": 2,
+              "status": "passed",
+              "durationMs": 24961,
+              "queueMs": 6182.459228999993,
+              "plannerSeconds": [
+                16.514
+              ],
+              "nativeErrors": {},
+              "traceFound": true
+            },
+            {
+              "ordinal": 3,
+              "status": "passed",
+              "durationMs": 16053,
+              "queueMs": 2059.872086000003,
+              "plannerSeconds": [
+                11.659
+              ],
+              "nativeErrors": {},
+              "traceFound": true
+            },
+            {
+              "ordinal": 4,
+              "status": "passed",
+              "durationMs": 22131,
+              "queueMs": 4113.641736999998,
+              "plannerSeconds": [
+                15.696
+              ],
+              "nativeErrors": {},
+              "traceFound": true
+            }
+          ]
+        },
+        {
+          "group": "native",
+          "wallMs": 23079,
+          "plannerWindowPeak": 4,
+          "rows": [
+            {
+              "ordinal": 1,
+              "status": "passed",
+              "durationMs": 15416,
+              "queueMs": null,
+              "plannerSeconds": [
+                13.451
+              ],
+              "nativeErrors": {},
+              "traceFound": true
+            },
+            {
+              "ordinal": 2,
+              "status": "passed",
+              "durationMs": 23079,
+              "queueMs": null,
+              "plannerSeconds": [
+                21.084
+              ],
+              "nativeErrors": {},
+              "traceFound": true
+            },
+            {
+              "ordinal": 3,
+              "status": "passed",
+              "durationMs": 11182,
+              "queueMs": null,
+              "plannerSeconds": [
+                9.073
+              ],
+              "nativeErrors": {},
+              "traceFound": true
+            },
+            {
+              "ordinal": 4,
+              "status": "passed",
+              "durationMs": 11473,
+              "queueMs": null,
+              "plannerSeconds": [
+                9.478
+              ],
+              "nativeErrors": {},
+              "traceFound": true
+            }
+          ]
+        },
+        {
+          "group": "off",
+          "wallMs": 13875,
+          "plannerWindowPeak": 4,
+          "rows": [
+            {
+              "ordinal": 1,
+              "status": "passed",
+              "durationMs": 8684,
+              "queueMs": null,
+              "plannerSeconds": [
+                6.261
+              ],
+              "nativeErrors": {},
+              "traceFound": true
+            },
+            {
+              "ordinal": 2,
+              "status": "passed",
+              "durationMs": 11939,
+              "queueMs": null,
+              "plannerSeconds": [
+                9.309
+              ],
+              "nativeErrors": {},
+              "traceFound": true
+            },
+            {
+              "ordinal": 3,
+              "status": "passed",
+              "durationMs": 13875,
+              "queueMs": null,
+              "plannerSeconds": [
+                11.428
+              ],
+              "nativeErrors": {},
+              "traceFound": true
+            },
+            {
+              "ordinal": 4,
+              "status": "passed",
+              "durationMs": 9818,
+              "queueMs": null,
+              "plannerSeconds": [
+                7.355
+              ],
+              "nativeErrors": {},
+              "traceFound": true
+            }
+          ]
+        }
+      ],
+      "source": "compare-4.json"
+    }
+  ],
+  "cancellations": [
+    {
+      "source": "compare-cancel.json",
+      "groups": [
+        {
+          "group": "off",
+          "requestStates": null,
+          "rows": [
+            {
+              "ordinal": 1,
+              "status": "cancelled",
+              "stopReason": "cancelled",
+              "cancelAckMs": 8.26592200000232,
+              "admissionWaitMs": null,
+              "markerReceived": false
+            },
+            {
+              "ordinal": 2,
+              "status": "cancelled",
+              "stopReason": "cancelled",
+              "cancelAckMs": 8.215091000001848,
+              "admissionWaitMs": null,
+              "markerReceived": false
+            },
+            {
+              "ordinal": 3,
+              "status": "cancelled",
+              "stopReason": "cancelled",
+              "cancelAckMs": 8.25952099999995,
+              "admissionWaitMs": null,
+              "markerReceived": false
+            }
+          ]
+        },
+        {
+          "group": "on",
+          "requestStates": [
+            {
+              "state": "cancelled",
+              "count": 3
+            }
+          ],
+          "rows": [
+            {
+              "ordinal": 1,
+              "status": "unexpected-stop",
+              "stopReason": "end_turn",
+              "cancelAckMs": 887.1553290000011,
+              "admissionWaitMs": 2039.7467969999998,
+              "markerReceived": false
+            },
+            {
+              "ordinal": 2,
+              "status": "cancelled",
+              "stopReason": "cancelled",
+              "cancelAckMs": 7.318229999997129,
+              "admissionWaitMs": 7.962239000000409,
+              "markerReceived": false
+            },
+            {
+              "ordinal": 3,
+              "status": "cancelled",
+              "stopReason": "cancelled",
+              "cancelAckMs": 2.7360179999959655,
+              "admissionWaitMs": 2512.1314550000025,
+              "markerReceived": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "source": "compare-cancel-fixed.json",
+      "groups": [
+        {
+          "group": "off",
+          "requestStates": null,
+          "rows": [
+            {
+              "ordinal": 1,
+              "status": "cancelled",
+              "stopReason": "cancelled",
+              "cancelAckMs": 7.323452000000543,
+              "admissionWaitMs": null,
+              "markerReceived": false
+            },
+            {
+              "ordinal": 2,
+              "status": "cancelled",
+              "stopReason": "cancelled",
+              "cancelAckMs": 7.464543000001868,
+              "admissionWaitMs": null,
+              "markerReceived": false
+            },
+            {
+              "ordinal": 3,
+              "status": "cancelled",
+              "stopReason": "cancelled",
+              "cancelAckMs": 7.089180000002671,
+              "admissionWaitMs": null,
+              "markerReceived": false
+            }
+          ]
+        },
+        {
+          "group": "on",
+          "requestStates": [
+            {
+              "state": "cancelled",
+              "count": 3
+            }
+          ],
+          "rows": [
+            {
+              "ordinal": 1,
+              "status": "cancelled",
+              "stopReason": "cancelled",
+              "cancelAckMs": 1070.8891629999998,
+              "admissionWaitMs": 2029.772825,
+              "markerReceived": false
+            },
+            {
+              "ordinal": 2,
+              "status": "cancelled",
+              "stopReason": "cancelled",
+              "cancelAckMs": 7.6827830000038375,
+              "admissionWaitMs": 26.120496999999887,
+              "markerReceived": false
+            },
+            {
+              "ordinal": 3,
+              "status": "cancelled",
+              "stopReason": "cancelled",
+              "cancelAckMs": 2.7553100000004633,
+              "admissionWaitMs": 2512.3604140000025,
+              "markerReceived": false
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "limits": [
+    "Single short-text pass per condition; same cloud account.",
+    "plannerWindowPeak measures overlapping native planner intervals, not backend model execution concurrency.",
+    "One initial on/3 session setup failure remains unattributed; successful followup is separate.",
+    "Production wrapper and managed kernel pins unchanged."
+  ]
+}

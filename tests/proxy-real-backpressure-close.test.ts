@@ -6,8 +6,6 @@ import { PassThrough, Writable } from "node:stream";
 import { fileURLToPath } from "node:url";
 import { once } from "node:events";
 import { expect, it, vi } from "vitest";
-import { AdmissionRuntime } from "../ACP Connector/admission/runtime.js";
-import { AdmissionTurnCoordinator } from "../ACP Connector/admission/turn-coordinator.js";
 import { OfficialKernelProxy } from "../ACP Connector/official-kernel/proxy.js";
 import { createNdjsonParser, encodeNdjson } from "../ACP Connector/official-kernel/ndjson.js";
 
@@ -24,8 +22,6 @@ async function bounded<T>(promise: Promise<T>, label: string): Promise<T> {
 
 it.each(["close", "EOF", "child SIGTERM"])("真实 child stdout 背压暂停后 %s 仍完成 close 和全部资源清理", async mode => {
   const directory = await mkdtemp(path.join(os.tmpdir(), "real-pipe-close-"));
-  const coordinatorClose = vi.spyOn(AdmissionTurnCoordinator.prototype, "close");
-  const runtimeClose = vi.spyOn(AdmissionRuntime.prototype, "close");
   const child = spawn(process.execPath, [fixture], { stdio: ["pipe", "pipe", "pipe"] });
   const input = new PassThrough();
   let blocking = false;
@@ -45,7 +41,7 @@ it.each(["close", "EOF", "child SIGTERM"])("真实 child stdout 背压暂停后 
     else { parse(chunk); callback(); }
   } });
   const proxy = new OfficialKernelProxy({ child, stdin: input, stdout: output, version: "test", env: {
-    HOME: directory, PASEO_AGENT_ID: "backpressure-agent", AGY_ACP_ADMISSION_ENABLED: "1", AGY_ACP_STATE_DIR: path.join(directory, "state")
+    HOME: directory, PASEO_AGENT_ID: "backpressure-agent"
   } });
   let childClosed = false;
   child.once("close", () => { childClosed = true; });
@@ -66,13 +62,11 @@ it.each(["close", "EOF", "child SIGTERM"])("真实 child stdout 背压暂停后 
     if (mode === "close") proxy.close();
     else if (mode === "EOF") input.end();
     else child.kill("SIGTERM");
-    // 故意不恢复 client drain：start 只有真正 child close、MCP/Admission 清理后才能完成。
+    // 故意不恢复 client drain：start 只有真正 child close、MCP 清理后才能完成。
     // 外部 SIGTERM 可截断尾帧而报协议错误；主动 close/EOF 则应正常完成。
     await bounded(mode === "child SIGTERM" ? running.then(() => undefined, () => undefined) : running, mode);
     expect(childClosed).toBe(true);
     expect(child.signalCode).toBe("SIGTERM");
-    expect(coordinatorClose).toHaveBeenCalledTimes(1);
-    expect(runtimeClose).toHaveBeenCalledTimes(1);
     await expect(fetch(url, { signal: AbortSignal.timeout(500) })).rejects.toThrow();
   } finally {
     // 失败路径才恢复 pipe，避免旧版本复现让测试进程永久挂起。
@@ -83,7 +77,6 @@ it.each(["close", "EOF", "child SIGTERM"])("真实 child stdout 背压暂停后 
     input.end();
     try { await bounded(running.catch(() => {}), "测试清理"); }
     finally {
-      coordinatorClose.mockRestore(); runtimeClose.mockRestore();
       await rm(directory, { recursive: true, force: true });
     }
   }
@@ -98,7 +91,7 @@ it.skipIf(process.platform === "win32")("真实 adapter 收到 SIGTERM 后退出
   const runModule = new URL("../dist/ACP%20Connector/official-kernel/run.js", import.meta.url).href;
   const adapter = spawn(process.execPath, [harness, runModule], { detached: true, stdio: ["pipe", "pipe", "pipe", "ipc"], env: {
     ...process.env, HOME: directory, PASEO_HOME: directory, PASEO_AGENT_ID: "signal-agent",
-    PASEO_AGY_ACP_OFFICIAL_BIN: kernel, AGY_ACP_ADMISSION_ENABLED: "1", AGY_ACP_STATE_DIR: path.join(directory, "state")
+    PASEO_AGY_ACP_OFFICIAL_BIN: kernel
   } });
   adapter.stdout!.resume(); adapter.stderr!.resume();
   const exited = once(adapter, "exit");

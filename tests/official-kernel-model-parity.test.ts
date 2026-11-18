@@ -3,13 +3,10 @@ import os from "node:os";
 import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import Database from "better-sqlite3";
 import { afterEach, describe, expect, it } from "vitest";
 
 const repositoryRoot = path.resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
 const driver = path.join(repositoryRoot, "scripts", "official-kernel-model-parity.mjs");
-const stressEvidence = path.join(repositoryRoot, "scripts", "official-kernel-stress-evidence.mjs");
-const stressScript = path.join(repositoryRoot, "scripts", "isolated-official-kernel-stress.sh");
 const fakeKernel = path.join(repositoryRoot, "tests", "helpers", "fake-model-parity-acp-kernel.mjs");
 const temporaryDirectories: string[] = [];
 
@@ -121,76 +118,6 @@ function runNode(script: string, args: string[], environment: NodeJS.ProcessEnv 
 
 function runHarness(targetFlag: string, target: string, extra: string[] = [], environment: NodeJS.ProcessEnv = {}) {
   return runNode(driver, [targetFlag, target, ...EXPECTED_ARGUMENTS, ...extra], environment);
-}
-
-type EvidenceDatabaseOptions = {
-  startEventTimes?: number[];
-  startHistoryTimes?: number[];
-  extraAdmittedEvents?: number;
-};
-
-function makeEvidenceDatabase({
-  startEventTimes = [1_001, 3_001, 5_001, 7_001],
-  startHistoryTimes = [7_001],
-  extraAdmittedEvents = 0
-}: EvidenceDatabaseOptions = {}): string {
-  const root = temporaryDirectory("paseo-model-parity-evidence-");
-  const databasePath = path.join(root, "runtime.sqlite");
-  const database = new Database(databasePath);
-  try {
-    database.exec(`
-      CREATE TABLE policy_state (
-        id INTEGER PRIMARY KEY,
-        max_active_turns INTEGER NOT NULL,
-        max_concurrent_starts INTEGER NOT NULL,
-        min_start_interval_ms INTEGER NOT NULL
-      );
-      CREATE TABLE turn_requests (state TEXT NOT NULL);
-      CREATE TABLE leases (lease_id TEXT NOT NULL);
-      CREATE TABLE turn_payloads (request_id TEXT NOT NULL);
-      CREATE TABLE start_history (started_at INTEGER NOT NULL);
-      CREATE TABLE events (
-        event_seq INTEGER PRIMARY KEY AUTOINCREMENT,
-        kind TEXT NOT NULL,
-        from_state TEXT NOT NULL,
-        to_state TEXT NOT NULL,
-        occurred_at INTEGER NOT NULL
-      );
-    `);
-    database.prepare(
-      "INSERT INTO policy_state (id, max_active_turns, max_concurrent_starts, min_start_interval_ms) VALUES (1, 3, 2, 2000)"
-    ).run();
-    const insertEvent = database.prepare(
-      "INSERT INTO events (kind, from_state, to_state, occurred_at) VALUES (?, ?, ?, ?)"
-    );
-    const insertState = database.prepare("INSERT INTO turn_requests (state) VALUES ('completed')");
-    for (let index = 0; index < 4; index += 1) {
-      insertEvent.run("request_enqueued", "absent", "queued", index);
-      insertState.run();
-    }
-    for (let index = 0; index < 4; index += 1) {
-      const time = 1_000 + index * 2_000;
-      insertEvent.run("request_admitted", "queued", "admitted", time);
-      const startTime = startEventTimes[index];
-      if (startTime !== undefined) {
-        insertEvent.run("request_starting", "admitted", "starting", startTime);
-      }
-      insertEvent.run("request_dispatch_intent", "starting", "dispatch_intent", time + 2);
-      insertEvent.run("request_active", "dispatch_intent", "active", time + 3);
-      insertEvent.run("request_provider_terminal", "active", "provider_terminal", time + 4);
-      insertEvent.run("request_released", "provider_terminal", "completed", time + 5);
-    }
-    for (let index = 0; index < extraAdmittedEvents; index += 1) {
-      const time = 10_000 + index * 2;
-      insertEvent.run("request_enqueued", "absent", "queued", time);
-      insertEvent.run("request_admitted", "queued", "admitted", time + 1);
-    }
-    const insertStart = database.prepare("INSERT INTO start_history (started_at) VALUES (?)");
-    for (const startedAt of startHistoryTimes) insertStart.run(startedAt);
-  } finally {
-    database.close();
-  }
-  return databasePath;
 }
 
 async function waitForProcessExit(processId: number): Promise<boolean> {
@@ -794,98 +721,4 @@ describe("official kernel model parity acceptance harness", () => {
     const childPid = Number(readFileSync(childPidPath, "utf8"));
     expect(await waitForProcessExit(childPid)).toBe(true);
   }, 20_000);
-});
-
-describe("isolated stress evidence", () => {
-  it("validates configured bounds, queue progress, interval, and resource release without reading payloads", () => {
-    const databasePath = makeEvidenceDatabase();
-    const result = runNode(stressEvidence, [
-      "--database",
-      databasePath,
-      "--expected-runs",
-      "4",
-      "--max-active-turns",
-      "3",
-      "--max-concurrent-starts",
-      "2",
-      "--min-start-interval-ms",
-      "2000"
-    ]);
-    expect(result.status).toBe(0);
-    expect(result.receipt).toMatchObject({
-      ok: true,
-      policy: { maxActiveTurns: 3, maxConcurrentStarts: 2, minStartIntervalMs: 2000 },
-      runs: { expected: 4, observed: 4, enqueued: 4, admitted: 4 },
-      bounds: { startEventsObserved: 4, minStartGapMs: 2000 },
-      queue: { maxQueuedObserved: 4, progressed: true },
-      release: { leases: 0, payloads: 0, nonterminal: 0 }
-    });
-  });
-
-  it("requires durable start events even when unrelated admissions and current-window history exist", () => {
-    const databasePath = makeEvidenceDatabase({ startEventTimes: [], extraAdmittedEvents: 1 });
-    const result = runNode(stressEvidence, [
-      "--database",
-      databasePath,
-      "--expected-runs",
-      "4",
-      "--max-active-turns",
-      "3",
-      "--max-concurrent-starts",
-      "2",
-      "--min-start-interval-ms",
-      "2000"
-    ]);
-    expect(result.status).toBe(1);
-    expect(result.receipt).toEqual({ ok: false, failure: "start_evidence_missing" });
-  });
-
-  it("rejects a too-small durable start gap even when the pruned history has one valid row", () => {
-    const databasePath = makeEvidenceDatabase({ startEventTimes: [1_001, 1_002, 5_001, 7_001] });
-    const result = runNode(stressEvidence, [
-      "--database",
-      databasePath,
-      "--expected-runs",
-      "4",
-      "--max-active-turns",
-      "3",
-      "--max-concurrent-starts",
-      "2",
-      "--min-start-interval-ms",
-      "2000"
-    ]);
-    expect(result.status).toBe(1);
-    expect(result.receipt).toEqual({ ok: false, failure: "start_interval_violated" });
-  });
-
-  it("requires explicit admission settings and consumes the sanitized evidence helper", () => {
-    const script = readFileSync(stressScript, "utf8");
-    const syntax = spawnSync("bash", ["-n", stressScript], { encoding: "utf8" });
-    expect(syntax.status).toBe(0);
-    expect(script).toContain("AGY_ACP_ADMISSION_MAX_ACTIVE_TURNS");
-    expect(script).toContain("AGY_ACP_ADMISSION_MAX_CONCURRENT_STARTS");
-    expect(script).toContain("AGY_ACP_ADMISSION_MIN_START_INTERVAL_MS");
-    expect(script).toContain("STRESS_CONCURRENCY");
-    expect(script).toContain('CONCURRENCY="$((MAX_ACTIVE_TURNS + 1))"');
-    expect(script).toContain("admission policy active=");
-    expect(script).toContain("official-kernel-stress-evidence.mjs");
-    expect(script).toContain('PRESERVE_FAILURE="${STRESS_PRESERVE_FAILURE:-0}"');
-    expect(script).toContain('require_binary_flag "$PRESERVE_FAILURE" "STRESS_PRESERVE_FAILURE"');
-    expect(script).toContain('[[ "$value" == "0" || "$value" == "1" ]]');
-    expect(script).toContain('exit_status" -ne 0 && "$PRESERVE_FAILURE" == "1"');
-    expect(script).toContain("mode 0700");
-    expect(script).toContain("may contain sensitive local diagnostics");
-    expect(script).toContain("retention handler does not automatically read or print retained files");
-    expect(script).toContain("exit-success=%s stdout-bytes=%s stderr-bytes=%s");
-    expect(script).toContain('stat -c %s "$filename"');
-    expect(script).toContain("ordinal=%d status=%s agent-id-present=%s");
-    expect(script).toContain("safe_statuses=");
-    expect(script).not.toContain("STRESS_CONCURRENCY:-6");
-    expect(script).not.toMatch(/STRESS_CONCURRENCY:-[0-9]+/);
-    expect(script).not.toContain('CONCURRENCY="8"');
-    expect(script).not.toContain('cat "$TMPHOME/run-');
-    expect(script).not.toContain('wc -c < "$filename"');
-    expect(script).not.toContain("payload=%s");
-    expect(script).not.toContain('raise SystemExit("isolated run returned an unexpected status")');
-  });
 });

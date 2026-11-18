@@ -1,10 +1,9 @@
 import { performance } from "node:perf_hooks";
 import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import type { Readable, Writable } from "node:stream";
-import { TurnClaim, raceClaim, isTurnCancelled } from "../acp/session/turn-scheduler.js";
-import { createOfficialAdmission, isAdmissionDiscoveryEnvironment, issueAdmittedOfficialPromptWrite } from "./admission-fence.js";
-import { extractCwd, extractPromptText, extractSessionId, PaseoSessionContext } from "./context.js";
-import { blankTurnError, officialResponseError, sessionUpdateShowsVisibleOutput, shouldRejectBlankTurn } from "./errors.js";
+import { TurnClaim, raceClaim, isTurnCancelled } from "../acp/session/turn-claim.js";
+import { extractCwd, extractSessionId, PaseoSessionContext } from "./context.js";
+import { blankTurnError, sessionUpdateShowsVisibleOutput, shouldRejectBlankTurn } from "./errors.js";
 import { overlayProductIdentity } from "./identity.js";
 import {
   isJsonRpcFailure,
@@ -23,7 +22,7 @@ import { rewriteModeFields } from "./mode-map.js";
 import { createNdjsonParser, encodeNdjson } from "./ndjson.js";
 import { augmentAvailableCommands, type AvailableCommand } from "./skill-commands.js";
 import { SessionSkillMcpServer } from "./skill-mcp.js";
-import { createKernelDiagnostics, createQueueFeedback, supportsSessionNotices } from "./observability.js";
+import { createKernelDiagnostics } from "./observability.js";
 import { SystemMessageFolder } from "./system-message-fold.js";
 
 const INITIALIZE_METHOD = "initialize";
@@ -34,7 +33,6 @@ const SESSION_CLOSE_METHOD = "session/close";
 const SESSION_PROMPT_METHOD = "session/prompt";
 const SESSION_SET_MODE_METHOD = "session/set_mode";
 const SESSION_SET_CONFIG_METHOD = "session/set_config_option";
-const SESSION_SET_MODEL_METHOD = "session/set_model";
 const SESSION_CANCEL_METHOD = "session/cancel";
 const SESSION_UPDATE_METHOD = "session/update";
 
@@ -62,21 +60,16 @@ export class OfficialKernelProxy {
   readonly #version: string;
   readonly #pending = new Map<JsonRpcId, PendingClientRequest>();
   readonly #claims = new Map<string, TurnClaim>();
-  readonly #requestedModels = new Map<JsonRpcId, { sessionId: string; model?: string; concrete: boolean }>();
-  readonly #sessionModels = new Map<string, string>();
-  readonly #sessionModelFallbacks = new Map<string, string>();
   readonly #sessionCwds = new Map<string, string>();
   readonly #systemMessageFolder = new SystemMessageFolder();
   readonly #env: NodeJS.ProcessEnv;
   readonly #context: PaseoSessionContext;
   readonly #skillMcp: SessionSkillMcpServer;
   readonly #diagnostics: ReturnType<typeof createKernelDiagnostics>;
-  #notices = false;
   readonly #sessionSetup = new Map<JsonRpcId, { native: boolean; token?: string }>();
   readonly #skillTokens = new Map<string, string>();
   readonly #firstOutputs = new Map<JsonRpcId, () => void>();
   readonly #requestTimings = new Map<JsonRpcId, () => void>();
-  readonly #admission;
   readonly #mcpBridge = new McpProtocolBridge();
   readonly #inFlight = new Set<Promise<void>>();
   #sessionNewTail: Promise<void> = Promise.resolve();
@@ -95,7 +88,6 @@ export class OfficialKernelProxy {
     this.#context = new PaseoSessionContext(this.#env);
     this.#skillMcp = new SessionSkillMcpServer(this.#env);
     this.#diagnostics = createKernelDiagnostics({ env: this.#env });
-    this.#admission = createOfficialAdmission(this.#env);
   }
 
   start(): Promise<void> {
@@ -174,13 +166,8 @@ export class OfficialKernelProxy {
             await Promise.allSettled([this.#mcpBridge.close(), this.#skillMcp.close()]);
             await Promise.allSettled(this.#inFlight);
           } finally {
-            this.#admission?.coordinator.close();
-            this.#admission?.runtime.close();
             this.#claims.clear();
             this.#sessionCwds.clear();
-            this.#sessionModels.clear();
-            this.#sessionModelFallbacks.clear();
-            this.#requestedModels.clear();
             this.#sessionSetup.clear();
             this.#skillTokens.clear();
             this.#requestTimings.clear();
@@ -269,7 +256,6 @@ export class OfficialKernelProxy {
       return;
     }
     if (request.method === INITIALIZE_METHOD) {
-      this.#notices = supportsSessionNotices(params);
       this.#requestTimings.set(request.id, this.#diagnostics.start("initialize", { requestId: request.id }));
     }
     if (request.method === SESSION_NEW_METHOD || request.method === SESSION_LOAD_METHOD || request.method === SESSION_RESUME_METHOD) {
@@ -308,20 +294,6 @@ export class OfficialKernelProxy {
       }
     } else if (request.method === SESSION_SET_MODE_METHOD || request.method === SESSION_SET_CONFIG_METHOD) {
       params = rewriteModeFields(params);
-      if (isRecord(params) && typeof params.value === "string") {
-        const optionId = params.configId ?? params.id;
-        const sessionId = extractSessionId(params);
-        if (sessionId && (optionId === "model" || optionId === "thinking_level")) {
-          this.#requestedModels.set(request.id, {
-            sessionId, model: optionId === "model" ? params.value : undefined, concrete: false
-          });
-        }
-      }
-    } else if (request.method === SESSION_SET_MODEL_METHOD) {
-      const sessionId = extractSessionId(params);
-      if (sessionId && isRecord(params) && typeof params.modelId === "string" && params.modelId.length > 0) {
-        this.#requestedModels.set(request.id, { sessionId, model: params.modelId, concrete: true });
-      }
     } else if (request.method === SESSION_PROMPT_METHOD) {
       await this.#handlePrompt(request, params);
       return;
@@ -351,17 +323,13 @@ export class OfficialKernelProxy {
 
   async #handlePrompt(request: JsonRpcRequest, params: unknown): Promise<void> {
     if (this.#closed) return;
-    if (isAdmissionDiscoveryEnvironment(this.#env)) {
-      throw new Error("Admission enabled without PASEO_AGENT_ID: discovery only; session/prompt is blocked");
-    }
     const sessionId = extractSessionId(params);
     if (sessionId && this.#claims.has(sessionId)) throw new Error("session already has an active prompt");
-    const claim = new TurnClaim("foreground");
+    const claim = new TurnClaim();
     if (sessionId) this.#claims.set(sessionId, claim);
     let responseDelivered = false;
     const turnStartedAt = performance.now();
     let terminalStage: "turn_end" | "turn_fail" | "turn_cancel" = "turn_end";
-    let finishAdmissionWait: (() => void) | undefined;
     const firstOutputDone = this.#diagnostics.start("first_kernel_output", { requestId: request.id, sessionId });
     this.#firstOutputs.set(request.id, firstOutputDone);
     try {
@@ -373,79 +341,19 @@ export class OfficialKernelProxy {
         return;
       }
       if (this.#closed) return;
-      const promptText = extractPromptText(params) || "prompt";
-      const rewritten: JsonRpcRequest = { ...request, jsonrpc: "2.0", params };
-      const coordinator = this.#admission?.coordinator;
-      const processId = this.#child.pid;
-
-      if (coordinator === undefined || processId === undefined) {
-        const response = this.#track(rewritten.id, rewritten.method, params);
-        claim.throwIfAborted();
-        this.#writeChild(rewritten);
-        const result = await response;
-        responseDelivered = true;
-        if (isJsonRpcFailure(result)) terminalStage = "turn_fail";
+      const response = this.#track(request.id, request.method, params);
+      claim.throwIfAborted();
+      this.#writeChild({ ...request, jsonrpc: "2.0", params });
+      const result = await response;
+      responseDelivered = true;
+      if (isJsonRpcFailure(result)) terminalStage = "turn_fail";
       else if (isJsonRpcSuccess(result) && isRecord(result.result) && result.result.stopReason === "cancelled") terminalStage = "turn_cancel";
-        return;
-      }
-
-      let wrote = false;
-      const feedback = createQueueFeedback({ notices: this.#notices });
-      let queued = false;
-      const admissionWaitDone = this.#diagnostics.start("admission_wait", { requestId: request.id, sessionId });
-      let admissionWaitFinished = false;
-      const admitted = () => {
-        if (admissionWaitFinished) return;
-        admissionWaitFinished = true;
-        admissionWaitDone();
-      };
-      finishAdmissionWait = admitted;
-      const stopReason = await coordinator.admit({
-        sessionId: sessionId ?? "session",
-        model: (sessionId && (this.#sessionModels.get(sessionId) || this.#sessionModelFallbacks.get(sessionId))) || "unknown",
-        promptText,
-        claim,
-        reportProgress: (progress) => {
-          if (!sessionId || claim.aborted) return;
-          queued = true;
-          const update = feedback(sessionId, progress);
-          if (update) this.#writeClient(update);
-        },
-        execute: async (boundary) => {
-          admitted();
-          if (queued && sessionId && !claim.aborted) {
-            const update = feedback(sessionId, { state: "running" });
-            if (update) this.#writeClient(update);
-          }
-          const response = this.#track(rewritten.id, rewritten.method, params);
-          issueAdmittedOfficialPromptWrite(boundary, processId, () => {
-            wrote = true;
-            this.#writeChild(rewritten);
-          });
-          const result = await response;
-          responseDelivered = true;
-          // 断连只用于解开等待；已派发轮次仍交给 Admission 的恢复路径结算。
-          if (this.#closed) throw new Error("official kernel connection closed during prompt");
-          if (isJsonRpcFailure(result)) throw officialResponseError(result);
-          const cancelled = isJsonRpcSuccess(result) && isRecord(result.result) && result.result.stopReason === "cancelled";
-          return { stopReason: claim.aborted || cancelled ? "cancelled" : "end_turn" };
-        }
-      });
-      if (stopReason === "cancelled") terminalStage = "turn_cancel";
-      if (!wrote) {
-        this.#writeClient({
-          jsonrpc: "2.0",
-          id: request.id,
-          result: { stopReason: stopReason === "cancelled" ? "cancelled" : "end_turn" }
-        });
-      }
     } catch (error) {
       terminalStage = isTurnCancelled(error) ? "turn_cancel" : "turn_fail";
       if (!responseDelivered && isTurnCancelled(error)) {
         this.#writeClient({ jsonrpc: "2.0", id: request.id, result: { stopReason: "cancelled" } });
       } else if (!responseDelivered) throw error;
     } finally {
-      finishAdmissionWait?.();
       if (sessionId && this.#claims.get(sessionId) === claim) {
         const timer = this.#cancelTimers.get(sessionId);
         if (timer) clearTimeout(timer);
@@ -455,7 +363,6 @@ export class OfficialKernelProxy {
       if (this.#firstOutputs.get(request.id) === firstOutputDone) this.#firstOutputs.delete(request.id);
       if (terminalStage === "turn_end" && claim.aborted) terminalStage = "turn_cancel";
       this.#diagnostics.event(terminalStage, { requestId: request.id, sessionId, durationMs: performance.now() - turnStartedAt });
-      claim.markReleased();
     }
   }
 
@@ -474,24 +381,9 @@ export class OfficialKernelProxy {
     });
   }
 
-  #rememberModel(sessionId: string, value: unknown): void {
-    if (!isRecord(value)) return;
-    const models = isRecord(value.models) ? value.models : {};
-    const direct = value.modelId ?? value.currentModelId ?? models.currentModelId;
-    if (typeof direct === "string" && direct.length > 0) this.#sessionModels.set(sessionId, direct);
-    if (Array.isArray(value.configOptions)) {
-      for (const option of value.configOptions) {
-        if (isRecord(option) && (option.category === "model" || option.id === "model") && typeof option.currentValue === "string") {
-          this.#sessionModelFallbacks.set(sessionId, option.currentValue);
-        }
-      }
-    }
-  }
-
   #onChildMessage(message: JsonRpcMessage): void {
     if (isJsonRpcNotification(message) && message.method === SESSION_UPDATE_METHOD) {
       const sessionId = extractSessionId(message.params);
-      if (sessionId && isRecord(message.params)) this.#rememberModel(sessionId, message.params.update);
       if (sessionUpdateShowsVisibleOutput(message.params)) {
         for (const [id, pending] of this.#pending) {
           if (
@@ -556,22 +448,15 @@ export class OfficialKernelProxy {
         return;
       }
       this.#pending.delete(message.id);
+      // Capture cancellation before releasing the claim for the next turn.
+      const promptWasCancelled = pending.method === SESSION_PROMPT_METHOD && pending.sessionId !== undefined &&
+        this.#claims.get(pending.sessionId)?.aborted === true;
       if (pending.method === SESSION_PROMPT_METHOD && pending.sessionId) {
         // 回包前同步释放：客户端可在收到终态的同一调用栈开始下一轮。
         const timer = this.#cancelTimers.get(pending.sessionId);
         if (timer) clearTimeout(timer);
         this.#cancelTimers.delete(pending.sessionId);
         this.#claims.delete(pending.sessionId);
-      }
-      const requestedModel = this.#requestedModels.get(message.id);
-      this.#requestedModels.delete(message.id);
-      if (requestedModel && isJsonRpcSuccess(message)) {
-        // 显式配置切换可能只返回家族；不能沿用切换前的具体 ID。
-        if (!requestedModel.concrete) this.#sessionModels.delete(requestedModel.sessionId);
-        if (requestedModel.model !== undefined) {
-          const models = requestedModel.concrete ? this.#sessionModels : this.#sessionModelFallbacks;
-          models.set(requestedModel.sessionId, requestedModel.model);
-        }
       }
       this.#requestTimings.get(message.id)?.();
       this.#requestTimings.delete(message.id);
@@ -593,7 +478,6 @@ export class OfficialKernelProxy {
           this.#sessionCwds.set(sessionId, pending.cwd);
         }
         if (sessionId) {
-          this.#rememberModel(sessionId, message.result);
           if (setup) this.#context.bindSession(sessionId, setup.native);
           const previousToken = this.#skillTokens.get(sessionId);
           if (previousToken) this.#skillMcp.release(previousToken);
@@ -608,23 +492,22 @@ export class OfficialKernelProxy {
         if (token) this.#skillMcp.release(token);
         this.#skillTokens.delete(sessionId);
         this.#sessionCwds.delete(sessionId);
-        this.#sessionModels.delete(sessionId);
-        this.#sessionModelFallbacks.delete(sessionId);
         this.#context.forgetSession(sessionId);
         this.#systemMessageFolder.reset(sessionId);
       } else if (
         pending.method === SESSION_PROMPT_METHOD
       ) {
         for (const update of this.#systemMessageFolder.finish(pending.sessionId)) this.#writeClient(update);
-        if (
+        if (promptWasCancelled && isJsonRpcSuccess(message) && isRecord(message.result) && message.result.stopReason === "end_turn") {
+          // Some kernels acknowledge cancellation with end_turn. Match the local
+          // turn outcome before forwarding or applying the blank-success guard.
+          outbound = { ...message, result: { ...message.result, stopReason: "cancelled" } };
+        } else if (
           isJsonRpcSuccess(message) &&
           shouldRejectBlankTurn(message.result, pending.sawVisibleOutput)
         ) {
           outbound = blankTurnError(message.id);
         }
-      }
-      if (isJsonRpcSuccess(message) && pending.sessionId && (pending.method === SESSION_SET_CONFIG_METHOD || pending.method === SESSION_SET_MODEL_METHOD)) {
-        this.#rememberModel(pending.sessionId, message.result);
       }
       this.#writeClient(outbound);
       pending.resolve(outbound);

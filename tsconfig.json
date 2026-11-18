@@ -6,9 +6,10 @@
     "rootDir": ".",
     "outDir": "dist",
     "strict": true,
+    "types": ["node"],
     "declaration": true,
     "sourceMap": true,
     "skipLibCheck": true
   },
-  "include": ["ACP Connector/**/*.ts", "Admission Controller/**/*.ts"]
+  "include": ["ACP Connector/**/*.ts"]
 }

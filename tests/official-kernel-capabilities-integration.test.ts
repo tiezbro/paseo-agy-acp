@@ -31,7 +31,7 @@ function capabilityHarness(env: NodeJS.ProcessEnv) {
 }
 
 describe("proxy 能力与技能 MCP 闭环", () => {
-  it.each(["cancelled", "end_turn"])("无 Admission 的 %s 内核响应只产生一个准确终态诊断", async stopReason => {
+  it.each(["cancelled", "end_turn"])("直连 %s 内核响应只产生一个准确终态诊断", async stopReason => {
     const lines: string[] = [];
     const stderr = vi.spyOn(process.stderr, "write").mockImplementation((value) => {
       lines.push(String(value));

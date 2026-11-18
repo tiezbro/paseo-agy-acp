@@ -14,7 +14,7 @@
 
 ## CI 与发布隔离
 
-产品验证 job 保留根项目自身的 `npm ci`、完整测试与架构检查；`better-sqlite3` 的原有构建策略不变。外部 Paseo 客户端安装和导入放在独立的 `paseo-client-compat` 矩阵 job、独立 runner 中执行，每个版本单独安装和验证。
+产品验证 job 保留根项目自身的 `npm ci`、完整测试与架构检查；产品已移除 `better-sqlite3`，无运行时 npm 依赖。外部 Paseo 客户端安装和导入放在独立的 `paseo-client-compat` 矩阵 job、独立 runner 中执行，每个版本单独安装和验证。
 
 工作流仅申请 `contents: read`，checkout 不持久化 Git 凭据，不接收 Google 登录目录、生产配置、发布 secret 或 OIDC 写权限。发布工作流和根项目运行依赖不引用测试 fixture；已有打包白名单测试继续拒绝额外目录。
 

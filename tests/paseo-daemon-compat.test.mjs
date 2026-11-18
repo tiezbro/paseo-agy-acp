@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createRequire } from "node:module";
-import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { createServer } from "node:http";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -32,10 +32,9 @@ async function waitFor(probe, label) {
 }
 
 // 使用真实 daemon 核心和存储，只有 Google 内核与插件 hook 的返回值由测试提供。
-async function harness(t, { resume = false, admission = false } = {}) {
+async function harness(t, { resume = false } = {}) {
   const directory = await mkdtemp(path.join(root, ".tmp-paseo-daemon-"));
   const trace = path.join(directory, "requests.ndjson");
-  await mkdir(path.join(directory, "admission/official-kernel"), { recursive: true, mode: 0o700 });
   const opens = [];
   const received = [];
   const server = createServer(async (request, response) => {
@@ -56,8 +55,7 @@ async function harness(t, { resume = false, admission = false } = {}) {
   const client = new ACPAgentClient({ provider, logger,
     defaultCommand: [process.execPath, path.join(root, "tests/helpers/run-paseo-contract-adapter.mjs")],
     runtimeSettings: { env: { HOME: directory, PASEO_HOME: directory, PASEO_CONTRACT_TRACE: trace,
-      PASEO_CONTRACT_RESUME: resume ? "1" : "0", AGY_ACP_ADMISSION_ENABLED: String(admission),
-      AGY_ACP_STATE_DIR: path.join(directory, "admission"), AGY_ACP_ADMISSION_MAX_ACTIVE_TURNS: "1" } } });
+      PASEO_CONTRACT_RESUME: resume ? "1" : "0" } } });
   const manager = new AgentManager({ logger, registry, clients: { [provider]: client },
     providerDefinitions: { [provider]: { enabled: true } }, paseoToolsEnabled: false,
     appendSystemPrompt: "daemon-context-marker",
@@ -136,37 +134,23 @@ for (const resume of [false, true]) {
   });
 }
 
-test("Paseo 0.14 daemon：排队取消不派发、不被空闲回收，并释放活动席位", { timeout: 30_000 }, async t => {
-  const h = await harness(t, { admission: true });
+test("Paseo 0.14 daemon：独立 agent 直接并发，取消互不影响且活动轮次不会被空闲回收", { timeout: 30_000 }, async t => {
+  const h = await harness(t);
   const first = await h.create("00000000-0000-4000-8000-000000000001");
   const second = await h.create("00000000-0000-4000-8000-000000000002");
-  const Database = (await import("better-sqlite3")).default;
-  const db = new Database(path.join(h.directory, "admission/official-kernel/runtime.sqlite"), { readonly: true });
-  t.after(() => db.close());
   const active = h.manager.runAgent(first.id, "hold");
-  active.catch(() => {});
-  await waitFor(() => db.prepare("SELECT 1 FROM turn_requests WHERE agent_id=? AND state='active'").get(first.id), "首轮激活");
-  const queued = h.manager.runAgent(second.id, "inspect");
-  queued.catch(() => {});
-  await waitFor(() => db.prepare("SELECT 1 FROM turn_requests WHERE agent_id=? AND state='queued'").get(second.id), "第二轮排队");
+  const other = h.manager.runAgent(second.id, "hold");
+  active.catch(() => {}); other.catch(() => {});
+  await waitFor(async () => (await h.requests()).filter(row => row.method === "session/prompt").length === 2, "两个 agent 同时进入内核");
   const cleanup = createIdleRuntimeCleanup({ enabled: true, logger, now: () => Date.now() + 3_600_001,
     runtimes: () => h.manager.getRuntimeCleanupCandidates(), schedule: () => () => {} });
   t.after(() => cleanup.close());
   assert.deepEqual((await cleanup.sweep()).collected, []);
   assert.equal((await h.manager.cancelAgentRun(second.id)).status, "settled");
-  await queued.catch(() => {});
-  assert.equal(db.prepare("SELECT state FROM turn_requests WHERE agent_id=?").get(second.id).state, "cancelled");
-  assert.equal((await h.requests()).filter(row => row.method === "session/prompt" && row.params.sessionId === second.persistence.sessionId).length, 0);
+  await other.catch(() => {});
+  assert.equal((await h.requests()).filter(row => row.method === "session/cancel" && row.params.sessionId === first.persistence.sessionId).length, 0);
   assert.equal((await h.manager.cancelAgentRun(first.id)).status, "settled");
   await active.catch(() => {});
-  await waitFor(() => db.prepare("SELECT state FROM turn_requests WHERE agent_id=?").get(first.id).state === "cancelled", "已派发轮次结算");
-  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM turn_requests WHERE state IN ('active','starting','dispatching')").get().n, 0);
-  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM leases").get().n, 0);
-  assert.equal(db.prepare("SELECT state FROM turn_requests WHERE agent_id=?").get(first.id).state, "cancelled");
-  // 再跑一轮，证明席位可复用，且已取消的业务 prompt 没有被自动重放。
   await h.manager.runAgent(second.id, "inspect");
-  await waitFor(() => db.prepare("SELECT COUNT(*) AS n FROM turn_requests WHERE state='completed'").get().n === 1, "后续轮次结算");
-  assert.equal((await h.requests()).filter(row => row.method === "session/prompt" && row.params.sessionId === second.persistence.sessionId).length, 1);
-  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM turn_requests WHERE state IN ('active','starting','dispatching')").get().n, 0);
-  assert.equal(db.prepare("SELECT COUNT(*) AS n FROM leases").get().n, 0);
+  assert.equal((await h.requests()).filter(row => row.method === "session/prompt" && row.params.sessionId === second.persistence.sessionId).length, 2);
 });

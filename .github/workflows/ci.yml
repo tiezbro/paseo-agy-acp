@@ -75,11 +75,10 @@ jobs:
         run: npm run test:paseo-client
 
   provider-platform:
-    name: Provider without Admission (${{ matrix.os }})
+    name: Provider protocol (${{ matrix.os }})
     strategy:
       fail-fast: false
       matrix:
-        # Node 22 随附的 node-gyp 尚不能识别 windows-latest 上的 VS 2026。
         os: [ubuntu-latest, macos-latest, windows-2022]
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
@@ -95,7 +94,7 @@ jobs:
           cache: npm
       - name: Install adapter dependencies
         run: npm ci
-      - name: Test ordinary provider and discovery without identity
+      - name: Test provider dispatch without identity and with legacy environment
         run: npm run test:paseo-provider
 
   repository-redaction:

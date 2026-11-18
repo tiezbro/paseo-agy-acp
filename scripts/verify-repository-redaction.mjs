@@ -60,8 +60,18 @@ function verifyRedaction() {
     check(lstatSync(file).isFile(), "current path is not a regular file: " + name);
     const current = readFileSync(file);
     check(current.length <= 1_000_000 && !current.includes(0), "mapped file would be skipped by secret scan: " + name);
-    check(current.equals(redacted), "current file differs from redacted blob: " + name);
-    check(git(["hash-object", "--stdin"], current).toString("utf8").trim() === row.redactedBlob, "current blob mismatch: " + name);
+    if (name === "CHANGELOG.md" && !current.equals(redacted)) {
+      // Release notes grow at the top. Keep the frozen introduction and every
+      // historical release byte-identical; scan the complete current file below.
+      const originalText = redacted.toString("utf8");
+      const firstRelease = originalText.search(/^## /m);
+      const currentText = current.toString("utf8");
+      check(firstRelease >= 0 && currentText.startsWith(originalText.slice(0, firstRelease)) &&
+        currentText.endsWith(originalText.slice(firstRelease)), "current file differs from redacted history: " + name);
+    } else {
+      check(current.equals(redacted), "current file differs from redacted blob: " + name);
+      check(git(["hash-object", "--stdin"], current).toString("utf8").trim() === row.redactedBlob, "current blob mismatch: " + name);
+    }
   }
   const changed = git(["diff", "--name-only", "--no-renames", "-z", map.sourceCommit, map.redactionCommit, "--"])
     .toString("utf8").split("\0").filter(Boolean).filter(name => !supportPaths.has(name));
@@ -71,7 +81,7 @@ function verifyRedaction() {
     const result = spawnSync(process.execPath, [scanner, "--root", path.join(root, name)], { encoding: "utf8" });
     check(result.status === 0 && /secret scan: PASS \(1 file checked\)/.test(result.stdout ?? ""), "secret scan failed: " + name);
   }
-  console.log("redaction mappings: PASS (89 entries; source and redaction commits; blob identities; SHA-256; current files; exact path coverage; 89 secret scans)");
+  console.log("redaction mappings: PASS (89 entries; source and redaction commits; blob identities; SHA-256; current files (append-only changelog); exact path coverage; 89 secret scans)");
 }
 
 function check(condition, message) {

@@ -6,20 +6,13 @@ import os from "node:os";
 import path from "node:path";
 import { PassThrough } from "node:stream";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { AdmissionTurnInput } from "../ACP Connector/admission/turn-coordinator.js";
-import { createOfficialAdmission } from "../ACP Connector/official-kernel/admission-fence.js";
 import type { JsonRpcMessage, JsonRpcRequest } from "../ACP Connector/official-kernel/json-rpc.js";
 import { createNdjsonParser, encodeNdjson } from "../ACP Connector/official-kernel/ndjson.js";
 import { OfficialKernelProxy } from "../ACP Connector/official-kernel/proxy.js";
 
-vi.mock("../ACP Connector/official-kernel/admission-fence.js", async (original) => ({
-  ...await original<typeof import("../ACP Connector/official-kernel/admission-fence.js")>(),
-  createOfficialAdmission: vi.fn()
-}));
 
 const directories: string[] = [];
 afterEach(() => {
-  vi.mocked(createOfficialAdmission).mockReset();
   for (const dir of directories.splice(0)) rmSync(dir, { recursive: true, force: true });
 });
 
@@ -96,7 +89,7 @@ describe("会话关闭边界与竞态", () => {
     } finally { await h.close(); }
   });
 
-  it("close 失败保留模型、cwd、native context 和技能能力", async () => {
+  it("close 失败保留 cwd、native context 和技能能力", async () => {
     mkdirSync(path.join(process.cwd(), "node_modules/.cache"), { recursive: true });
     const directory = mkdtempSync(path.join(process.cwd(), "node_modules/.cache/close-retain-"));
     directories.push(directory);
@@ -105,8 +98,6 @@ describe("会话关闭边界与竞态", () => {
     const skill = path.join(directory, ".paseo/skills/retained");
     mkdirSync(skill, { recursive: true });
     writeFileSync(path.join(skill, "SKILL.md"), "---\nname: retained\ndescription: 保留的技能\n---\n", "utf8");
-    const admit = vi.fn(async (input: AdmissionTurnInput) => (await input.execute({ prepare() {}, beforePromptWrite() {}, afterPromptWrite() {} })).stopReason);
-    vi.mocked(createOfficialAdmission).mockReturnValue({ coordinator: { admit, close() {} }, runtime: { close() {} } } as unknown as ReturnType<typeof createOfficialAdmission>);
     const h = harness({ PASEO_HOME: directory, PASEO_AGENT_ID: "agent-1", PASEO_AGY_ACP_NATIVE_SYSTEM_CONTEXT: "1" });
     try {
       await lifecycleRequest(h, 1, "initialize", {}, { agentCapabilities: { _meta: { antigravity: { systemPrompt: { append: true } } } } });
@@ -120,7 +111,6 @@ describe("会话关闭边界与竞态", () => {
       expect(JSON.stringify(h.received.at(-1))).toContain('"name":"retained"');
       h.send({ jsonrpc: "2.0", id: 4, method: "session/prompt", params: { sessionId: "s1", prompt: "next" } });
       await vi.waitFor(() => expect(h.forwarded.some(row => row.id === 4)).toBe(true));
-      expect(admit.mock.calls[0]![0].model).toBe("retained-model");
       expect(JSON.stringify(h.forwarded.find(row => row.id === 4))).not.toContain("retained-native-context");
       h.reply({ jsonrpc: "2.0", method: "session/update", params: { sessionId: "s1", update: { sessionUpdate: "agent_message_chunk", content: { type: "text", text: "answer" } } } });
       h.reply({ jsonrpc: "2.0", id: 4, result: { stopReason: "end_turn" } });
@@ -262,29 +252,6 @@ describe("Paseo 代理工作区与生命周期", () => {
     expect(h.forwarded).toHaveLength(1);
   });
 
-  it("Admission 排队通知不计入内核可见输出，空轮次仍被拒绝", async () => {
-    const coordinatorClose = vi.fn();
-    const runtimeClose = vi.fn();
-    const admit = vi.fn(async (input: AdmissionTurnInput) => {
-      await input.reportProgress?.({ state: "queued", position: 2, eligiblePosition: 1, waitedMs: 2_500, cooldownUntil: 12345 });
-      return (await input.execute({ prepare() {}, beforePromptWrite() {}, afterPromptWrite() {} })).stopReason;
-    });
-    vi.mocked(createOfficialAdmission).mockReturnValue({
-      coordinator: { admit, close: coordinatorClose }, runtime: { close: runtimeClose }
-    } as unknown as ReturnType<typeof createOfficialAdmission>);
-    const h = harness();
-    try {
-      h.send({ jsonrpc: "2.0", id: 1, method: "session/prompt", params: { sessionId: "s1", prompt: "hello" } });
-      await vi.waitFor(() => expect(h.forwarded).toHaveLength(1));
-      expect(h.received[0]).toMatchObject({ method: "session/update", params: { sessionId: "s1", update: { sessionUpdate: "agent_thought_chunk", content: { type: "text", text: expect.stringContaining("队列第 2 位") } } } });
-      expect(JSON.stringify(h.forwarded[0])).not.toContain("请求排队中");
-      h.reply({ jsonrpc: "2.0", id: 1, result: { stopReason: "end_turn" } });
-      expect(h.received.at(-1)).toMatchObject({ id: 1, error: { code: -32000 } });
-    } finally { await h.close(); }
-    expect(coordinatorClose).toHaveBeenCalledOnce();
-    expect(runtimeClose).toHaveBeenCalledOnce();
-  });
-
   it("内核错误也会关闭所属 bridge，且不影响其他代理", async () => {
     const first = harness();
     const second = harness();
@@ -314,36 +281,11 @@ describe("Paseo 代理工作区与生命周期", () => {
     }
   });
 
-  it.each(["queued", "dispatched"])("%s 轮次在退出时结束等待，然后释放 Admission", async phase => {
-    const events: string[] = [];
-    let turn: AdmissionTurnInput | undefined;
-    const admit = vi.fn(async (input: AdmissionTurnInput) => {
-      turn = input;
-      if (phase === "queued") {
-        await new Promise<void>(resolve => input.claim.signal.addEventListener("abort", () => resolve(), { once: true }));
-        events.push("cancelled");
-        return "cancelled" as const;
-      }
-      try {
-        await input.execute({ prepare() {}, beforePromptWrite() {}, afterPromptWrite() {} });
-        throw new Error("断连轮次不应正常完成");
-      } catch (error) {
-        expect(error).toBeInstanceOf(Error);
-        expect((error as Error).message).toContain("connection closed during prompt");
-        events.push("recovery_required");
-        throw error;
-      }
-    });
-    vi.mocked(createOfficialAdmission).mockReturnValue({
-      coordinator: { admit, close() { events.push("coordinator closed"); } },
-      runtime: { close() { events.push("runtime closed"); } }
-    } as unknown as ReturnType<typeof createOfficialAdmission>);
+  it("内核退出会解开正在等待响应的 prompt", async () => {
     const h = harness();
-    h.send({ jsonrpc: "2.0", id: 1, method: "session/prompt", params: { sessionId: "s1", prompt: "hello" } });
-    await vi.waitFor(() => expect(admit).toHaveBeenCalledOnce());
-    expect(h.forwarded).toHaveLength(phase === "queued" ? 0 : 1);
+    h.send({ id: 1, method: "session/prompt", params: { sessionId: "s1", prompt: "hello" } });
+    await vi.waitFor(() => expect(h.forwarded).toHaveLength(1));
     await h.close();
-    expect(turn?.claim.aborted).toBe(true);
-    expect(events).toEqual([phase === "queued" ? "cancelled" : "recovery_required", "coordinator closed", "runtime closed"]);
+    expect(h.received).toHaveLength(0);
   });
 });

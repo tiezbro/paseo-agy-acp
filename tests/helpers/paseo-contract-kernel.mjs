@@ -67,7 +67,7 @@ async function handle(message) {
       finish(sessionId, JSON.stringify({ prompt: params.prompt, state: state(sessionId),
         servers: sessions.get(sessionId).mcpServers.map(({ name }) => name) }));
     } else if (text.endsWith("hold")) {
-      // 保持活动轮次，供真实客户端和 Admission 排队取消测试控制结束。
+      // 保持活动轮次，供真实客户端并发与取消测试控制结束。
     } else if (text === "permission" || text === "cancel") {
       write({ jsonrpc: "2.0", id: `permission:${sessionId}`, method: "session/request_permission", params: {
         sessionId, toolCall: { toolCallId: "permission-tool", title: "测试许可", status: "pending" },

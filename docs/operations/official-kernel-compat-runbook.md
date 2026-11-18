@@ -225,11 +225,11 @@ P4_MODEL_PARITY_THROUGH_PRODUCT=1 node ./scripts/official-kernel-model-parity.mj
 
 ## Sub-System Policies and Behaviors
 
-### Dynamic Admission Policy
-Production compatibility validations correctly process upstream dynamic Admission policies.
-- It **does not** artificially cap concurrent capacity to `8`.
-- `8` is simply the current/default tested queue value, not a ceiling limit. Operators should not manually hardcode this value to 8.
-- Requests form queues and proceed properly along boundaries without forced truncation.
+### Direct prompt dispatch
+
+The lightweight branch removes Admission and its queue policy. Independent sessions
+reach the official kernel directly; account/model limits remain upstream concerns.
+The historical RC01 receipts below describe their original verification environment.
 
 ### Official Update Takeover and Stale Refusal
 The generated wrapper is entirely self-contained and **does not** dynamically monitor newly installed official PAR paths on disk. If an unknown new hash arrives from upstream, a new `prepare` operation will fail, but it will **not** auto-disable a currently active RC01 compat wrapper.

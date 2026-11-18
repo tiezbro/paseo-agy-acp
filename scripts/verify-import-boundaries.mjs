@@ -3,27 +3,27 @@ import path from "node:path";
 
 const root = process.cwd();
 const connectorRoot = path.join(root, "ACP Connector");
-const controllerRoot = path.join(root, "Admission Controller");
 const failures = [];
 
-for (const required of [connectorRoot, controllerRoot]) {
+for (const required of [connectorRoot]) {
   if (!existsSync(required) || !statSync(required).isDirectory()) {
     failures.push(`missing source module: ${path.basename(required)}`);
   }
 }
 if (existsSync(path.join(root, "src"))) failures.push("legacy src/ source area must not exist");
 
-for (const file of sourceFiles(controllerRoot)) {
+for (const retired of ["Admission Controller", "ACP Connector/admission", "ACP Connector/official-kernel/admission-fence.ts"]) {
+  if (existsSync(path.join(root, retired))) failures.push(`retired scheduling module must not exist: ${retired}`);
+}
+for (const file of sourceFiles(connectorRoot)) {
   const source = readFileSync(file, "utf8");
   for (const match of source.matchAll(/\b(?:from\s+|import\s*\()(["'])([^"']+)\1/g)) {
-    const specifier = match[2];
-    if (specifier.includes("ACP Connector") || specifier.includes("/acp/") || specifier.includes("/agy/")) {
-      failures.push(`Admission Controller imports Connector implementation: ${relative(file)} -> ${specifier}`);
-    }
+    if (/admission|better-sqlite3/i.test(match[2])) failures.push(`retired scheduling dependency: ${relative(file)} -> ${match[2]}`);
   }
 }
 
 const packageJson = JSON.parse(readFileSync(path.join(root, "package.json"), "utf8"));
+if (packageJson.dependencies && Object.keys(packageJson.dependencies).length) failures.push("adapter must have no runtime npm dependencies");
 for (const [field, expected] of [
   ["main", "dist/ACP Connector/agent.js"],
   ["types", "dist/ACP Connector/agent.d.ts"],

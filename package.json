@@ -1,7 +1,7 @@
 {
   "name": "paseo-agy-acp",
   "version": "2.8.1",
-  "description": "Paseo product ACP adapter that proxies the official Google Antigravity ACP kernel (NDJSON) with Admission and daemon context",
+  "description": "Paseo ACP adapter for the official Google Antigravity kernel with daemon context, skills and protocol compatibility",
   "type": "module",
   "author": {
     "name": "tiezbro"
@@ -27,7 +27,6 @@
   "bin": {
     "paseo-agy-acp": "dist/ACP Connector/main.js",
     "agy-acp": "dist/ACP Connector/main.js",
-    "agy-acp-prepare-state": "scripts/prepare-admission-state-dir.mjs",
     "agy-acp-prepare-official-kernel-compat": "scripts/prepare-official-kernel-compat.mjs"
   },
   "publishConfig": {
@@ -35,7 +34,6 @@
   },
   "files": [
     "dist",
-    "scripts/prepare-admission-state-dir.mjs",
     "scripts/prepare-official-kernel-compat.mjs",
     "assets/official-kernel-compat/rc01/paseo_model_compat.py",
     "README.md",
@@ -57,19 +55,12 @@
     "prepublishOnly": "npm run build",
     "validate:paseo-client-lock": "node scripts/verify-paseo-client-lock.mjs"
   },
-  "dependencies": {
-    "better-sqlite3": "^13.0.1"
-  },
   "devDependencies": {
-    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^26.1.1",
     "typescript": "^7.0.2",
     "vitest": "^4.1.10"
   },
   "engines": {
     "node": ">=22"
-  },
-  "allowScripts": {
-    "better-sqlite3@13.0.1": true
   }
 }
