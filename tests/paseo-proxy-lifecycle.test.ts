@@ -140,6 +140,18 @@ function harness(env: NodeJS.ProcessEnv = {}) {
 
 describe("Paseo 代理工作区与生命周期", () => {
   it.each([
+    ["max_tokens", "The model reached its token limit before finishing."],
+    ["max_turn_requests", "The agent reached the request limit for this turn."],
+    ["refusal", "The official kernel ended the turn because the quota was exhausted."]
+  ])("内核以 %s 停止时，客户端收到失败原因", async (stopReason, message) => {
+    const h = harness();
+    try {
+      await lifecycleRequest(h, 1, "session/prompt", { sessionId: "s1", prompt: "hello" }, { stopReason });
+      expect(h.received).toEqual([{ jsonrpc: "2.0", id: 1, error: { code: -32000, message, data: { stopReason } } }]);
+    } finally { await h.close(); }
+  });
+
+  it.each([
     [undefined, false], [[], false], [[{ type: "text", text: " \t" }], false],
     [[{ type: "text", text: " " }, { type: "text", text: "answer" }], true],
     [[{ type: "audio", data: "AAAA", mimeType: "audio/wav" }], true],

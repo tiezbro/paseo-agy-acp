@@ -40,6 +40,7 @@ export function spawnOfficialKernel(
     child.kill("SIGKILL");
     throw new Error("official kernel stdio pipes are unavailable");
   }
-  child.stderr.pipe(process.stderr);
+  // The caller owns stderr: run filters the namespaced kernel event lines while
+  // login reads the stream line by line.
   return child;
 }

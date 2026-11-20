@@ -710,8 +710,8 @@ function validatePatchPlan(plan: KernelCompatPatchPlan): KernelCompatPatchPlan {
     else if (target === "proxyServer") targetCounts.proxyServer += 1;
     return Object.freeze({ ...edit, target });
   });
-  if (targetCounts.modelSelection === 0 || targetCounts.proxyServer === 0) {
-    throw new KernelCompatLifecycleError("patch plan must contain exact edits for modelSelection and proxyServer");
+  if (targetCounts.proxyServer === 0) {
+    throw new KernelCompatLifecycleError("patch plan must contain exact edits for proxyServer");
   }
   return Object.freeze({ edits: Object.freeze(edits) });
 }

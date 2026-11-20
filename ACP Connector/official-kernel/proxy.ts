@@ -3,8 +3,11 @@ import type { ChildProcessWithoutNullStreams } from "node:child_process";
 import type { Readable, Writable } from "node:stream";
 import { TurnClaim, raceClaim, isTurnCancelled } from "../acp/session/turn-claim.js";
 import { extractCwd, extractSessionId, PaseoSessionContext } from "./context.js";
-import { blankTurnError, sessionUpdateShowsVisibleOutput, shouldRejectBlankTurn } from "./errors.js";
+import { blankTurnError, isSuccessfulEndTurn, sessionUpdateShowsVisibleOutput, shouldRejectBlankTurn } from "./errors.js";
 import { overlayProductIdentity } from "./identity.js";
+import { KernelEventTracker, type KernelBackendNotice, type KernelNotice } from "./kernel-event-tracker.js";
+import type { KernelEvent } from "./kernel-events.js";
+import { KernelTerminalStateStore, type KernelTerminalState } from "./kernel-terminal-state.js";
 import {
   isJsonRpcFailure,
   isJsonRpcNotification,
@@ -36,6 +39,12 @@ const SESSION_SET_CONFIG_METHOD = "session/set_config_option";
 const SESSION_CANCEL_METHOD = "session/cancel";
 const SESSION_UPDATE_METHOD = "session/update";
 
+const PROMPT_STOP_ERRORS = new Map<string, string>([
+  ["max_tokens", "The model reached its token limit before finishing."],
+  ["max_turn_requests", "The agent reached the request limit for this turn."],
+  ["refusal", "The official kernel ended the turn because the quota was exhausted."]
+]);
+
 interface PendingClientRequest {
   method: string;
   sessionId?: string;
@@ -51,6 +60,8 @@ export interface OfficialKernelProxyOptions {
   stdout: Writable;
   env?: NodeJS.ProcessEnv;
   version: string;
+  /** Directory shared with the pinned compatibility module for fenced terminal state. */
+  kernelEventDirectory?: string;
 }
 
 export class OfficialKernelProxy {
@@ -72,6 +83,9 @@ export class OfficialKernelProxy {
   readonly #requestTimings = new Map<JsonRpcId, () => void>();
   readonly #mcpBridge = new McpProtocolBridge();
   readonly #inFlight = new Set<Promise<void>>();
+  readonly #kernelEvents = new KernelEventTracker();
+  readonly #terminalStates: KernelTerminalStateStore;
+  #noticeSequence = 0;
   #sessionNewTail: Promise<void> = Promise.resolve();
   #closed = false;
   #stopping = false;
@@ -88,6 +102,18 @@ export class OfficialKernelProxy {
     this.#context = new PaseoSessionContext(this.#env);
     this.#skillMcp = new SessionSkillMcpServer(this.#env);
     this.#diagnostics = createKernelDiagnostics({ env: this.#env });
+    this.#terminalStates = new KernelTerminalStateStore(options.kernelEventDirectory);
+  }
+
+  /**
+   * Receives a structured progress signal from the pinned compatibility module.
+   * Signals are never terminal outcomes; stale or cross-turn signals are dropped.
+   */
+  observeKernelEvent(event: KernelEvent): void {
+    if (this.#closed) return;
+    const notice = this.#kernelEvents.observe(event);
+    if (notice === undefined) return;
+    this.#writeClient(kernelNoticeMessage(notice, ++this.#noticeSequence));
   }
 
   start(): Promise<void> {
@@ -172,6 +198,8 @@ export class OfficialKernelProxy {
             this.#skillTokens.clear();
             this.#requestTimings.clear();
             this.#firstOutputs.clear();
+            this.#kernelEvents.clear();
+            this.#terminalStates.clear();
           }
           if (error) throw error;
         })().then(resolve, reject);
@@ -235,6 +263,9 @@ export class OfficialKernelProxy {
       const sessionId = extractSessionId("params" in message ? message.params : undefined);
       if (sessionId) {
         this.#claims.get(sessionId)?.abort();
+        // Cancellation wins over any in-flight progress or terminal signal.
+        this.#kernelEvents.cancelTurn(sessionId);
+        this.#terminalStates.cancel(sessionId);
         const dispatched = Array.from(this.#pending.values()).some(pending => pending.method === SESSION_PROMPT_METHOD && pending.sessionId === sessionId);
         if (dispatched && !this.#cancelTimers.has(sessionId)) {
           const configured = Number(this.#env.AGY_ACP_CANCEL_TIMEOUT_MS);
@@ -329,6 +360,11 @@ export class OfficialKernelProxy {
     if (sessionId) this.#claims.set(sessionId, claim);
     let responseDelivered = false;
     const turnStartedAt = performance.now();
+    const turnStartedAtWallClock = Date.now();
+    if (sessionId) {
+      this.#kernelEvents.beginTurn(sessionId, turnStartedAtWallClock);
+      this.#terminalStates.beginTurn(sessionId, turnStartedAtWallClock);
+    }
     let terminalStage: "turn_end" | "turn_fail" | "turn_cancel" = "turn_end";
     const firstOutputDone = this.#diagnostics.start("first_kernel_output", { requestId: request.id, sessionId });
     this.#firstOutputs.set(request.id, firstOutputDone);
@@ -337,6 +373,10 @@ export class OfficialKernelProxy {
       try { params = rewriteModeFields(await raceClaim(this.#context.injectPrompt(params), claim)); }
       finally { contextDone(); }
       if (claim.aborted) {
+        if (sessionId) {
+          this.#kernelEvents.cancelTurn(sessionId);
+          this.#terminalStates.cancel(sessionId);
+        }
         this.#writeClient({ jsonrpc: "2.0", id: request.id, result: { stopReason: "cancelled" } });
         return;
       }
@@ -362,6 +402,15 @@ export class OfficialKernelProxy {
       }
       if (this.#firstOutputs.get(request.id) === firstOutputDone) this.#firstOutputs.delete(request.id);
       if (terminalStage === "turn_end" && claim.aborted) terminalStage = "turn_cancel";
+      if (sessionId) {
+        if (terminalStage === "turn_cancel") {
+          this.#kernelEvents.cancelTurn(sessionId);
+          this.#terminalStates.cancel(sessionId);
+        } else {
+          this.#kernelEvents.endTurn(sessionId);
+          this.#terminalStates.finishTurn(sessionId);
+        }
+      }
       this.#diagnostics.event(terminalStage, { requestId: request.id, sessionId, durationMs: performance.now() - turnStartedAt });
     }
   }
@@ -497,20 +546,49 @@ export class OfficialKernelProxy {
         this.#sessionCwds.delete(sessionId);
         this.#context.forgetSession(sessionId);
         this.#systemMessageFolder.reset(sessionId);
+        this.#kernelEvents.forget(sessionId);
+        this.#terminalStates.forget(sessionId);
       } else if (
         pending.method === SESSION_PROMPT_METHOD
       ) {
         for (const update of this.#systemMessageFolder.finish(pending.sessionId)) this.#writeClient(update);
-        if (promptWasCancelled && isJsonRpcSuccess(message) && isRecord(message.result) && message.result.stopReason === "end_turn") {
+        const succeeded = isJsonRpcSuccess(message);
+        const result = isJsonRpcSuccess(message) ? message.result : undefined;
+        const stopReason = isRecord(result) ? result.stopReason : undefined;
+        const stopError = typeof stopReason === "string" ? PROMPT_STOP_ERRORS.get(stopReason) : undefined;
+        const cancelledByKernel = stopReason === "cancelled";
+        const signals = pending.sessionId ? this.#kernelEvents.endTurn(pending.sessionId) : undefined;
+        let terminal: KernelTerminalState | undefined;
+        if (pending.sessionId) {
+          if (succeeded && !promptWasCancelled && !cancelledByKernel) {
+            // Read after the response: the compatibility module wrote the fenced
+            // state synchronously before returning this same response.
+            terminal = this.#terminalStates.read(pending.sessionId);
+          } else {
+            this.#terminalStates.cancel(pending.sessionId);
+          }
+        }
+        if (promptWasCancelled && succeeded && stopReason === "end_turn") {
           // Some kernels acknowledge cancellation with end_turn. Match the local
-          // turn outcome before forwarding or applying the blank-success guard.
-          outbound = { ...message, result: { ...message.result, stopReason: "cancelled" } };
+          // turn outcome before forwarding or applying any terminal state.
+          outbound = { ...message, result: { ...(isRecord(result) ? result : {}), stopReason: "cancelled" } };
+        } else if (succeeded && stopError !== undefined) {
+          outbound = jsonRpcError(message.id, stopError, -32000, { stopReason });
         } else if (
-          isJsonRpcSuccess(message) &&
-          shouldRejectBlankTurn(message.result, pending.sawVisibleOutput)
+          terminal !== undefined &&
+          succeeded &&
+          !promptWasCancelled &&
+          !cancelledByKernel &&
+          isSuccessfulEndTurn(result)
+        ) {
+          outbound = kernelTerminalFailureError(message.id, terminal, signals?.lastHttpStatus);
+        } else if (
+          succeeded &&
+          shouldRejectBlankTurn(result, pending.sawVisibleOutput)
         ) {
           outbound = blankTurnError(message.id);
         }
+        if (pending.sessionId) this.#terminalStates.finishTurn(pending.sessionId);
       }
       if (isJsonRpcSuccess(outbound) && [SESSION_NEW_METHOD, SESSION_LOAD_METHOD, SESSION_RESUME_METHOD, SESSION_SET_CONFIG_METHOD].includes(pending.method)) {
         outbound = { ...outbound, result: describeOfficialModes(outbound.result) };
@@ -522,4 +600,74 @@ export class OfficialKernelProxy {
 
     this.#writeClient(message);
   }
+}
+
+function kernelBackendNoticeText(httpStatus: number): string {
+  return httpStatus > 0
+    ? `The official kernel reported HTTP ${httpStatus}; the turn is still active.`
+    : "The official kernel reported a backend error; the turn is still active.";
+}
+
+function kernelNoticeMessage(notice: KernelNotice, sequence: number): JsonRpcMessage {
+  if (notice.kind === "model_retry_scheduled") {
+    return systemNoticeMessage(
+      notice.sessionId,
+      "The official kernel scheduled a model retry; the turn is still active.",
+      {
+        v: 1,
+        event: "model_retry_scheduled",
+        ...(notice.delayMs === undefined ? {} : { delayMs: notice.delayMs })
+      },
+      sequence
+    );
+  }
+  return backendNoticeMessage(notice, sequence);
+}
+
+function backendNoticeMessage(notice: KernelBackendNotice, sequence: number): JsonRpcMessage {
+  return systemNoticeMessage(
+    notice.sessionId,
+    kernelBackendNoticeText(notice.httpStatus),
+    { v: 1, event: "backend_http_error", httpStatus: notice.httpStatus },
+    sequence
+  );
+}
+
+function systemNoticeMessage(
+  sessionId: string,
+  text: string,
+  kernelEvent: Record<string, unknown>,
+  sequence: number
+): JsonRpcMessage {
+  return {
+    jsonrpc: "2.0",
+    method: "session/update",
+    params: {
+      sessionId,
+      update: {
+        sessionUpdate: "agent_message_chunk",
+        messageId: `paseo-kernel-event:${sequence}`,
+        content: { type: "text", text },
+        _meta: {
+          "paseo.dev/messageKind": "system",
+          "paseo.dev/kernelEvent": kernelEvent
+        }
+      }
+    }
+  } as JsonRpcMessage;
+}
+
+function kernelTerminalFailureError(
+  id: JsonRpcId,
+  state: KernelTerminalState,
+  lastHttpStatus?: number
+): JsonRpcMessage {
+  return jsonRpcError(id, "official kernel ended the turn with a terminal failure", -32000, {
+    "paseo.dev/kernelEvent": {
+      v: 1,
+      event: "turn_failed",
+      errorClass: state.errorClass,
+      ...(lastHttpStatus === undefined ? {} : { lastHttpStatus })
+    }
+  });
 }

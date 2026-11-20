@@ -2,7 +2,7 @@
 
 All notable changes to `paseo-agy-acp` are recorded here.
 
-## Unreleased
+## 2.9.0 - 2026-11-20
 
 ### Changed
 
@@ -48,11 +48,18 @@ All notable changes to `paseo-agy-acp` are recorded here.
 
 ### Scope
 
-- Experimental branch only. Managed kernel pins are now 1.5.0, package version
-  remains 2.8.1, and production entrypoints are unchanged. The final version,
-  rollout and merge to main depend on the recorded acceptance results.
-- Upstream quota failures encoded as normal text/end_turn and the real-time
-  thought-summary pipeline remain separate acceptance items.
+- Release 2.9.0 from the lightweight official-kernel branch. Users install this
+  package only. Stock Paseo displays the adapter's standard ACP messages. The
+  companion MAACS worktree is not part of this npm package.
+- Turn `max_tokens`, `max_turn_requests` and `refusal` into JSON-RPC `-32000`
+  errors so stock Paseo shows a failed turn. Keep the official reason in
+  `error.data.stopReason`. Leave `end_turn` unchanged.
+- Show scheduled retries and completed HTTP 503 error steps immediately. The
+  turn continues. A plain 502 or 503 is not described as a scheduled retry.
+- Restore the official model filter and skill presentation. Paseo identifies
+  itself and does not impersonate Zed or Xcode.
+- Rewrite both READMEs around the accepted 1.5.0 behavior, including the
+  built-in `antigravity` comparison.
 
 ## 2.7.2 - 2026-11-01
 

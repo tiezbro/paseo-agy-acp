@@ -113,11 +113,6 @@ describe("prepare official kernel compatibility CLI", () => {
     expect(observation.compatibilityModule.content).toBe(readFileSync(sourceCompatModule, "utf8"));
     expect(observation.options.patchPlan.edits).toEqual(expect.arrayContaining([
       expect.objectContaining({
-        id: "rc01-model-selection-catalog",
-        find: "    if not allow_third_party and not ccpa_id.startswith(\n        _GEMINI_MODEL_ID_PREFIX\n    ):\n",
-        replacement: "    if not is_catalog_model(ccpa_id):\n"
-      }),
-      expect.objectContaining({
         id: "rc01-proxy-server-transform",
         find: "    model = match.group(1)\n",
         replacement:

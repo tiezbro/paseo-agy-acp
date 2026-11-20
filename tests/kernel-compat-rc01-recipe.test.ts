@@ -1,5 +1,4 @@
 import { readFileSync } from "node:fs";
-import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { OfficialKernelCompatLifecycle } from "../ACP Connector/official-kernel/kernel-compat-lifecycle.js";
@@ -34,6 +33,10 @@ const PROXY_AGENT_CONFIG_SOURCE = [
   "  def _build_harness_config(self):",
   "    harness_config = super()._build_harness_config()",
   "    return harness_config",
+  "  def create_strategy(",
+  "      self, *, tool_runner: Any, hook_runner: Any",
+  "  ) -> sdk_connection_module.ConnectionStrategy:",
+  "    return None",
   ""
 ].join("\n");
 const fixtures: KernelCompatP2Fixture[] = [];
@@ -43,7 +46,7 @@ afterEach(() => {
 });
 
 describe("RC01 official kernel compatibility marker recipe", () => {
-  it("refuses a missing skill configuration marker before publishing a release", async () => {
+  it("refuses a missing step observer marker before publishing a release", async () => {
     const fixture = createKernelCompatP2Fixture({
       modelSource: MODEL_SELECTION_SOURCE,
       proxySource: PROXY_SERVER_SOURCE,
@@ -54,26 +57,14 @@ describe("RC01 official kernel compatibility marker recipe", () => {
     await expect(lifecycle.prepare({
       ...fixture.prepareOptions,
       patchPlan: RC01_KERNEL_COMPAT_PATCH_PLAN
-    })).rejects.toThrow(/skills-tool-presentation in proxyAgentConfig must occur exactly once; found 0/);
+    })).rejects.toThrow(/paseo-step-observer in proxyAgentConfig must occur exactly once; found 0/);
   });
 
-  it("applies the frozen model and skill presentation edits to pinned sources", async () => {
+  it("applies the frozen proxy and step observer edits to pinned sources", async () => {
     expect(Object.isFrozen(RC01_KERNEL_COMPAT_PATCH_PLAN)).toBe(true);
     expect(Object.isFrozen(RC01_KERNEL_COMPAT_PATCH_PLAN.edits)).toBe(true);
     expect(RC01_KERNEL_COMPAT_PATCH_PLAN.edits.every((edit) => Object.isFrozen(edit))).toBe(true);
     expect(RC01_KERNEL_COMPAT_PATCH_PLAN.edits).toEqual([
-      {
-        id: "rc01-model-selection-import",
-        target: "modelSelection",
-        find: "def _parse_ccpa_response(",
-        replacement: "from paseo_model_compat import is_catalog_model\n\ndef _parse_ccpa_response("
-      },
-      {
-        id: "rc01-model-selection-catalog",
-        target: "modelSelection",
-        find: "    if not allow_third_party and not ccpa_id.startswith(\n        _GEMINI_MODEL_ID_PREFIX\n    ):\n",
-        replacement: "    if not is_catalog_model(ccpa_id):\n"
-      },
       {
         id: "rc01-proxy-server-import",
         target: "proxyServer",
@@ -91,12 +82,13 @@ describe("RC01 official kernel compatibility marker recipe", () => {
           "    incoming_json = transform_request(model, incoming_json)\n"
       },
       {
-        id: "skills-tool-presentation",
+        id: "paseo-step-observer",
         target: "proxyAgentConfig",
-        find: "    harness_config = super()._build_harness_config()\n",
+        find: "  def create_strategy(\n      self, *, tool_runner: Any, hook_runner: Any\n  ) -> sdk_connection_module.ConnectionStrategy:\n",
         replacement:
-          "    harness_config = super()._build_harness_config()\n" +
-          "    harness_config.skills_config.presentation_mode = localharness_pb2.SkillsConfig.TOOL\n"
+          "  def create_strategy(\n      self, *, tool_runner: Any, hook_runner: Any\n  ) -> sdk_connection_module.ConnectionStrategy:\n" +
+          "    from paseo_model_compat import register_step_observer\n" +
+          "    register_step_observer(hook_runner, conversation_id=self.conversation_id)\n"
       }
     ]);
 
@@ -127,15 +119,7 @@ describe("RC01 official kernel compatibility marker recipe", () => {
     });
     const runfiles = path.join(prepared.releasePath, RUNFILES_DIRECTORY, ACP_SERVER_DIRECTORY);
 
-    expect(readFileSync(path.join(runfiles, "model_selection.py"), "utf8")).toBe([
-      "from paseo_model_compat import is_catalog_model",
-      "",
-      "def _parse_ccpa_response(ccpa_id):",
-      "    if not is_catalog_model(ccpa_id):",
-      "        return ccpa_id",
-      "    return None",
-      ""
-    ].join("\n"));
+    expect(readFileSync(path.join(runfiles, "model_selection.py"), "utf8")).toBe(MODEL_SELECTION_SOURCE);
     expect(readFileSync(path.join(runfiles, "ccpa_connection", "proxy_server.py"), "utf8")).toBe([
       "from google3.cloud.developer_experience.antigravity_extensions.acp_server import useragent",
       "from paseo_model_compat import transform_request",
@@ -146,33 +130,7 @@ describe("RC01 official kernel compatibility marker recipe", () => {
       "    return incoming_json",
       ""
     ].join("\n"));
-    // 执行补丁后的配置方法，确认只切换呈现方式，不改技能来源或其他配置。
-    const result = spawnSync("python3", ["-B", "-c", String.raw`
-from pathlib import Path
-from types import SimpleNamespace
-import sys
-
-config = SimpleNamespace(
-    skills_config=SimpleNamespace(presentation_mode=2, enabled=False),
-    skills_paths=["/user/skills"],
-    app_data_dir="/user/state",
-    models=["original-model"],
-)
-class BaseStrategy:
-    def _build_harness_config(self):
-        return config
-
-localharness_pb2 = SimpleNamespace(SkillsConfig=SimpleNamespace(TOOL=1))
-exec(compile(Path(sys.argv[1]).read_text(encoding="utf-8"), sys.argv[1], "exec"))
-result = ProxyConnectionStrategy()._build_harness_config()
-assert result is config
-assert result.skills_config.presentation_mode == 1
-assert result.skills_config.enabled is False
-assert result.skills_paths == ["/user/skills"]
-assert result.app_data_dir == "/user/state"
-assert result.models == ["original-model"]
-`, path.join(runfiles, "proxy_agent_config.py")], { encoding: "utf8" });
-    expect(result.status, result.stderr).toBe(0);
+    expect(readFileSync(path.join(runfiles, "proxy_agent_config.py"), "utf8")).not.toContain("presentation_mode");
   });
 });
 

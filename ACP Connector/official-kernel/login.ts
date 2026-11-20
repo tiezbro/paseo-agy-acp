@@ -58,8 +58,7 @@ export async function runOfficialLogin(
     showLoginOutput
   );
   child.stdout.on("data", parse);
-  // spawn 默认直通 stderr；登录时改为逐行处理，兼容分块并避免重复输出。
-  child.stderr.unpipe(process.stderr);
+  // 登录时逐行处理内核 stderr，兼容分块并避免重复输出。
   const stderrLines = createInterface({ input: child.stderr, crlfDelay: Infinity });
   stderrLines.on("line", showLoginOutput);
 
