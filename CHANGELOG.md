@@ -23,6 +23,9 @@ All notable changes to `paseo-agy-acp` are recorded here.
   succeeds, fails or is cancelled.
 - Release locally cancelled turns before delivering their terminal response,
   allowing immediate reentry while preserving dispatched cancellation handling.
+- Filter the known GenAI upload-docstring escape warnings from login and
+  provider stderr. Preserve unrelated warnings, failures and OAuth prompts;
+  incomplete or changed warning pairs pass through unchanged.
 
 ### Upgrade
 

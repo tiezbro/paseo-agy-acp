@@ -27,6 +27,10 @@ import { existsSync } from "node:fs";
 import readline from "node:readline";
 const lines = readline.createInterface({ input: process.stdin });
 const mode = process.env.TEST_LOGIN_OUTPUT;
+const warning = ${JSON.stringify(String.raw`/kernel/google3/third_party/py/google/genai/types.py:18270: SyntaxWarning: "\/" is an invalid escape sequence. Such sequences will not work in the future. Did you mean "\\/"? A raw string is also an option.`)};
+const source = ${JSON.stringify('  description="""Output only. The original name of the uploaded file, taken from the `Content-Disposition` header on upload. Between 1 and 255 characters. Control characters and the characters `<>:"|?*\\/` are not accepted.""",')};
+process.stderr.write(warning.slice(0, 37));
+process.stderr.write(warning.slice(37) + "\\n" + source + "\\n");
 const reply = (id, result) => process.stdout.write(JSON.stringify({ jsonrpc: "2.0", id, ...result }) + "\\n");
 lines.on("line", line => {
   const request = JSON.parse(line);
@@ -78,6 +82,8 @@ lines.on("line", line => {
         expect(text.match(/Paste the OAuth callback URL to finish login:/g)).toHaveLength(1);
         expect(text.indexOf("https://accounts.example/authorize")).toBeLessThan(text.indexOf("Paste the OAuth callback URL"));
         expect(text).toContain("Diagnostic documentation: https://example.test/docs");
+        expect(text).not.toContain("SyntaxWarning:");
+        expect(text).not.toContain("description=");
         expect(text.includes("official kernel login succeeded")).toBe(outputMode !== "stderr-rejected");
       } finally {
         stderr.mockRestore();
