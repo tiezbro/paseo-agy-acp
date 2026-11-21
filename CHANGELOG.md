@@ -15,6 +15,12 @@ All notable changes to `paseo-agy-acp` are recorded here.
   digests match, so an upgrade replaces stale compatibility behavior.
 - Preserve the frozen redaction evidence commit in release history so clean CI
   checkouts can verify all 89 mappings without weakening the checks.
+- Restore tool-based skill presentation in the managed Linux x64 kernel so
+  built-in skills do not reappear as generated files in user workspaces. Keep
+  the step observer and the original skill sources and enabled settings.
+- Fence asynchronous turn cleanup by ownership. An immediately started next
+  turn keeps its progress and terminal-failure state after the previous turn
+  succeeds, fails or is cancelled.
 
 ### Upgrade
 

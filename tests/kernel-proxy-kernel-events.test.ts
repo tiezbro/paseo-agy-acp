@@ -83,6 +83,46 @@ async function closeHarness(current: Harness): Promise<void> {
 }
 
 describe("official kernel progress notices", () => {
+  it.each(["end_turn", "cancelled", "error"])("上一轮 %s 响应立即触发下一轮时，旧收尾不能清除新轮次的通知与失败状态", async reason => {
+    const current = harness();
+    const sessionId = "session-reentrant";
+    const push = current.received.push.bind(current.received);
+    vi.spyOn(current.received, "push").mockImplementation((...messages) => {
+      const length = push(...messages);
+      if (messages.some(message => "id" in message && message.id === 1)) {
+        current.send({ id: 2, method: "session/prompt", params: { sessionId, prompt: "two" } });
+      }
+      return length;
+    });
+    try {
+      current.send({ id: 1, method: "session/prompt", params: { sessionId, prompt: "one" } });
+      await vi.waitFor(() => expect(current.forwarded.some(message => "id" in message && message.id === 1)).toBe(true));
+      current.reply({ method: "session/update", params: { sessionId, update: {
+        sessionUpdate: "agent_message_chunk", content: { type: "text", text: "first answer" }
+      } } });
+      current.reply(reason === "error"
+        ? { id: 1, error: { code: -32000, message: "first turn failed" } }
+        : { id: 1, result: { stopReason: reason } });
+      await vi.waitFor(() => expect(current.forwarded.some(message => "id" in message && message.id === 2)).toBe(true));
+      current.proxy.observeKernelEvent({ v: 1, event: "backend_http_error", session: sessionId,
+        httpStatus: 503, emittedAt: Date.now() + 1 });
+      writeFileSync(kernelTerminalStatePath(current.directory, sessionId), JSON.stringify({
+        v: 1, event: "turn_failed", session: sessionId, errorClass: "AntigravityExecutionError",
+        sequence: 1, writtenAt: Date.now()
+      }), "utf8");
+      current.reply({ method: "session/update", params: { sessionId, update: {
+        sessionUpdate: "agent_message_chunk", content: { type: "text", text: "partial second answer" }
+      } } });
+      current.reply({ id: 2, result: { stopReason: "end_turn" } });
+      expect(current.received.find(message => "id" in message && message.id === 2)).toMatchObject({
+        error: { data: { "paseo.dev/kernelEvent": { event: "turn_failed", lastHttpStatus: 503 } } }
+      });
+      expect(kernelNotices(current)).toHaveLength(1);
+    } finally {
+      await closeHarness(current);
+    }
+  });
+
   it("wires each retry plan as its own system chunk without raw error data", async () => {
     const current = harness();
     try {

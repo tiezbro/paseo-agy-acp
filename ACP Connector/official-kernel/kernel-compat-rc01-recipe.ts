@@ -33,6 +33,15 @@ export const RC01_KERNEL_COMPAT_PATCH_PLAN: KernelCompatPatchPlan = Object.freez
         "    incoming_json = transform_request(model, incoming_json)\n"
     }),
     Object.freeze({
+      id: "skills-tool-presentation",
+      target: "proxyAgentConfig" as const,
+      // 内核默认向工作区写入内置技能；通过工具呈现，保留发现与读取能力。
+      find: "    harness_config = super()._build_harness_config()\n",
+      replacement:
+        "    harness_config = super()._build_harness_config()\n" +
+        "    harness_config.skills_config.presentation_mode = localharness_pb2.SkillsConfig.TOOL\n"
+    }),
+    Object.freeze({
       id: "paseo-step-observer",
       target: "proxyAgentConfig" as const,
       // 只读 SDK 观察器；上报 SYSTEM error 的 HTTP 状态与 harness 重试决策，

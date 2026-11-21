@@ -7,7 +7,7 @@
 <!-- readme:positioning -->
 ## Purpose
 
-Choose **Antigravity Pro** in Paseo to start `paseo-agy-acp`. It can run alongside the built-in **Antigravity** provider (`antigravity`). Antigravity Pro uses the unmodified official ACP 1.5.0 kernel. The built-in provider drives `agy` on the host.
+Choose **Antigravity Pro** in Paseo to start `paseo-agy-acp`. It can run alongside the built-in **Antigravity** provider (`antigravity`). Antigravity Pro uses official ACP 1.5.0 with compatibility patches in the managed Linux x86_64 runtime. The built-in provider drives `agy` on the host.
 
 ![Antigravity Pro and built-in Antigravity side by side in Paseo](./docs/images/antigravity-and-antigravity-pro.png)
 
@@ -16,14 +16,14 @@ Google’s kernel handles authentication, models, tools, retries and conversatio
 <!-- readme:value -->
 ## Why use paseo-agy-acp?
 
-This refactor makes the adapter a thin interface to the official kernel. The unmodified 1.5.0 kernel decides capabilities, names, order, modes, retries and cancellation. Paseo presents the signals the kernel already emits. Install this package only. Do not change Paseo. The adapter no longer rewrites official behavior with a global queue, and it does not report Paseo as another client.
+The adapter uses official 1.5.0 modes, retries and cancellation. The managed Linux x86_64 compatibility layer restores supported account models, presents skills through tools and observes kernel events. Install this package and configure Paseo; the connection keeps the actual client identity.
 
 What the new architecture delivers:
 
 - It connects directly to the official kernel instead of scraping the `agy` interface.
 - A scheduled retry or an HTTP 503 is shown immediately, and the turn continues.
 - `max_tokens`, `max_turn_requests` and `refusal` appear as failures instead of looking like success.
-- Model filtering and skill presentation follow the official defaults.
+- Concrete model choices remain available; the managed compatibility layer exposes built-in skills through tools without automatically writing skill files into the workspace.
 
 “Official” says whether the unmodified 1.5.0 kernel provides the capability named in the first column. The last column describes Paseo’s built-in `antigravity-provider` implementation. “Not verified” means there is insufficient evidence for that comparison. [Official capability catalog](docs/research/2026-11-19-official-capability-catalog.md)
 

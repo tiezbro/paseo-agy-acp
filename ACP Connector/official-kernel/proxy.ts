@@ -394,15 +394,13 @@ export class OfficialKernelProxy {
         this.#writeClient({ jsonrpc: "2.0", id: request.id, result: { stopReason: "cancelled" } });
       } else if (!responseDelivered) throw error;
     } finally {
+      if (terminalStage === "turn_end" && claim.aborted) terminalStage = "turn_cancel";
       if (sessionId && this.#claims.get(sessionId) === claim) {
         const timer = this.#cancelTimers.get(sessionId);
         if (timer) clearTimeout(timer);
         this.#cancelTimers.delete(sessionId);
         if (this.#claims.get(sessionId) === claim) this.#claims.delete(sessionId);
-      }
-      if (this.#firstOutputs.get(request.id) === firstOutputDone) this.#firstOutputs.delete(request.id);
-      if (terminalStage === "turn_end" && claim.aborted) terminalStage = "turn_cancel";
-      if (sessionId) {
+        // 已回包的轮次由响应路径同步清理；旧 finally 不能触碰下一轮状态。
         if (terminalStage === "turn_cancel") {
           this.#kernelEvents.cancelTurn(sessionId);
           this.#terminalStates.cancel(sessionId);
@@ -411,6 +409,7 @@ export class OfficialKernelProxy {
           this.#terminalStates.finishTurn(sessionId);
         }
       }
+      if (this.#firstOutputs.get(request.id) === firstOutputDone) this.#firstOutputs.delete(request.id);
       this.#diagnostics.event(terminalStage, { requestId: request.id, sessionId, durationMs: performance.now() - turnStartedAt });
     }
   }

@@ -1,4 +1,5 @@
 import { readFileSync } from "node:fs";
+import { spawnSync } from "node:child_process";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import { OfficialKernelCompatLifecycle } from "../ACP Connector/official-kernel/kernel-compat-lifecycle.js";
@@ -46,11 +47,62 @@ afterEach(() => {
 });
 
 describe("RC01 official kernel compatibility marker recipe", () => {
+  it("技能呈现标记缺失时拒绝发布，即使步骤观察器标记仍在", async () => {
+    const fixture = createKernelCompatP2Fixture({
+      modelSource: MODEL_SELECTION_SOURCE,
+      proxySource: PROXY_SERVER_SOURCE,
+      proxyAgentConfigSource: PROXY_AGENT_CONFIG_SOURCE.replace("    harness_config = super()._build_harness_config()\n", "")
+    });
+    fixtures.push(fixture);
+    const lifecycle = new OfficialKernelCompatLifecycle({ stateRoot: fixture.stateRoot, pins: fixture.pins });
+    await expect(lifecycle.prepare({ ...fixture.prepareOptions, patchPlan: RC01_KERNEL_COMPAT_PATCH_PLAN }))
+      .rejects.toThrow(/skills-tool-presentation in proxyAgentConfig must occur exactly once; found 0/);
+  });
+
+  it.each([false, true])("技能通过工具呈现，同时保留技能来源、启用状态 %s 与步骤观察器", async enabled => {
+    const fixture = createKernelCompatP2Fixture({
+      modelSource: MODEL_SELECTION_SOURCE,
+      proxySource: PROXY_SERVER_SOURCE,
+      proxyAgentConfigSource: PROXY_AGENT_CONFIG_SOURCE
+    });
+    fixtures.push(fixture);
+    const lifecycle = new OfficialKernelCompatLifecycle({ stateRoot: fixture.stateRoot, pins: fixture.pins });
+    const prepared = await lifecycle.prepare({ ...fixture.prepareOptions, patchPlan: RC01_KERNEL_COMPAT_PATCH_PLAN });
+    const configPath = path.join(prepared.releasePath, RUNFILES_DIRECTORY, ACP_SERVER_DIRECTORY, "proxy_agent_config.py");
+    const result = spawnSync("python3", ["-B", "-c", String.raw`
+from pathlib import Path
+from types import SimpleNamespace
+import sys
+
+enabled = sys.argv[2] == "true"
+config = SimpleNamespace(
+    skills_config=SimpleNamespace(presentation_mode=2, enabled=enabled),
+    skills_paths=["/user/skills"], app_data_dir="/user/state", models=["original-model"],
+)
+class BaseStrategy:
+    def _build_harness_config(self):
+        return config
+
+localharness_pb2 = SimpleNamespace(SkillsConfig=SimpleNamespace(TOOL=1))
+source = Path(sys.argv[1]).read_text(encoding="utf-8")
+exec(compile("from __future__ import annotations\n" + source, sys.argv[1], "exec"))
+result = ProxyConnectionStrategy()._build_harness_config()
+assert result is config
+assert result.skills_config.presentation_mode == localharness_pb2.SkillsConfig.TOOL
+assert result.skills_config.enabled is enabled
+assert result.skills_paths == ["/user/skills"]
+assert result.app_data_dir == "/user/state"
+assert result.models == ["original-model"]
+assert "register_step_observer(hook_runner, conversation_id=self.conversation_id)" in source
+`, configPath, String(enabled)], { encoding: "utf8" });
+    expect(result.status, result.stderr).toBe(0);
+  });
+
   it("refuses a missing step observer marker before publishing a release", async () => {
     const fixture = createKernelCompatP2Fixture({
       modelSource: MODEL_SELECTION_SOURCE,
       proxySource: PROXY_SERVER_SOURCE,
-      proxyAgentConfigSource: "class ChangedUpstreamConfig:\n  pass\n"
+      proxyAgentConfigSource: PROXY_AGENT_CONFIG_SOURCE.replace("  def create_strategy(\n", "  def changed_strategy(\n")
     });
     fixtures.push(fixture);
     const lifecycle = new OfficialKernelCompatLifecycle({ stateRoot: fixture.stateRoot, pins: fixture.pins });
@@ -60,7 +112,7 @@ describe("RC01 official kernel compatibility marker recipe", () => {
     })).rejects.toThrow(/paseo-step-observer in proxyAgentConfig must occur exactly once; found 0/);
   });
 
-  it("applies the frozen proxy and step observer edits to pinned sources", async () => {
+  it("applies the frozen model, skill and step observer edits to pinned sources", async () => {
     expect(Object.isFrozen(RC01_KERNEL_COMPAT_PATCH_PLAN)).toBe(true);
     expect(Object.isFrozen(RC01_KERNEL_COMPAT_PATCH_PLAN.edits)).toBe(true);
     expect(RC01_KERNEL_COMPAT_PATCH_PLAN.edits.every((edit) => Object.isFrozen(edit))).toBe(true);
@@ -92,6 +144,14 @@ describe("RC01 official kernel compatibility marker recipe", () => {
         replacement:
           "    model = match.group(1)\n" +
           "    incoming_json = transform_request(model, incoming_json)\n"
+      },
+      {
+        id: "skills-tool-presentation",
+        target: "proxyAgentConfig",
+        find: "    harness_config = super()._build_harness_config()\n",
+        replacement:
+          "    harness_config = super()._build_harness_config()\n" +
+          "    harness_config.skills_config.presentation_mode = localharness_pb2.SkillsConfig.TOOL\n"
       },
       {
         id: "paseo-step-observer",
@@ -147,7 +207,8 @@ describe("RC01 official kernel compatibility marker recipe", () => {
       "    return incoming_json",
       ""
     ].join("\n"));
-    expect(readFileSync(path.join(runfiles, "proxy_agent_config.py"), "utf8")).not.toContain("presentation_mode");
+    expect(readFileSync(path.join(runfiles, "proxy_agent_config.py"), "utf8"))
+      .toContain("harness_config.skills_config.presentation_mode = localharness_pb2.SkillsConfig.TOOL");
   });
 });
 
