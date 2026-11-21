@@ -2,7 +2,7 @@
 
 [English](./README.md) | [中文](./README.zh-CN.md) | [Changelog](./CHANGELOG.md)
 
-`paseo-agy-acp` 把 Google 官方 Antigravity ACP 内核接入现有 Paseo。适配器包版本为 `2.9.1`，内核基准是官方 `agy_acp_server` 1.5.0，Linux 托管安装使用兼容层。只需安装本包，在 Paseo 中配置一个 ACP provider，即可使用，无需修改 Paseo。
+`paseo-agy-acp` 把 Google 官方 Antigravity ACP 内核接入现有 Paseo。适配器包版本为 `2.9.2`，内核基准是官方 `agy_acp_server` 1.5.0，Linux 托管安装使用兼容层。只需安装本包，在 Paseo 中配置一个 ACP provider，即可使用，无需修改 Paseo。
 
 <!-- readme:positioning -->
 ## 产品定位
@@ -81,7 +81,7 @@ Paseo → ACP / NDJSON → paseo-agy-acp → agy_acp_server 1.5.0 → Google
 在运行 Paseo daemon 的主机上，从本版本的 npm 包安装。若手头是源码，可按“开发验证”中的命令生成同名安装包。
 
 ```bash
-npm install --global ./paseo-agy-acp-2.9.1.tgz
+npm install --global ./paseo-agy-acp-2.9.2.tgz
 paseo-agy-acp --doctor
 paseo-agy-acp --prepare-kernel
 paseo-agy-acp --login
@@ -130,7 +130,7 @@ paseo-agy-acp --login
 
 从带全局排队的版本迁移时，移除 `AGY_ACP_ADMISSION_*` 和 `AGY_ACP_STATE_DIR`。旧账本保留在磁盘上，适配器不再读取，原 `agy-acp-prepare-state` 入口已移除。账号额度、服务端 429/502/503 和模型生成时间仍由上游决定。
 
-会话建立及配置回包保留具体 `models` 列表，同时保留分组 `configOptions`，各思考档位可作为独立模型选择。Linux x64 托管兼容层也恢复上游账号目录实际提供的受支持第三方模型，不更改客户端身份。仅在兼容模块和补丁配方均匹配时复用内核缓存。重新构建后再次运行 Provider 诊断；已运行的会话继续使用原先加载的内核。模型可用性仍以上游账号目录为准。
+会话建立及配置回包保留具体 `models` 列表，同时保留分组 `configOptions`，各思考档位可作为独立模型选择。Linux x64 托管兼容层也恢复上游账号目录实际提供的受支持第三方模型，不更改客户端身份。仅在兼容模块和补丁配方均匹配时复用内核缓存。升级或重新构建后，先在终端运行 `paseo-agy-acp --prepare-kernel` 并等待完成，再运行 Provider 诊断。源码检出使用 `node "dist/ACP Connector/main.js" --prepare-kernel`。首次准备可能需要数分钟（本机约 314 秒），超过 Paseo 诊断初始化的 20 秒限时。已运行的会话继续使用原先加载的内核。模型可用性仍以上游账号目录为准。
 
 - [旧排队配置迁移](docs/operations/admission.md)
 - [轻量适配器验收](docs/operations/lightweight-adapter.md)

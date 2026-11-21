@@ -2,7 +2,7 @@
 
 [English](./README.md) | [中文](./README.zh-CN.md) | [Changelog](./CHANGELOG.md)
 
-`paseo-agy-acp` connects an existing Paseo installation to the official Google Antigravity ACP kernel. The adapter package is `2.9.1` and its reference kernel is official `agy_acp_server` 1.5.0 with the managed Linux compatibility layer. Install this package and configure a custom ACP provider in Paseo. No Paseo code changes are required.
+`paseo-agy-acp` connects an existing Paseo installation to the official Google Antigravity ACP kernel. The adapter package is `2.9.2` and its reference kernel is official `agy_acp_server` 1.5.0 with the managed Linux compatibility layer. Install this package and configure a custom ACP provider in Paseo. No Paseo code changes are required.
 
 <!-- readme:positioning -->
 ## Purpose
@@ -81,7 +81,7 @@ The kernel stores session history. The adapter has no scheduling database or run
 On the host running the Paseo daemon, install the npm package for this version. If you have the source checkout, the Development section shows how to produce the same package file.
 
 ```bash
-npm install --global ./paseo-agy-acp-2.9.1.tgz
+npm install --global ./paseo-agy-acp-2.9.2.tgz
 paseo-agy-acp --doctor
 paseo-agy-acp --prepare-kernel
 paseo-agy-acp --login
@@ -130,7 +130,7 @@ Skill discovery covers configured directories, workspace roots, global Gemini, A
 
 When migrating from a version with global queueing, remove `AGY_ACP_ADMISSION_*` and `AGY_ACP_STATE_DIR`. Old ledgers stay on disk and the adapter no longer reads them. The `agy-acp-prepare-state` command has been removed. Account quota, upstream 429/502/503 responses and generation latency remain under the service’s control.
 
-The adapter preserves the concrete `models` catalog alongside grouped `configOptions`, including distinct thinking variants. On managed Linux x64, it also restores supported third-party entries from the upstream account catalog without changing client identity. Cached kernels are reused only when both the compatibility module and patch recipe match. Re-run provider diagnostics after rebuilding; existing running sessions keep their loaded kernel. Model availability still follows the upstream account catalog.
+The adapter preserves the concrete `models` catalog alongside grouped `configOptions`, including distinct thinking variants. On managed Linux x64, it also restores supported third-party entries from the upstream account catalog without changing client identity. Cached kernels are reused only when both the compatibility module and patch recipe match. After upgrading or rebuilding, run `paseo-agy-acp --prepare-kernel` in a terminal and wait for it to finish before running provider diagnostics. For a source checkout, use `node "dist/ACP Connector/main.js" --prepare-kernel`. Initial preparation can take several minutes (about 314 seconds on the test host), exceeding Paseo’s 20-second diagnostic initialization timeout. Existing running sessions keep their loaded kernel. Model availability still follows the upstream account catalog.
 
 - [Migrate from the old queue](docs/operations/admission.md)
 - [Verify the lightweight adapter](docs/operations/lightweight-adapter.md)
