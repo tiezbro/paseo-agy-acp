@@ -4,15 +4,26 @@
 
 [English](./README.md) | [中文](./README.zh-CN.md) | [Changelog](./CHANGELOG.md)
 
+![Paseo 中 Antigravity Pro 与内置 Antigravity 并存](./docs/images/antigravity-and-antigravity-pro.png)
+
 <!-- readme:positioning -->
 ## 产品定位
 
-在 Paseo 中选择 **Antigravity Pro**，就会启动 `paseo-agy-acp`。它和内置的 **Antigravity**（`antigravity`）可以并存。Antigravity Pro 通过 ACP 连接 `agy_acp_server`，内置 provider 则驱动主机上的 `agy` CLI。
+在 Paseo 中选择 **Antigravity Pro**，就会启动 `paseo-agy-acp`。它和内置的 **Antigravity**（`antigravity`）可以并存。Antigravity Pro 走未修改的官方 ACP 1.5.0，内置 provider 走主机上的 `agy`。
 
 Google 内核负责账号认证、模型、工具、重试和会话历史。适配器负责把 Paseo 的工作目录、背景说明和技能交给内核，再把回答、权限请求和错误交回 Paseo。这是社区项目，Google 内核单独下载。
 
 <!-- readme:value -->
 ## 为什么用 paseo-agy-acp
+
+这次重构把适配器收成官方内核的轻量接口。能力、名称、顺序、模式、重试和取消都由未修改的官方 1.5.0 决定。Paseo 只把官方已经给出的信号完整呈现出来。用户只安装这个包，不改 Paseo。适配器不再用全局排队改写官方行为，也不把 Paseo 报成别的客户端。
+
+新架构带来的结果：
+
+- 直接连接官方内核，不再刮 `agy` 的界面。
+- 准备重试和 HTTP 503 立刻显示，这一轮继续。
+- `max_tokens`、`max_turn_requests`、`refusal` 显示成失败，不再看起来像成功。
+- 模型过滤和技能呈现回到官方默认。
 
 “官方能力”表示未修改的 1.5.0 是否原生提供第一列所述能力。最后一列依据 Paseo 内置 `antigravity-provider` 的实现。“未核对”表示没有足够证据判断内置 provider 的行为。[官方能力目录](docs/research/2026-11-19-official-capability-catalog.md)
 

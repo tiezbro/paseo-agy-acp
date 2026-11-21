@@ -4,15 +4,26 @@
 
 [English](./README.md) | [中文](./README.zh-CN.md) | [Changelog](./CHANGELOG.md)
 
+![Antigravity Pro and built-in Antigravity side by side in Paseo](./docs/images/antigravity-and-antigravity-pro.png)
+
 <!-- readme:positioning -->
 ## Purpose
 
-Choose **Antigravity Pro** in Paseo to start `paseo-agy-acp`. It can run alongside the built-in **Antigravity** provider (`antigravity`). Antigravity Pro connects to `agy_acp_server` over ACP. The built-in provider drives the `agy` CLI on the host.
+Choose **Antigravity Pro** in Paseo to start `paseo-agy-acp`. It can run alongside the built-in **Antigravity** provider (`antigravity`). Antigravity Pro uses the unmodified official ACP 1.5.0 kernel. The built-in provider drives `agy` on the host.
 
 Google’s kernel handles authentication, models, tools, retries and conversation history. The adapter supplies Paseo’s working directory, background instructions and skills, then delivers replies, permission requests and errors to Paseo. This is a community project. The Google kernel is downloaded separately.
 
 <!-- readme:value -->
 ## Why use paseo-agy-acp?
+
+This refactor makes the adapter a thin interface to the official kernel. The unmodified 1.5.0 kernel decides capabilities, names, order, modes, retries and cancellation. Paseo presents the signals the kernel already emits. Install this package only. Do not change Paseo. The adapter no longer rewrites official behavior with a global queue, and it does not report Paseo as another client.
+
+What the new architecture delivers:
+
+- It connects directly to the official kernel instead of scraping the `agy` interface.
+- A scheduled retry or an HTTP 503 is shown immediately, and the turn continues.
+- `max_tokens`, `max_turn_requests` and `refusal` appear as failures instead of looking like success.
+- Model filtering and skill presentation follow the official defaults.
 
 “Official” says whether the unmodified 1.5.0 kernel provides the capability named in the first column. The last column describes Paseo’s built-in `antigravity-provider` implementation. “Not verified” means there is insufficient evidence for that comparison. [Official capability catalog](docs/research/2026-11-19-official-capability-catalog.md)
 
