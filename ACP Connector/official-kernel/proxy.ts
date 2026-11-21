@@ -373,10 +373,7 @@ export class OfficialKernelProxy {
       try { params = rewriteModeFields(await raceClaim(this.#context.injectPrompt(params), claim)); }
       finally { contextDone(); }
       if (claim.aborted) {
-        if (sessionId) {
-          this.#kernelEvents.cancelTurn(sessionId);
-          this.#terminalStates.cancel(sessionId);
-        }
+        this.#releasePromptClaim(sessionId, claim, true);
         this.#writeClient({ jsonrpc: "2.0", id: request.id, result: { stopReason: "cancelled" } });
         return;
       }
@@ -391,27 +388,31 @@ export class OfficialKernelProxy {
     } catch (error) {
       terminalStage = isTurnCancelled(error) ? "turn_cancel" : "turn_fail";
       if (!responseDelivered && isTurnCancelled(error)) {
+        this.#releasePromptClaim(sessionId, claim, true);
         this.#writeClient({ jsonrpc: "2.0", id: request.id, result: { stopReason: "cancelled" } });
       } else if (!responseDelivered) throw error;
     } finally {
       if (terminalStage === "turn_end" && claim.aborted) terminalStage = "turn_cancel";
-      if (sessionId && this.#claims.get(sessionId) === claim) {
-        const timer = this.#cancelTimers.get(sessionId);
-        if (timer) clearTimeout(timer);
-        this.#cancelTimers.delete(sessionId);
-        if (this.#claims.get(sessionId) === claim) this.#claims.delete(sessionId);
-        // 已回包的轮次由响应路径同步清理；旧 finally 不能触碰下一轮状态。
-        if (terminalStage === "turn_cancel") {
-          this.#kernelEvents.cancelTurn(sessionId);
-          this.#terminalStates.cancel(sessionId);
-        } else {
-          this.#kernelEvents.endTurn(sessionId);
-          this.#terminalStates.finishTurn(sessionId);
-        }
-      }
+      this.#releasePromptClaim(sessionId, claim, terminalStage === "turn_cancel");
       if (this.#firstOutputs.get(request.id) === firstOutputDone) this.#firstOutputs.delete(request.id);
       this.#diagnostics.event(terminalStage, { requestId: request.id, sessionId, durationMs: performance.now() - turnStartedAt });
     }
+  }
+
+  #releasePromptClaim(sessionId: string | undefined, claim: TurnClaim, cancelled: boolean): void {
+    // 本地终态回包前同步释放；旧 finally 不能触碰同步续轮的新 claim。
+    if (!sessionId || this.#claims.get(sessionId) !== claim) return;
+    const timer = this.#cancelTimers.get(sessionId);
+    if (timer) clearTimeout(timer);
+    this.#cancelTimers.delete(sessionId);
+    if (cancelled) {
+      this.#kernelEvents.cancelTurn(sessionId);
+      this.#terminalStates.cancel(sessionId);
+    } else {
+      this.#kernelEvents.endTurn(sessionId);
+      this.#terminalStates.finishTurn(sessionId);
+    }
+    this.#claims.delete(sessionId);
   }
 
   #track(id: JsonRpcId, method: string, params: unknown): Promise<JsonRpcMessage> {

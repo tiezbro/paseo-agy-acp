@@ -21,6 +21,8 @@ All notable changes to `paseo-agy-acp` are recorded here.
 - Fence asynchronous turn cleanup by ownership. An immediately started next
   turn keeps its progress and terminal-failure state after the previous turn
   succeeds, fails or is cancelled.
+- Release locally cancelled turns before delivering their terminal response,
+  allowing immediate reentry while preserving dispatched cancellation handling.
 
 ### Upgrade
 
