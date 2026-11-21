@@ -21,7 +21,7 @@ import {
 } from "./json-rpc.js";
 import { bridgeOfficialMcpServers, McpProtocolBridge } from "./mcp-protocol-bridge.js";
 import { rewriteMcpServers } from "./mcp-rewrite.js";
-import { describeOfficialModes, hideLegacyModelCatalog, rewriteModeFields } from "./mode-map.js";
+import { describeOfficialModes, rewriteModeFields } from "./mode-map.js";
 import { createNdjsonParser, encodeNdjson } from "./ndjson.js";
 import { augmentAvailableCommands, type AvailableCommand } from "./skill-commands.js";
 import { SessionSkillMcpServer } from "./skill-mcp.js";
@@ -373,10 +373,7 @@ export class OfficialKernelProxy {
       try { params = rewriteModeFields(await raceClaim(this.#context.injectPrompt(params), claim)); }
       finally { contextDone(); }
       if (claim.aborted) {
-        if (sessionId) {
-          this.#kernelEvents.cancelTurn(sessionId);
-          this.#terminalStates.cancel(sessionId);
-        }
+        this.#releasePromptClaim(sessionId, claim, true);
         this.#writeClient({ jsonrpc: "2.0", id: request.id, result: { stopReason: "cancelled" } });
         return;
       }
@@ -391,28 +388,31 @@ export class OfficialKernelProxy {
     } catch (error) {
       terminalStage = isTurnCancelled(error) ? "turn_cancel" : "turn_fail";
       if (!responseDelivered && isTurnCancelled(error)) {
+        this.#releasePromptClaim(sessionId, claim, true);
         this.#writeClient({ jsonrpc: "2.0", id: request.id, result: { stopReason: "cancelled" } });
       } else if (!responseDelivered) throw error;
     } finally {
-      if (sessionId && this.#claims.get(sessionId) === claim) {
-        const timer = this.#cancelTimers.get(sessionId);
-        if (timer) clearTimeout(timer);
-        this.#cancelTimers.delete(sessionId);
-        if (this.#claims.get(sessionId) === claim) this.#claims.delete(sessionId);
-      }
-      if (this.#firstOutputs.get(request.id) === firstOutputDone) this.#firstOutputs.delete(request.id);
       if (terminalStage === "turn_end" && claim.aborted) terminalStage = "turn_cancel";
-      if (sessionId) {
-        if (terminalStage === "turn_cancel") {
-          this.#kernelEvents.cancelTurn(sessionId);
-          this.#terminalStates.cancel(sessionId);
-        } else {
-          this.#kernelEvents.endTurn(sessionId);
-          this.#terminalStates.finishTurn(sessionId);
-        }
-      }
+      this.#releasePromptClaim(sessionId, claim, terminalStage === "turn_cancel");
+      if (this.#firstOutputs.get(request.id) === firstOutputDone) this.#firstOutputs.delete(request.id);
       this.#diagnostics.event(terminalStage, { requestId: request.id, sessionId, durationMs: performance.now() - turnStartedAt });
     }
+  }
+
+  #releasePromptClaim(sessionId: string | undefined, claim: TurnClaim, cancelled: boolean): void {
+    // 本地终态回包前同步释放；旧 finally 不能触碰同步续轮的新 claim。
+    if (!sessionId || this.#claims.get(sessionId) !== claim) return;
+    const timer = this.#cancelTimers.get(sessionId);
+    if (timer) clearTimeout(timer);
+    this.#cancelTimers.delete(sessionId);
+    if (cancelled) {
+      this.#kernelEvents.cancelTurn(sessionId);
+      this.#terminalStates.cancel(sessionId);
+    } else {
+      this.#kernelEvents.endTurn(sessionId);
+      this.#terminalStates.finishTurn(sessionId);
+    }
+    this.#claims.delete(sessionId);
   }
 
   #track(id: JsonRpcId, method: string, params: unknown): Promise<JsonRpcMessage> {
@@ -593,7 +593,7 @@ export class OfficialKernelProxy {
       if (isJsonRpcSuccess(outbound) && [SESSION_NEW_METHOD, SESSION_LOAD_METHOD, SESSION_RESUME_METHOD, SESSION_SET_CONFIG_METHOD].includes(pending.method)) {
         outbound = {
           ...outbound,
-          result: hideLegacyModelCatalog(describeOfficialModes(outbound.result))
+          result: describeOfficialModes(outbound.result)
         };
       }
       this.#writeClient(outbound);

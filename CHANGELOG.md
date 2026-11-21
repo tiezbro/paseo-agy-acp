@@ -2,6 +2,42 @@
 
 All notable changes to `paseo-agy-acp` are recorded here.
 
+## 2.9.2 - 2026-11-21
+
+### Fixes in 2.9.2
+
+- Restore supported Claude/GPT entries from the upstream account catalog in the
+  managed Linux x64 compatibility kernel. Preserve upstream disabled-model checks
+  and the actual ACP client identity.
+- Preserve the concrete model catalog alongside grouped configuration options,
+  restoring separate Flash High/Medium/Low entries and saved concrete model IDs.
+- Reuse managed kernels only when both compatibility module and patch recipe
+  digests match, so an upgrade replaces stale compatibility behavior.
+- Preserve the frozen redaction evidence commit in release history so clean CI
+  checkouts can verify all 89 mappings without weakening the checks.
+- Restore tool-based skill presentation in the managed Linux x64 kernel so
+  built-in skills do not reappear as generated files in user workspaces. Keep
+  the step observer and the original skill sources and enabled settings.
+- Fence asynchronous turn cleanup by ownership. An immediately started next
+  turn keeps its progress and terminal-failure state after the previous turn
+  succeeds, fails or is cancelled.
+- Release locally cancelled turns before delivering their terminal response,
+  allowing immediate reentry while preserving dispatched cancellation handling.
+- Filter the known GenAI upload-docstring escape warnings from login and
+  provider stderr. Preserve unrelated warnings, failures and OAuth prompts;
+  incomplete or changed warning pairs pass through unchanged.
+
+### Upgrade
+
+- Run `paseo-agy-acp --prepare-kernel` and wait for completion before provider
+  diagnostics. For source checkouts, run
+  `node "dist/ACP Connector/main.js" --prepare-kernel`. Initial preparation can
+  take several minutes (314 seconds on the test host), exceeding Paseo's
+  20-second diagnostic initialization timeout. Existing sessions keep their
+  loaded kernel until reopened.
+- Directory discovery and switching were verified for six models. This release
+  does not claim new model-generation, full UI or non-Linux kernel acceptance.
+
 ## 2.9.1 - 2026-11-20
 
 ### Fixed

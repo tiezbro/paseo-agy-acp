@@ -1610,7 +1610,7 @@ function buildArtifactId(profileId: string, parHash: string, compatibilityVersio
   return `${profileId}-${parHash.slice(0, 12)}-${compatibilityVersion}-${compatHash.slice(0, 12)}-${patchDigest.slice(0, 12)}`;
 }
 
-function digestPatchPlan(plan: KernelCompatPatchPlan): string {
+export function digestPatchPlan(plan: KernelCompatPatchPlan): string {
   return sha256Text(canonicalJson({
     edits: plan.edits.map((edit) => ({
       id: edit.id,

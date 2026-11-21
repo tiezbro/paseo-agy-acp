@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { PassThrough } from "node:stream";
 import { describe, expect, it, vi } from "vitest";
+import { PaseoSessionContext } from "../ACP Connector/official-kernel/context.js";
 import { kernelTerminalStatePath } from "../ACP Connector/official-kernel/kernel-terminal-state.js";
 import { createNdjsonParser, encodeNdjson } from "../ACP Connector/official-kernel/ndjson.js";
 import { OfficialKernelProxy } from "../ACP Connector/official-kernel/proxy.js";
@@ -83,6 +84,105 @@ async function closeHarness(current: Harness): Promise<void> {
 }
 
 describe("official kernel progress notices", () => {
+  it.each(["preparing-cancel", "ready-cancel", "context-error"])("本地 %s 终态回调可立即续轮，新轮次状态不被旧清理覆盖", async reason => {
+    const current = harness();
+    const sessionId = "session-local-reentrant";
+    const cancel = () => current.send({ method: "session/cancel", params: { sessionId } });
+    const prepare = vi.spyOn(PaseoSessionContext.prototype, "injectPrompt");
+    if (reason === "preparing-cancel") prepare.mockImplementationOnce(() => new Promise(() => {}));
+    else if (reason === "ready-cancel") prepare.mockImplementationOnce(params => {
+      // 先让 raceClaim 就绪，再在 await 续体派发前取消，覆盖 claim.aborted 分支。
+      queueMicrotask(() => queueMicrotask(cancel));
+      return Promise.resolve(params);
+    });
+    else prepare.mockRejectedValueOnce(new Error("isolated context failure"));
+    const push = current.received.push.bind(current.received);
+    vi.spyOn(current.received, "push").mockImplementation((...messages) => {
+      const length = push(...messages);
+      if (messages.some(message => "id" in message && message.id === 1)) {
+        current.send({ id: 2, method: "session/prompt", params: { sessionId, prompt: "two" } });
+      }
+      return length;
+    });
+    try {
+      current.send({ id: 1, method: "session/prompt", params: { sessionId, prompt: "one" } });
+      if (reason === "preparing-cancel") cancel();
+      await vi.waitFor(() => expect(current.forwarded.some(message => "id" in message && message.id === 2)).toBe(true));
+      expect(current.forwarded.filter(message => "method" in message && message.method === "session/prompt"))
+        .toEqual([expect.objectContaining({ id: 2 })]);
+      expect(current.received.filter(message => "id" in message && message.id === 1)).toEqual([
+        reason === "context-error"
+          ? { jsonrpc: "2.0", id: 1, error: { code: -32000, message: "isolated context failure" } }
+          : { jsonrpc: "2.0", id: 1, result: { stopReason: "cancelled" } }
+      ]);
+      current.send({ id: 3, method: "session/prompt", params: { sessionId, prompt: "overlapping" } });
+      await vi.waitFor(() => expect(current.received.filter(message => "id" in message && message.id === 3)).toEqual([
+        { jsonrpc: "2.0", id: 3, error: { code: -32000, message: "session already has an active prompt" } }
+      ]));
+      expect(current.forwarded.some(message => "id" in message && message.id === 3)).toBe(false);
+      current.proxy.observeKernelEvent({ v: 1, event: "backend_http_error", session: sessionId,
+        httpStatus: 503, emittedAt: Date.now() + 1 });
+      writeFileSync(kernelTerminalStatePath(current.directory, sessionId), JSON.stringify({
+        v: 1, event: "turn_failed", session: sessionId, errorClass: "AntigravityExecutionError",
+        sequence: 1, writtenAt: Date.now()
+      }), "utf8");
+      current.reply({ method: "session/update", params: { sessionId, update: {
+        sessionUpdate: "agent_message_chunk", content: { type: "text", text: "partial second answer" }
+      } } });
+      current.reply({ id: 2, result: { stopReason: "end_turn" } });
+      expect(current.received.filter(message => "id" in message && message.id === 2)).toEqual([
+        expect.objectContaining({ error: expect.objectContaining({ data: {
+          "paseo.dev/kernelEvent": { v: 1, event: "turn_failed", errorClass: "AntigravityExecutionError", lastHttpStatus: 503 }
+        } }) })
+      ]);
+      expect(kernelNotices(current)).toHaveLength(1);
+      expect(existsSync(kernelTerminalStatePath(current.directory, sessionId))).toBe(false);
+    } finally {
+      prepare.mockRestore();
+      await closeHarness(current);
+    }
+  });
+
+  it.each(["end_turn", "cancelled", "error"])("上一轮 %s 响应立即触发下一轮时，旧收尾不能清除新轮次的通知与失败状态", async reason => {
+    const current = harness();
+    const sessionId = "session-reentrant";
+    const push = current.received.push.bind(current.received);
+    vi.spyOn(current.received, "push").mockImplementation((...messages) => {
+      const length = push(...messages);
+      if (messages.some(message => "id" in message && message.id === 1)) {
+        current.send({ id: 2, method: "session/prompt", params: { sessionId, prompt: "two" } });
+      }
+      return length;
+    });
+    try {
+      current.send({ id: 1, method: "session/prompt", params: { sessionId, prompt: "one" } });
+      await vi.waitFor(() => expect(current.forwarded.some(message => "id" in message && message.id === 1)).toBe(true));
+      current.reply({ method: "session/update", params: { sessionId, update: {
+        sessionUpdate: "agent_message_chunk", content: { type: "text", text: "first answer" }
+      } } });
+      current.reply(reason === "error"
+        ? { id: 1, error: { code: -32000, message: "first turn failed" } }
+        : { id: 1, result: { stopReason: reason } });
+      await vi.waitFor(() => expect(current.forwarded.some(message => "id" in message && message.id === 2)).toBe(true));
+      current.proxy.observeKernelEvent({ v: 1, event: "backend_http_error", session: sessionId,
+        httpStatus: 503, emittedAt: Date.now() + 1 });
+      writeFileSync(kernelTerminalStatePath(current.directory, sessionId), JSON.stringify({
+        v: 1, event: "turn_failed", session: sessionId, errorClass: "AntigravityExecutionError",
+        sequence: 1, writtenAt: Date.now()
+      }), "utf8");
+      current.reply({ method: "session/update", params: { sessionId, update: {
+        sessionUpdate: "agent_message_chunk", content: { type: "text", text: "partial second answer" }
+      } } });
+      current.reply({ id: 2, result: { stopReason: "end_turn" } });
+      expect(current.received.find(message => "id" in message && message.id === 2)).toMatchObject({
+        error: { data: { "paseo.dev/kernelEvent": { event: "turn_failed", lastHttpStatus: 503 } } }
+      });
+      expect(kernelNotices(current)).toHaveLength(1);
+    } finally {
+      await closeHarness(current);
+    }
+  });
+
   it("wires each retry plan as its own system chunk without raw error data", async () => {
     const current = harness();
     try {
