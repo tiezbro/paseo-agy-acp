@@ -14,10 +14,12 @@ observe({ event: "kernel_started", pid: process.pid });
 
 function state(sessionId) {
   const current = saved[sessionId] ??= { model: "model-a", thinking: "low" };
-  return { models: { currentModelId: current.model, availableModels: [
-    { modelId: "model-a", name: "Model A" }, { modelId: "model-b", name: "Model B" }
-  ] }, configOptions: [{ id: "thinking_level", category: "thought_level", name: "Thinking", type: "select",
-    currentValue: current.thinking, options: [{ value: "low", name: "Low" }, { value: "high", name: "High" }] }] };
+  return { configOptions: [
+    { id: "model", category: "model", name: "Model", type: "select", currentValue: current.model,
+      options: [{ value: "model-a", name: "Model A" }, { value: "model-b", name: "Model B" }] },
+    { id: "thinking_level", category: "thought_level", name: "Thinking", type: "select",
+      currentValue: current.thinking, options: [{ value: "low", name: "Low" }, { value: "high", name: "High" }] }
+  ] };
 }
 
 function finish(sessionId, text, stopReason = "end_turn") {
@@ -53,7 +55,7 @@ async function handle(message) {
     write({ jsonrpc: "2.0", id, result });
   } else if (method === "session/set_model" || method === "session/set_config_option") {
     const current = saved[params.sessionId];
-    if (method === "session/set_model") current.model = params.modelId;
+    if (method === "session/set_model" || params.configId === "model") current.model = params.modelId ?? params.value;
     else if (params.configId === "thinking_level") current.thinking = params.value;
     writeFileSync(stateFile, JSON.stringify(saved), "utf8");
     write({ jsonrpc: "2.0", id, result: state(params.sessionId) });

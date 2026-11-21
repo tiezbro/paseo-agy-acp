@@ -36,6 +36,16 @@ export function rewriteModeFields(params: unknown): unknown {
   return next;
 }
 
+/**
+ * Stock Paseo prefers the superseded flat `models` list, whose names still
+ * carry the thinking level. Drop that list so it uses grouped configOptions.
+ */
+export function hideLegacyModelCatalog(value: unknown): unknown {
+  if (!isRecord(value) || !Object.hasOwn(value, "models")) return value;
+  const { models: _legacyModels, ...rest } = value;
+  return rest;
+}
+
 /** Paseo extension: the selected official mode owns all permission decisions. */
 export function describeOfficialModes(value: unknown): unknown {
   if (!isRecord(value)) return value;

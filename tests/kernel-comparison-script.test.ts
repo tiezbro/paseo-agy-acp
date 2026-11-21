@@ -16,7 +16,7 @@ createInterface({ input: process.stdin }).on("line", line => {
   if (m.method === "initialize") send({ id: m.id, result: { protocolVersion: 1, agentInfo: { name: "fake", version: "test" }, agentCapabilities: {} } });
   else if (m.method === "session/new") send(process.env.COMPARE_FIXTURE_RPC_FAIL
     ? { id: m.id, error: { code: -32603, message: "session upstream Error 503 private-error-detail" } }
-    : { id: m.id, result: { sessionId: "s", models: { currentModelId: "test-model" } } });
+    : { id: m.id, result: { sessionId: "s", models: { currentModelId: "test-model" }, configOptions: [{ id: "model", category: "model", type: "select", currentValue: "test-model", options: [{ value: "test-model", name: "test-model" }] }] } });
   else if (m.method === "session/prompt") {
     const timer = setTimeout(() => {
       pending.delete(m.id);

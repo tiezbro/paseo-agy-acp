@@ -165,7 +165,7 @@ test(`Paseo ${clientVersion}：官方 thinking 配置通过真实客户端生效
   const setting = (await h.requests()).find(row => row.method === "session/set_config_option");
   assert.equal(setting.params.configId, "thinking_level");
   assert.equal(setting.params.value, "high");
-  assert.equal(result.state.configOptions[0].currentValue, "high");
+  assert.equal(result.state.configOptions.find(option => option.id === "thinking_level").currentValue, "high");
   assert.deepEqual(result.prompt, [
     { type: "image", data: "aW1hZ2U=", mimeType: "image/png" },
     { type: "text", text: "inspect" }

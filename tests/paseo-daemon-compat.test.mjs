@@ -99,8 +99,8 @@ for (const resume of [false, true]) {
     const agent = await h.create("00000000-0000-4000-8000-000000000001");
     const first = JSON.parse((await h.manager.runAgent(agent.id, "inspect")).finalText);
     assert.match(JSON.stringify(first.prompt), /daemon-context-marker/);
-    assert.equal(first.state.models.currentModelId, "model-b");
-    assert.equal(first.state.configOptions[0].currentValue, "high");
+    assert.equal(first.state.configOptions.find(option => option.id === "model").currentValue, "model-b");
+    assert.equal(first.state.configOptions.find(option => option.id === "thinking_level").currentValue, "high");
     await h.manager.runAgent(agent.id, "tools");
     assert.ok(h.received.some(row => row.url === "/open-1" && row.message.method === "tools/call"));
     const sessionId = agent.persistence.sessionId;

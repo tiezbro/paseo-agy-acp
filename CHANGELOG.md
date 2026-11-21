@@ -2,6 +2,17 @@
 
 All notable changes to `paseo-agy-acp` are recorded here.
 
+## 2.9.1 - 2026-11-20
+
+### Fixed
+
+- Omit the superseded flat `models` catalog from `session/new`, `session/load`,
+  `session/resume` and `session/set_config_option` responses. Stock Paseo then
+  uses grouped `configOptions`: the model button shows the family name, and the
+  thinking level stays on its own control. A saved session that stored a concrete
+  variant id needs to be selected again. A family with only one offered variant
+  keeps the kernel's ungrouped name.
+
 ## 2.9.0 - 2026-11-20
 
 ### Changed

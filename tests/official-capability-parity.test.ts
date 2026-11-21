@@ -62,6 +62,30 @@ describe("official capability transport parity", () => {
       } finally { await h.close(); }
     });
 
+  it.each(["session/new", "session/load", "session/resume", "session/set_config_option"])(
+    "drops the superseded flat model catalog from %s so Paseo uses grouped names", async method => {
+      const h = harness();
+      try {
+        h.send({ jsonrpc: "2.0", id: 12, method, params: { sessionId: "s", cwd: process.cwd(), mcpServers: [] } });
+        await vi.waitFor(() => expect(h.toKernel).toContainEqual(expect.objectContaining({ id: 12 })));
+        h.reply({ jsonrpc: "2.0", id: 12, result: {
+          sessionId: "s",
+          models: { currentModelId: "gemini-4-argon-medium", availableModels: [
+            { modelId: "gemini-4-argon-medium", name: "Gemini 4 Argon (Medium)" }
+          ] },
+          configOptions: [
+            { id: "model", category: "model", type: "select", currentValue: "gemini-4-argon",
+              options: [{ value: "gemini-4-argon", name: "Gemini 4 Argon" }] },
+            { id: "thinking_level", category: "thought_level", type: "select", currentValue: "medium",
+              options: [{ value: "medium", name: "Medium" }, { value: "high", name: "High" }] }
+          ]
+        } });
+        const forwarded = h.toClient.find(message => "id" in message && message.id === 12);
+        expect(forwarded).toMatchObject({ result: { sessionId: "s", configOptions: expect.any(Array) } });
+        expect(forwarded).not.toHaveProperty("result.models");
+      } finally { await h.close(); }
+    });
+
   it("preserves negotiated capabilities, auth methods and vendor metadata", async () => {
     const h = harness();
     try {
