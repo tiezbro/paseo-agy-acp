@@ -1,15 +1,15 @@
+[English](./README.md) | [中文](./README.zh-CN.md) | [Changelog](./CHANGELOG.md)
+
 # paseo-agy-acp
 
 `paseo-agy-acp` 把 Google 官方 Antigravity ACP 内核接入现有 Paseo。适配器包版本为 `2.9.0`，内核基准是未修改的官方 `agy_acp_server` 1.5.0。只需安装本包，在 Paseo 中配置一个 ACP provider，即可使用，无需修改 Paseo。
-
-[English](./README.md) | [中文](./README.zh-CN.md) | [Changelog](./CHANGELOG.md)
-
-![Paseo 中 Antigravity Pro 与内置 Antigravity 并存](./docs/images/antigravity-and-antigravity-pro.png)
 
 <!-- readme:positioning -->
 ## 产品定位
 
 在 Paseo 中选择 **Antigravity Pro**，就会启动 `paseo-agy-acp`。它和内置的 **Antigravity**（`antigravity`）可以并存。Antigravity Pro 走未修改的官方 ACP 1.5.0，内置 provider 走主机上的 `agy`。
+
+![Paseo 中 Antigravity Pro 与内置 Antigravity 并存](./docs/images/antigravity-and-antigravity-pro.png)
 
 Google 内核负责账号认证、模型、工具、重试和会话历史。适配器负责把 Paseo 的工作目录、背景说明和技能交给内核，再把回答、权限请求和错误交回 Paseo。这是社区项目，Google 内核单独下载。
 

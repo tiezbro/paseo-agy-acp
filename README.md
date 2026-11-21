@@ -1,15 +1,15 @@
+[English](./README.md) | [中文](./README.zh-CN.md) | [Changelog](./CHANGELOG.md)
+
 # paseo-agy-acp
 
 `paseo-agy-acp` connects an existing Paseo installation to the official Google Antigravity ACP kernel. The adapter package is `2.9.0` and its reference kernel is the unmodified official `agy_acp_server` 1.5.0. Install this package and configure a custom ACP provider in Paseo. No Paseo code changes are required.
-
-[English](./README.md) | [中文](./README.zh-CN.md) | [Changelog](./CHANGELOG.md)
-
-![Antigravity Pro and built-in Antigravity side by side in Paseo](./docs/images/antigravity-and-antigravity-pro.png)
 
 <!-- readme:positioning -->
 ## Purpose
 
 Choose **Antigravity Pro** in Paseo to start `paseo-agy-acp`. It can run alongside the built-in **Antigravity** provider (`antigravity`). Antigravity Pro uses the unmodified official ACP 1.5.0 kernel. The built-in provider drives `agy` on the host.
+
+![Antigravity Pro and built-in Antigravity side by side in Paseo](./docs/images/antigravity-and-antigravity-pro.png)
 
 Google’s kernel handles authentication, models, tools, retries and conversation history. The adapter supplies Paseo’s working directory, background instructions and skills, then delivers replies, permission requests and errors to Paseo. This is a community project. The Google kernel is downloaded separately.
 
