@@ -72,7 +72,10 @@ test(`Paseo ${clientVersion}：真实客户端新建、模型切换、权限拒�
   assert.equal((await session.run("hello")).finalText, "contract-ok");
   await session.setModel("model-b");
   assert.equal((await session.getRuntimeInfo()).model, "model-b");
-  assert.equal((await h.requests()).find(row => row.method === "session/set_model").params.modelId, "model-b");
+  const modelChange = (await h.requests()).find(row =>
+    row.method === "session/set_model" ||
+    (row.method === "session/set_config_option" && row.params.configId === "model"));
+  assert.equal(modelChange.params.modelId ?? modelChange.params.value, "model-b");
   const denied = session.run("permission");
   const request = await waitFor(() => session.getPendingPermissions()[0], "许可请求");
   await session.respondToPermission(request.id, { behavior: "deny", selectedActionId: "reject" });
