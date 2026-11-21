@@ -66,6 +66,18 @@ describe("RC01 official kernel compatibility marker recipe", () => {
     expect(RC01_KERNEL_COMPAT_PATCH_PLAN.edits.every((edit) => Object.isFrozen(edit))).toBe(true);
     expect(RC01_KERNEL_COMPAT_PATCH_PLAN.edits).toEqual([
       {
+        id: "rc01-model-selection-import",
+        target: "modelSelection",
+        find: "def _parse_ccpa_response(",
+        replacement: "from paseo_model_compat import is_catalog_model\n\ndef _parse_ccpa_response("
+      },
+      {
+        id: "rc01-model-selection-catalog",
+        target: "modelSelection",
+        find: "    if not allow_third_party and not ccpa_id.startswith(\n        _GEMINI_MODEL_ID_PREFIX\n    ):\n",
+        replacement: "    if not is_catalog_model(ccpa_id):\n"
+      },
+      {
         id: "rc01-proxy-server-import",
         target: "proxyServer",
         find: "from google3.cloud.developer_experience.antigravity_extensions.acp_server import useragent",
@@ -119,7 +131,12 @@ describe("RC01 official kernel compatibility marker recipe", () => {
     });
     const runfiles = path.join(prepared.releasePath, RUNFILES_DIRECTORY, ACP_SERVER_DIRECTORY);
 
-    expect(readFileSync(path.join(runfiles, "model_selection.py"), "utf8")).toBe(MODEL_SELECTION_SOURCE);
+    expect(readFileSync(path.join(runfiles, "model_selection.py"), "utf8")).toBe([
+      "from paseo_model_compat import is_catalog_model", "",
+      "def _parse_ccpa_response(ccpa_id):",
+      "    if not is_catalog_model(ccpa_id):",
+      "        return ccpa_id", "    return None", ""
+    ].join("\n"));
     expect(readFileSync(path.join(runfiles, "ccpa_connection", "proxy_server.py"), "utf8")).toBe([
       "from google3.cloud.developer_experience.antigravity_extensions.acp_server import useragent",
       "from paseo_model_compat import transform_request",

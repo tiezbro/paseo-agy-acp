@@ -4,6 +4,19 @@ import type { KernelCompatPatchPlan } from "./kernel-compat-lifecycle.js";
 export const RC01_KERNEL_COMPAT_PATCH_PLAN: KernelCompatPatchPlan = Object.freeze({
   edits: Object.freeze([
     Object.freeze({
+      id: "rc01-model-selection-import",
+      target: "modelSelection" as const,
+      find: "def _parse_ccpa_response(",
+      replacement: "from paseo_model_compat import is_catalog_model\n\ndef _parse_ccpa_response("
+    }),
+    Object.freeze({
+      id: "rc01-model-selection-catalog",
+      target: "modelSelection" as const,
+      // 仅保留上游实际提供且兼容层支持的模型；后续 disabled 检查不变。
+      find: "    if not allow_third_party and not ccpa_id.startswith(\n        _GEMINI_MODEL_ID_PREFIX\n    ):\n",
+      replacement: "    if not is_catalog_model(ccpa_id):\n"
+    }),
+    Object.freeze({
       id: "rc01-proxy-server-import",
       target: "proxyServer" as const,
       find: "from google3.cloud.developer_experience.antigravity_extensions.acp_server import useragent",

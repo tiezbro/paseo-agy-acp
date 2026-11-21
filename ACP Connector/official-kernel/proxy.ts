@@ -21,7 +21,7 @@ import {
 } from "./json-rpc.js";
 import { bridgeOfficialMcpServers, McpProtocolBridge } from "./mcp-protocol-bridge.js";
 import { rewriteMcpServers } from "./mcp-rewrite.js";
-import { describeOfficialModes, hideLegacyModelCatalog, rewriteModeFields } from "./mode-map.js";
+import { describeOfficialModes, rewriteModeFields } from "./mode-map.js";
 import { createNdjsonParser, encodeNdjson } from "./ndjson.js";
 import { augmentAvailableCommands, type AvailableCommand } from "./skill-commands.js";
 import { SessionSkillMcpServer } from "./skill-mcp.js";
@@ -593,7 +593,7 @@ export class OfficialKernelProxy {
       if (isJsonRpcSuccess(outbound) && [SESSION_NEW_METHOD, SESSION_LOAD_METHOD, SESSION_RESUME_METHOD, SESSION_SET_CONFIG_METHOD].includes(pending.method)) {
         outbound = {
           ...outbound,
-          result: hideLegacyModelCatalog(describeOfficialModes(outbound.result))
+          result: describeOfficialModes(outbound.result)
         };
       }
       this.#writeClient(outbound);

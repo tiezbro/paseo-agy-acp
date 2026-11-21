@@ -1,8 +1,8 @@
-[English](./README.md) | [中文](./README.zh-CN.md) | [Changelog](./CHANGELOG.md)
-
 # paseo-agy-acp
 
-`paseo-agy-acp` 把 Google 官方 Antigravity ACP 内核接入现有 Paseo。适配器包版本为 `2.9.1`，内核基准是未修改的官方 `agy_acp_server` 1.5.0。只需安装本包，在 Paseo 中配置一个 ACP provider，即可使用，无需修改 Paseo。
+[English](./README.md) | [中文](./README.zh-CN.md) | [Changelog](./CHANGELOG.md)
+
+`paseo-agy-acp` 把 Google 官方 Antigravity ACP 内核接入现有 Paseo。适配器包版本为 `2.9.1`，内核基准是官方 `agy_acp_server` 1.5.0，Linux 托管安装使用兼容层。只需安装本包，在 Paseo 中配置一个 ACP provider，即可使用，无需修改 Paseo。
 
 <!-- readme:positioning -->
 ## 产品定位
@@ -40,7 +40,7 @@ Google 内核负责账号认证、模型、工具、重试和会话历史。适�
 | 每条消息的背景说明 | 会话中途更新 daemon 的背景说明，下一条消息即可使用。 | 否 | 默认逐条读取并前置说明。启用原生会话背景后，在新建、加载或恢复时追加一次。 | 能做，但只在新会话的第一条消息前加说明，恢复后也不会再加。 |
 | `/usage` 与 `/logout` | 单独发送命令可查看用量或退出账号。 | 是 | daemon 没有保存背景说明，或设置 `PASEO_AGY_ACP_NATIVE_SYSTEM_CONTEXT=1` 并启用官方会话背景时，内核直接处理命令。否则前置说明会让命令作为普通消息进入模型。结果按普通回复显示。 | 做不到，内置 provider 启动 CLI 时禁用了斜杠命令。 |
 | 斜杠技能与 `/plan` | 在官方命令菜单里找到工作区和个人技能。 | 否 | 保留官方 `/plan`、`/logout`、`/usage`，在后面追加可调用的本地技能。同名时官方命令优先。`/plan` 用来请求计划，保留当前权限模式。 | 做不到，内置 provider 禁用斜杠命令，发送给 Paseo 的命令列表为空。 |
-| 模型与思考级别 | 查看账号可用的模型，按内核提供的选项调整思考级别。 | 是 | 转发分组后的模型与思考档选项，并去掉已被取代的扁平模型列表，使现有 Paseo 显示族名和单独的思考档。切换由内核确认。Paseo 以自己的客户端身份连接，个人登录沿用官方 Gemini 模型可见范围。 | 能做，但从 `agy models` 读取模型，思考级别只能通过模型 ID 选择。 |
+| 模型与思考级别 | 查看账号可用的模型，按内核提供的选项调整思考级别。 | 是 | 保留具体模型 ID 和分组思考档。Linux 托管兼容层同时列出上游账号目录实际提供的受支持 Claude/GPT 模型，保留上游禁用模型检查。 | 能做，但从 `agy models` 读取模型，思考级别只能通过模型 ID 选择。 |
 | 三种模式与 YOLO 无人值守 | Default 按策略审批，Auto Edit 自动批准编辑，YOLO 自动批准常规工具。 | 是 | 按官方模式运行。需要无人值守执行常规工具时选 `yolo`。管理员复核规则仍生效；Paseo 对权限请求的 Auto Accept 是独立设置。 | 能做，但只有 Full access，始终用 `--dangerously-skip-permissions` 启动，不能选择 Default 或 Auto Edit。 |
 | 工具审批与单选问答 | 审批工具、保存适用的许可，或从内核给出的选项中作答。 | 是 | 将官方选项交给 Paseo 的权限面板。多个允许选项需要人选择，切换 YOLO 本身不会让现有 Paseo 代答。 | 做不到，内置 provider 不能把 CLI 的交互式权限请求或单选题交给 Paseo 作答。 |
 | 工作区信任与钩子 | 工作区钩子需要信任时，内核询问是否信任并保存明确选择。 | 是 | 通过普通权限请求显示“信任／不信任”。默认由人选择；启用 Paseo Auto Accept 后，只有一个允许项的信任请求可以被自动批准。 | 做不到，内置 provider 没有向 Paseo 转交工作区信任选项的接口。 |
@@ -130,7 +130,7 @@ paseo-agy-acp --login
 
 从带全局排队的版本迁移时，移除 `AGY_ACP_ADMISSION_*` 和 `AGY_ACP_STATE_DIR`。旧账本保留在磁盘上，适配器不再读取，原 `agy-acp-prepare-state` 入口已移除。账号额度、服务端 429/502/503 和模型生成时间仍由上游决定。
 
-从 2.9.1 起，会话建立和配置回包不再带已被取代的扁平模型列表。现有 Paseo 会显示分组后的族名，例如 `Gemini 4 Argon`，思考档留在旁边的独立控件上。升级后打开模型菜单重新选一次族：已保存的具体 id，例如 `gemini-4-argon-medium`，对不上选项，在重新选择前会话保持内核默认模型。内核只提供一个档位的族不会分组，模型名仍可能带着该档位。思考档菜单仍跟随会话打开时选中的模型，切换族时不一定跟着换。内核仍把族和思考档解析成具体模型。
+会话建立及配置回包保留具体 `models` 列表，同时保留分组 `configOptions`，各思考档位可作为独立模型选择。Linux x64 托管兼容层也恢复上游账号目录实际提供的受支持第三方模型，不更改客户端身份。仅在兼容模块和补丁配方均匹配时复用内核缓存。重新构建后再次运行 Provider 诊断；已运行的会话继续使用原先加载的内核。模型可用性仍以上游账号目录为准。
 
 - [旧排队配置迁移](docs/operations/admission.md)
 - [轻量适配器验收](docs/operations/lightweight-adapter.md)
