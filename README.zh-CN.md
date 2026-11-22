@@ -23,7 +23,7 @@ Google 内核负责账号认证、模型、工具、重试和会话历史。适�
 - 直接连接官方内核，不再刮 `agy` 的界面。
 - 准备重试和 HTTP 503 立刻显示，这一轮继续。
 - `max_tokens`、`max_turn_requests`、`refusal` 显示成失败，不再看起来像成功。
-- 保留具体模型选项；托管兼容层通过技能工具提供内置技能，避免自动向工作区写入技能文件。
+- 保留模型分组与独立档位选择；托管兼容层通过技能工具提供内置技能，避免自动向工作区写入技能文件。
 
 “官方能力”表示未修改的 1.5.0 是否原生提供第一列所述能力。最后一列依据 Paseo 内置 `antigravity-provider` 的实现。“未核对”表示没有足够证据判断内置 provider 的行为。[官方能力目录](docs/research/2026-11-19-official-capability-catalog.md)
 
@@ -130,7 +130,7 @@ paseo-agy-acp --login
 
 从带全局排队的版本迁移时，移除 `AGY_ACP_ADMISSION_*` 和 `AGY_ACP_STATE_DIR`。旧账本保留在磁盘上，适配器不再读取，原 `agy-acp-prepare-state` 入口已移除。账号额度、服务端 429/502/503 和模型生成时间仍由上游决定。
 
-会话建立及配置回包保留具体 `models` 列表，同时保留分组 `configOptions`，各思考档位可作为独立模型选择。Linux x64 托管兼容层也恢复上游账号目录实际提供的受支持第三方模型，不更改客户端身份。仅在兼容模块和补丁配方均匹配时复用内核缓存。升级或重新构建后，先在终端运行 `paseo-agy-acp --prepare-kernel` 并等待完成，再运行 Provider 诊断。源码检出使用 `node "dist/ACP Connector/main.js" --prepare-kernel`。首次准备可能需要数分钟（本机约 314 秒），超过 Paseo 诊断初始化的 20 秒限时。已运行的会话继续使用原先加载的内核。模型可用性仍以上游账号目录为准。
+会话建立及配置回包使用分组 `configOptions`，省略旧扁平 `models` 列表。模型菜单只显示名称，多档模型通过独立控件切档；单档模型沿用其实际模型 ID，不额外显示档位选择器。Linux x64 托管兼容层也恢复上游账号目录实际提供的受支持第三方模型，不更改客户端身份。仅在兼容模块和补丁配方均匹配时复用内核缓存。升级或重新构建后，先在终端运行 `paseo-agy-acp --prepare-kernel` 并等待完成，再运行 Provider 诊断。源码检出使用 `node "dist/ACP Connector/main.js" --prepare-kernel`。首次准备可能需要数分钟（本机约 314 秒），超过 Paseo 诊断初始化的 20 秒限时。已运行的会话继续使用原先加载的内核。模型可用性仍以上游账号目录为准。
 
 - [旧排队配置迁移](docs/operations/admission.md)
 - [轻量适配器验收](docs/operations/lightweight-adapter.md)

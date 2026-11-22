@@ -63,7 +63,7 @@ describe("official capability transport parity", () => {
     });
 
   it.each(["session/new", "session/load", "session/resume", "session/set_config_option"])(
-    "preserves six concrete model ids and grouped config in %s", async method => {
+    "仅通过分组配置呈现模型，保留真实选项值：%s", async method => {
       const h = harness();
       try {
         h.send({ jsonrpc: "2.0", id: 12, method, params: { sessionId: "s", cwd: process.cwd(), mcpServers: [] } });
@@ -88,11 +88,18 @@ describe("official capability transport parity", () => {
         } });
         const forwarded = h.toClient.find(message => "id" in message && message.id === 12);
         expect(forwarded).toMatchObject({ result: { sessionId: "s", configOptions: expect.any(Array) } });
-        expect(forwarded).toMatchObject({ result: { models: { currentModelId: "gemini-3.8-flash-high",
-          availableModels: [
-            ...["high", "medium", "low"].map(level => ({ modelId: `gemini-3.8-flash-${level}` })),
-            { modelId: "claude-sonnet-4-6" }, { modelId: "claude-opus-4-6-thinking" }, { modelId: "gpt-oss-120b-medium" }
-          ] } } });
+        const result = (forwarded as { result: Record<string, unknown> }).result;
+        expect(result).not.toHaveProperty("models");
+        expect(result.configOptions).toEqual([
+          { id: "model", category: "model", type: "select", currentValue: "gemini-3.8-flash", options: [
+            { value: "gemini-3.8-flash", name: "Gemini 3.8 Flash" },
+            { value: "claude-sonnet-4-6", name: "Claude Sonnet 4.6" },
+            { value: "claude-opus-4-6-thinking", name: "Claude Opus 4.6" },
+            { value: "gpt-oss-120b-medium", name: "GPT-OSS 120B" }
+          ] },
+          { id: "thinking_level", category: "thought_level", type: "select", currentValue: "high",
+            options: [{ value: "medium", name: "Medium" }, { value: "high", name: "High" }] }
+        ]);
       } finally { await h.close(); }
     });
 

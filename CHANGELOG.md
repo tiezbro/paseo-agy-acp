@@ -9,8 +9,9 @@ All notable changes to `paseo-agy-acp` are recorded here.
 - Restore supported Claude/GPT entries from the upstream account catalog in the
   managed Linux x64 compatibility kernel. Preserve upstream disabled-model checks
   and the actual ACP client identity.
-- Preserve the concrete model catalog alongside grouped configuration options,
-  restoring separate Flash High/Medium/Low entries and saved concrete model IDs.
+- Preserve the v2.9.1 grouped configOptions interface and omit the legacy flat
+  models catalog. Clean thinking/effort suffixes from model display names only;
+  preserve concrete IDs and the upstream multi-level/single-level controls.
 - Reuse managed kernels only when both compatibility module and patch recipe
   digests match, so an upgrade replaces stale compatibility behavior.
 - Preserve the frozen redaction evidence commit in release history so clean CI
