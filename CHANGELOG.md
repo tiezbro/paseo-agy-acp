@@ -36,8 +36,10 @@ All notable changes to `paseo-agy-acp` are recorded here.
   take several minutes (314 seconds on the test host), exceeding Paseo's
   20-second diagnostic initialization timeout. Existing sessions keep their
   loaded kernel until reopened.
-- Directory discovery and switching were verified for six models. This release
-  does not claim new model-generation, full UI or non-Linux kernel acceptance.
+- Paseo 0.16.2 and managed kernel 1.5.0 were verified for grouped menus,
+  Claude/GPT-OSS text generation and cold session restoration, plus all three
+  Gemini thinking levels. Full browser UI and non-Linux kernels remain outside
+  this acceptance scope.
 
 ## 2.9.1 - 2026-11-20
 
