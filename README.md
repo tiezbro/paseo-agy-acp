@@ -1,13 +1,13 @@
-[English](./README.md) | [中文](./README.zh-CN.md) | [Changelog](./CHANGELOG.md)
-
 # paseo-agy-acp
 
-`paseo-agy-acp` connects an existing Paseo installation to the official Google Antigravity ACP kernel. The adapter package is `2.9.1` and its reference kernel is the unmodified official `agy_acp_server` 1.5.0. Install this package and configure a custom ACP provider in Paseo. No Paseo code changes are required.
+[English](./README.md) | [中文](./README.zh-CN.md) | [Changelog](./CHANGELOG.md)
+
+`paseo-agy-acp` connects an existing Paseo installation to the official Google Antigravity ACP kernel. The adapter package is `2.9.2` and its reference kernel is official `agy_acp_server` 1.5.0 with the managed Linux compatibility layer. Install this package and configure a custom ACP provider in Paseo. No Paseo code changes are required.
 
 <!-- readme:positioning -->
 ## Purpose
 
-Choose **Antigravity Pro** in Paseo to start `paseo-agy-acp`. It can run alongside the built-in **Antigravity** provider (`antigravity`). Antigravity Pro uses the unmodified official ACP 1.5.0 kernel. The built-in provider drives `agy` on the host.
+Choose **Antigravity Pro** in Paseo to start `paseo-agy-acp`. It can run alongside the built-in **Antigravity** provider (`antigravity`). Antigravity Pro uses official ACP 1.5.0 with compatibility patches in the managed Linux x86_64 runtime. The built-in provider drives `agy` on the host.
 
 ![Antigravity Pro and built-in Antigravity side by side in Paseo](./docs/images/antigravity-and-antigravity-pro.png)
 
@@ -16,14 +16,14 @@ Google’s kernel handles authentication, models, tools, retries and conversatio
 <!-- readme:value -->
 ## Why use paseo-agy-acp?
 
-This refactor makes the adapter a thin interface to the official kernel. The unmodified 1.5.0 kernel decides capabilities, names, order, modes, retries and cancellation. Paseo presents the signals the kernel already emits. Install this package only. Do not change Paseo. The adapter no longer rewrites official behavior with a global queue, and it does not report Paseo as another client.
+The adapter uses official 1.5.0 modes, retries and cancellation. The managed Linux x86_64 compatibility layer restores supported account models, presents skills through tools and observes kernel events. Install this package and configure Paseo; the connection keeps the actual client identity.
 
 What the new architecture delivers:
 
 - It connects directly to the official kernel instead of scraping the `agy` interface.
 - A scheduled retry or an HTTP 503 is shown immediately, and the turn continues.
 - `max_tokens`, `max_turn_requests` and `refusal` appear as failures instead of looking like success.
-- Model filtering and skill presentation follow the official defaults.
+- Concrete model choices remain available; the managed compatibility layer exposes built-in skills through tools without automatically writing skill files into the workspace.
 
 “Official” says whether the unmodified 1.5.0 kernel provides the capability named in the first column. The last column describes Paseo’s built-in `antigravity-provider` implementation. “Not verified” means there is insufficient evidence for that comparison. [Official capability catalog](docs/research/2026-11-19-official-capability-catalog.md)
 
@@ -40,7 +40,7 @@ What the new architecture delivers:
 | Per-message background instructions | Picks up revised daemon instructions on the next message in the session. | No | By default the adapter reads and prepends the current instructions to each message. Native session context appends them once at creation, load or resume. | Can, but prepends instructions only to the first message of a new conversation and skips the prefix on resume. |
 | `/usage` and `/logout` | Shows usage or signs out when the command is sent on its own. | Yes | The kernel handles these commands directly when the daemon has no saved note, or when `PASEO_AGY_ACP_NATIVE_SYSTEM_CONTEXT=1` activates native session context. Otherwise the prefixed note makes the command an ordinary model message. The result appears as a regular reply. | Cannot run these slash commands. The provider disables slash commands when starting the CLI. |
 | Slash skills and `/plan` | Makes workspace and personal skills available alongside the official commands. | No | Keeps `/plan`, `/logout` and `/usage`, then appends local skills that users can invoke. Official names win on collision. `/plan` requests a plan and keeps the current permission mode. | Cannot offer the slash menu. It disables slash commands and sends Paseo an empty command list. |
-| Models and thinking levels | Lists models available to the account and accepts the thinking levels the kernel offers. | Yes | Forwards grouped model and thinking options and omits the superseded flat model list, so stock Paseo shows the family name and a separate thinking level. The kernel confirms both choices. Paseo identifies itself, so personal sign-in follows the official Gemini visibility rules. | Can, but gets its list from `agy models` and selects effort through the model ID alone. |
+| Models and thinking levels | Lists models available to the account and accepts the thinking levels the kernel offers. | Yes | Preserves concrete model IDs and grouped thinking options. The managed Linux compatibility layer also lists supported Claude/GPT models actually offered by the upstream account catalog, while retaining upstream disabled-model checks. | Can, but gets its list from `agy models` and selects effort through the model ID alone. |
 | Three modes and unattended YOLO | Default follows approval policy, Auto Edit approves edits and YOLO approves routine tool calls. | Yes | Select `yolo` for unattended routine tools. Administrator review rules still apply. Paseo’s Auto Accept for client permission requests is a separate setting. | Can, but offers only Full access and always starts with `--dangerously-skip-permissions`. Default and Auto Edit are unavailable. |
 | Tool approvals and single-choice questions | Approves tools, saves a permission where offered or answers a question from the kernel. | Yes | Sends the official choices to Paseo’s permission panel. Questions with multiple allow options need a person to choose. Selecting YOLO alone does not answer them in stock Paseo. | Cannot present interactive CLI permissions or single-choice questions for the user to answer in Paseo. |
 | Workspace trust and hooks | Asks whether a workspace hook may be trusted and saves an explicit choice. | Yes | Presents trust and distrust as a normal permission request. A person chooses by default. With Paseo Auto Accept enabled, a trust request with a single allow option can be approved automatically. | Cannot relay the workspace trust choices to Paseo. The built-in provider has no permission interface for them. |
@@ -81,7 +81,7 @@ The kernel stores session history. The adapter has no scheduling database or run
 On the host running the Paseo daemon, install the npm package for this version. If you have the source checkout, the Development section shows how to produce the same package file.
 
 ```bash
-npm install --global ./paseo-agy-acp-2.9.1.tgz
+npm install --global ./paseo-agy-acp-2.9.2.tgz
 paseo-agy-acp --doctor
 paseo-agy-acp --prepare-kernel
 paseo-agy-acp --login
@@ -130,12 +130,13 @@ Skill discovery covers configured directories, workspace roots, global Gemini, A
 
 When migrating from a version with global queueing, remove `AGY_ACP_ADMISSION_*` and `AGY_ACP_STATE_DIR`. Old ledgers stay on disk and the adapter no longer reads them. The `agy-acp-prepare-state` command has been removed. Account quota, upstream 429/502/503 responses and generation latency remain under the service’s control.
 
-From 2.9.1, session setup and configuration responses omit the superseded flat model list. Stock Paseo then shows the grouped family name, such as `Gemini 4 Argon`, and keeps the thinking level on its own control. After upgrading, open the model menu once and select the family again: a saved concrete id such as `gemini-4-argon-medium` no longer matches an option, and Paseo keeps the kernel default until you do. A family the kernel offers at only one level keeps that level in the model name, because the kernel does not group it. The thinking-level menu still follows the model selected when the session opened, so it may not change when you switch families. The kernel still resolves the family and the thinking level into the concrete model.
+The adapter uses grouped `configOptions` and omits the legacy flat `models` catalog. Model names omit thinking/effort suffixes; the separate thinking-level control changes actual inference for models that expose native tiers, including Gemini and Claude 5.5 on eligible accounts. For the supported fixed Claude/GPT-OSS models, Low/Medium/High are display-only in stock Paseo and do not change the actual model ID or native thinking level. On managed Linux x64, it also restores supported third-party entries from the upstream account catalog without changing client identity. Cached kernels are reused only when both the compatibility module and patch recipe match. After upgrading or rebuilding, run `paseo-agy-acp --prepare-kernel` in a terminal and wait for it to finish before running provider diagnostics. For a source checkout, use `node "dist/ACP Connector/main.js" --prepare-kernel`. Initial preparation can take several minutes (about 314 seconds on the test host), exceeding Paseo’s 20-second diagnostic initialization timeout. Existing running sessions keep their loaded kernel. Model availability still follows the upstream account catalog.
 
 - [Migrate from the old queue](docs/operations/admission.md)
 - [Verify the lightweight adapter](docs/operations/lightweight-adapter.md)
 - [Operate the kernel wrapper](docs/operations/official-kernel-compat-runbook.md)
 - [Verify with a Paseo client](docs/operations/paseo-adapter-verification.md)
+- [Verify grouped models with a live account](docs/operations/2026-11-22-grouped-model-acceptance.md)
 - [Verify across hosts](docs/operations/paseo-cross-host-e2e.md)
 - [Publish to npm](docs/operations/npm-publishing.md)
 

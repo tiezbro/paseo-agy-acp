@@ -10,6 +10,7 @@ import {
 import { createNdjsonParser, encodeNdjson } from "./ndjson.js";
 import { ensureManagedOfficialKernel } from "./ensure-managed-kernel.js";
 import { spawnOfficialKernel } from "./spawn.js";
+import { createKernelStderrFilter } from "./kernel-stderr.js";
 
 const AUTHENTICATE_TIMEOUT_MS = 10 * 60_000;
 
@@ -59,7 +60,9 @@ export async function runOfficialLogin(
   );
   child.stdout.on("data", parse);
   // 登录时逐行处理内核 stderr，兼容分块并避免重复输出。
-  const stderrLines = createInterface({ input: child.stderr, crlfDelay: Infinity });
+  const stderr = createKernelStderrFilter();
+  child.stderr.pipe(stderr);
+  const stderrLines = createInterface({ input: stderr, crlfDelay: Infinity });
   stderrLines.on("line", showLoginOutput);
 
   const request = (method: string, params: unknown): Promise<JsonRpcMessage> => {
@@ -107,6 +110,8 @@ export async function runOfficialLogin(
     return 1;
   } finally {
     stderrLines.close();
+    child.stderr.unpipe(stderr);
+    stderr.destroy();
     if (child.exitCode === null && child.signalCode === null) {
       child.kill("SIGTERM");
     }

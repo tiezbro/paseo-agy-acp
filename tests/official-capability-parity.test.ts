@@ -63,26 +63,43 @@ describe("official capability transport parity", () => {
     });
 
   it.each(["session/new", "session/load", "session/resume", "session/set_config_option"])(
-    "drops the superseded flat model catalog from %s so Paseo uses grouped names", async method => {
+    "仅通过分组配置呈现模型，保留真实选项值：%s", async method => {
       const h = harness();
       try {
         h.send({ jsonrpc: "2.0", id: 12, method, params: { sessionId: "s", cwd: process.cwd(), mcpServers: [] } });
         await vi.waitFor(() => expect(h.toKernel).toContainEqual(expect.objectContaining({ id: 12 })));
         h.reply({ jsonrpc: "2.0", id: 12, result: {
           sessionId: "s",
-          models: { currentModelId: "gemini-4-argon-medium", availableModels: [
-            { modelId: "gemini-4-argon-medium", name: "Gemini 4 Argon (Medium)" }
+          models: { currentModelId: "gemini-3.8-flash-high", availableModels: [
+            ...["high", "medium", "low"].map(level => ({ modelId: `gemini-3.8-flash-${level}`, name: `Gemini 3.8 Flash (${level})` })),
+            { modelId: "claude-sonnet-4-6", name: "Claude Sonnet 4.6 (Thinking)" },
+            { modelId: "claude-opus-4-6-thinking", name: "Claude Opus 4.6 (Thinking)" },
+            { modelId: "gpt-oss-120b-medium", name: "GPT-OSS 120B (Medium)" }
           ] },
           configOptions: [
-            { id: "model", category: "model", type: "select", currentValue: "gemini-4-argon",
-              options: [{ value: "gemini-4-argon", name: "Gemini 4 Argon" }] },
-            { id: "thinking_level", category: "thought_level", type: "select", currentValue: "medium",
+            { id: "model", category: "model", type: "select", currentValue: "gemini-3.8-flash",
+              options: [{ value: "gemini-3.8-flash", name: "Gemini 3.8 Flash" },
+                { value: "claude-sonnet-4-6", name: "Claude Sonnet 4.6 (Thinking)" },
+                { value: "claude-opus-4-6-thinking", name: "Claude Opus 4.6 (Thinking)" },
+                { value: "gpt-oss-120b-medium", name: "GPT-OSS 120B (Medium)" }] },
+            { id: "thinking_level", category: "thought_level", type: "select", currentValue: "high",
               options: [{ value: "medium", name: "Medium" }, { value: "high", name: "High" }] }
           ]
         } });
         const forwarded = h.toClient.find(message => "id" in message && message.id === 12);
         expect(forwarded).toMatchObject({ result: { sessionId: "s", configOptions: expect.any(Array) } });
-        expect(forwarded).not.toHaveProperty("result.models");
+        const result = (forwarded as { result: Record<string, unknown> }).result;
+        expect(result).not.toHaveProperty("models");
+        expect(result.configOptions).toEqual([
+          { id: "model", category: "model", type: "select", currentValue: "gemini-3.8-flash", options: [
+            { value: "gemini-3.8-flash", name: "Gemini 3.8 Flash" },
+            { value: "claude-sonnet-4-6", name: "Claude Sonnet 4.6" },
+            { value: "claude-opus-4-6-thinking", name: "Claude Opus 4.6" },
+            { value: "gpt-oss-120b-medium", name: "GPT-OSS 120B" }
+          ] },
+          { id: "thinking_level", category: "thought_level", type: "select", currentValue: "high",
+            options: [{ value: "medium", name: "Medium" }, { value: "high", name: "High" }] }
+        ]);
       } finally { await h.close(); }
     });
 

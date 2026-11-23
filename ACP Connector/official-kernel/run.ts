@@ -6,6 +6,7 @@ import { ensureManagedOfficialKernel } from "./ensure-managed-kernel.js";
 import { createKernelEventFilter, KERNEL_EVENT_DIRECTORY_ENV, KERNEL_EVENT_ENV } from "./kernel-events.js";
 import { OfficialKernelProxy } from "./proxy.js";
 import { spawnOfficialKernel } from "./spawn.js";
+import { createKernelStderrFilter } from "./kernel-stderr.js";
 
 export interface RunOfficialKernelOptions {
   env?: NodeJS.ProcessEnv;
@@ -33,7 +34,8 @@ export async function runOfficialKernel(options: RunOfficialKernelOptions): Prom
     kernelEventDirectory: eventDirectory
   });
   const stderr = createKernelEventFilter(event => proxy.observeKernelEvent(event));
-  child.stderr.pipe(stderr).pipe(process.stderr);
+  const warnings = createKernelStderrFilter();
+  child.stderr.pipe(warnings).pipe(stderr).pipe(process.stderr);
   const stop = () => proxy.close();
   process.on("SIGINT", stop);
   process.on("SIGTERM", stop);
@@ -46,6 +48,7 @@ export async function runOfficialKernel(options: RunOfficialKernelOptions): Prom
       child.kill("SIGTERM");
     }
     stderr.destroy();
+    warnings.destroy();
     rmSync(eventDirectory, { recursive: true, force: true });
   }
 }

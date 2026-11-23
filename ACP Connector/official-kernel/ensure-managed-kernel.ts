@@ -11,7 +11,7 @@ import {
 import { homedir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { OfficialKernelCompatLifecycle } from "./kernel-compat-lifecycle.js";
+import { digestPatchPlan, OfficialKernelCompatLifecycle } from "./kernel-compat-lifecycle.js";
 import { PRODUCTION_KERNEL_COMPAT_PINS } from "./kernel-compat-pins.js";
 import { RC01_KERNEL_COMPAT_PATCH_PLAN } from "./kernel-compat-rc01-recipe.js";
 
@@ -173,7 +173,10 @@ async function currentManagedWrapper(home: string): Promise<boolean> {
   const lifecycle = new OfficialKernelCompatLifecycle({ stateRoot: managedCompatRoot(home) });
   try {
     const status = await lifecycle.status();
-    return status.current?.verified === true && status.current.artifactId.startsWith(MANAGED_ARTIFACT_PREFIX) && existsSync(managedStableWrapper(home));
+    const moduleDigest = await sha256File(compatModulePath());
+    const patchDigest = digestPatchPlan(RC01_KERNEL_COMPAT_PATCH_PLAN);
+    const expectedArtifactId = `${MANAGED_ARTIFACT_PREFIX}compat-v1-${moduleDigest.slice(0, 12)}-${patchDigest.slice(0, 12)}`;
+    return status.current?.verified === true && status.current.artifactId === expectedArtifactId && existsSync(managedStableWrapper(home));
   } catch {
     return false;
   }

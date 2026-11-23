@@ -36,30 +36,33 @@ export function rewriteModeFields(params: unknown): unknown {
   return next;
 }
 
-/**
- * Stock Paseo prefers the superseded flat `models` list, whose names still
- * carry the thinking level. Drop that list so it uses grouped configOptions.
- */
-export function hideLegacyModelCatalog(value: unknown): unknown {
-  if (!isRecord(value) || !Object.hasOwn(value, "models")) return value;
-  const { models: _legacyModels, ...rest } = value;
-  return rest;
-}
-
 /** Paseo extension: the selected official mode owns all permission decisions. */
 export function describeOfficialModes(value: unknown): unknown {
   if (!isRecord(value)) return value;
   const next = { ...value };
+  // Paseo 优先读取扁平 models；继续使用 2.9.1 的官方分组配置。
+  delete next.models;
   if (isRecord(next.modes) && Array.isArray(next.modes.availableModes)) {
     next.modes = { ...next.modes, availableModes: next.modes.availableModes.map(describeMode) };
   }
   if (Array.isArray(next.configOptions)) {
     next.configOptions = next.configOptions.map(option => {
-      if (!isRecord(option) || option.category !== "mode" || !Array.isArray(option.options)) return option;
+      if (!isRecord(option) || !Array.isArray(option.options)) return option;
+      if (option.category === "model") return { ...option, options: option.options.map(describeModel) };
+      if (option.category !== "mode") return option;
       return { ...option, options: option.options.map(describeMode) };
     });
   }
   return next;
+}
+
+function describeModel(option: unknown): unknown {
+  if (!isRecord(option)) return option;
+  if (Array.isArray(option.options)) return { ...option, options: option.options.map(describeModel) };
+  if (typeof option.name !== "string") return option;
+  // 仅清理菜单文案；value、具体模型 ID 和内核的档位解析保持原值。
+  const name = option.name.replace(/(?:\s+\((?:thinking|minimal|low|medium|high|xhigh|extra high|max)(?: thinking)?\))+$/i, "");
+  return name ? { ...option, name } : option;
 }
 
 function describeMode(option: unknown): unknown {
