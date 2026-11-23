@@ -222,7 +222,7 @@ _SDK_TERMINAL_CLASSES = frozenset(
     }
 )
 
-# PyPI's Go harness writes these decisions through klog. The pinned 1.5.0
+# PyPI's Go harness writes these decisions through klog. The pinned 1.5.2
 # harness is the only source bound to this template: planner_generator.go:359
 # logs one retry plan per line, and local_connection.py::_drain forwards each
 # line through the stdlib logging record matched below.
@@ -551,7 +551,7 @@ def _terminal_record(record: logging.LogRecord) -> Optional[Tuple[str, str]]:
     return None
 
 
-# The pinned 1.5.0 server reports a terminal SDK failure by first sending one
+# The pinned 1.5.2 server reports a terminal SDK failure by first sending one
 # AgentMessageChunk built from the raw exception text (server.py::prompt, in
 # the AntigravityExecutionError/AntigravityConnectionError/
 # AntigravityValidationError handler) and then returning a normal response.
@@ -562,7 +562,7 @@ def _terminal_record(record: logging.LogRecord) -> Optional[Tuple[str, str]]:
 # exception, so streamed model text, cancellation notices, and every other
 # session or turn still pass through unchanged. The line is fixed by the pinned
 # serverControl preimage hash; a new official profile must re-derive it.
-_TERMINAL_DIAGNOSTIC_SEND_LINE = 5759
+_TERMINAL_DIAGNOSTIC_SEND_LINE = 6697
 
 
 def _is_terminal_diagnostic_send(caller: Any) -> bool:

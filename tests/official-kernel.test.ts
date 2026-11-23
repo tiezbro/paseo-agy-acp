@@ -80,7 +80,7 @@ describe("official kernel selection", () => {
     expect(officialSpawnArgs(fakeOfficialAgent, "linux")).toEqual([]);
     expect(officialSpawnArgs(fakeOfficialAgent, "darwin")).toEqual([]);
     expect(resolveOfficialBinary({ PASEO_AGY_ACP_OFFICIAL_BIN: fakeOfficialAgent })).toBe(fakeOfficialAgent);
-    expect(managedOfficialKernelRoot("/home/user")).toBe("/home/user/.local/opt/agy-acp-server-1.5.0");
+    expect(managedOfficialKernelRoot("/home/user")).toBe("/home/user/.local/opt/agy-acp-server-1.5.2");
     expect(usesManagedOfficialKernel(undefined, "/home/user")).toBe(true);
     expect(usesManagedOfficialKernel("", "/home/user")).toBe(true);
     expect(usesManagedOfficialKernel("/home/user/.local/opt/agy-acp-server-1.4.5/agy-acp-server-canary", "/home/user")).toBe(true);
@@ -88,28 +88,28 @@ describe("official kernel selection", () => {
     expect(usesManagedOfficialKernel("/home/user/.local/opt/agy-acp-server-agy_acp_server_20260818_01_RC01/agy-acp-server-canary", "/home/user")).toBe(true);
     expect(usesManagedOfficialKernel(fakeOfficialAgent, "/home/user")).toBe(false);
     expect(officialKernelDownload("linux", "x64")).toMatchObject({
-      url: expect.stringContaining("agy-acp-server-1.5.0-linux-x86_64.zip"),
-      sha256: "36f373e8948edf1727b39c7d62b5722d6a4474bdfd72b04ad3d6def571808c9f"
+      url: expect.stringContaining("agy-acp-server-1.5.2-linux-x86_64.zip"),
+      sha256: "99dd8612450805011619d7b8447ce374c289e00549d8557f36790e1dd6256852"
     });
     expect(officialKernelDownload("linux", "arm64")).toMatchObject({
-      url: expect.stringContaining("agy-acp-server-1.5.0-linux-arm64.zip"),
-      sha256: "1e184f439477b54138e94440056b26a78c0a8075a8fd2ffda637ec31267c6459"
+      url: expect.stringContaining("agy-acp-server-1.5.2-linux-arm64.zip"),
+      sha256: "e729e05ef54ef0763e48900032466b47fa7c9939cde257f93ba49410ab577acb"
     });
     expect(officialKernelDownload("darwin", "arm64")).toMatchObject({
-      url: expect.stringContaining("agy-acp-server-1.5.0-darwin-arm64.zip"),
-      sha256: "c82ecb4ef476bfc35cbe5b2745cdddef873b99c9f5bd7fd11e5ca1fc1667a3fc"
+      url: expect.stringContaining("agy-acp-server-1.5.2-darwin-arm64.zip"),
+      sha256: "123a16d5c40a8ac99e20f01a62b68dd860fd96b1c528dfb8eaa37ca8733d4845"
     });
     expect(officialKernelDownload("darwin", "x64")).toMatchObject({
-      url: expect.stringContaining("agy-acp-server-1.5.0-darwin-x86_64.zip"),
-      sha256: "86a94e33b25d4a38ff30526ad844546860aa9ed98698498d9e87d30eb794426e"
+      url: expect.stringContaining("agy-acp-server-1.5.2-darwin-x86_64.zip"),
+      sha256: "92addb5580577b5356d35484d72d1a113d9c5312ad766bcb304983aa8e3fbb06"
     });
     expect(officialKernelDownload("win32", "x64")).toMatchObject({
       binaryName: "agy_acp_server.exe",
-      sha256: "6163f6b59b381bae419652dbae167bc8cda0ef29d665c0ba8af3d8c7fddd8867"
+      sha256: "5cbadd4f4df698572473d8890fc26ec2dc1724501f06e3a963941daec2bd21d6"
     });
     expect(officialKernelDownload("win32", "arm64")).toMatchObject({
-      url: expect.stringContaining("agy-acp-server-1.5.0-windows-arm64.zip"),
-      sha256: "340092b8af6dafc71eb15f4a8ec54b4d1f0bce16d1fa4d163b562c50b905f8f4"
+      url: expect.stringContaining("agy-acp-server-1.5.2-windows-arm64.zip"),
+      sha256: "8a4b2ea8df2ffefae33309348752e9119d21a6d36090c0eb48631c2e8f5781ab"
     });
     expect(officialKernelDownload("linux", "x64").compat).toBe(true);
     expect(officialKernelDownload("darwin", "arm64").compat).toBe(false);
@@ -226,10 +226,10 @@ describe("official kernel adapters", () => {
   it("overlays product identity onto the official initialize payload", () => {
     const overlaid = overlayProductIdentity(
       { protocolVersion: 1, agentInfo: { name: "antigravity-acp", version: "rc01" } },
-      "2.9.2"
+      "2.10.0"
     );
     expect(overlaid).toMatchObject({
-      agentInfo: { name: PRODUCT_AGENT_NAME, version: "2.9.2" }
+      agentInfo: { name: PRODUCT_AGENT_NAME, version: "2.10.0" }
     });
   });
 
@@ -270,7 +270,7 @@ describe("official kernel proxy", () => {
       stdin,
       stdout,
       env,
-      version: "2.9.2"
+      version: "2.10.0"
     });
     const started = proxy.start();
     const collected = collect(stdout);
@@ -304,7 +304,7 @@ describe("official kernel proxy", () => {
         send({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: 1 } });
         const initialized = await waitFor((message) => "id" in message && message.id === 1);
         expect(initialized).toMatchObject({
-          result: { agentInfo: { name: "agy-acp", version: "2.9.2" } }
+          result: { agentInfo: { name: "agy-acp", version: "2.10.0" } }
         });
 
         send({
@@ -571,7 +571,7 @@ describe("official kernel proxy", () => {
       );
       const initialized = await collected.waitFor((message) => "id" in message && message.id === 1);
       expect(initialized).toMatchObject({
-        result: { agentInfo: { name: "agy-acp", version: "2.9.2" } }
+        result: { agentInfo: { name: "agy-acp", version: "2.10.0" } }
       });
     } finally {
       child.stdin.end();

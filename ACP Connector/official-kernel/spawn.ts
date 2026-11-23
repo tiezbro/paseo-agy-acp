@@ -5,7 +5,7 @@ import path from "node:path";
 
 export const DEFAULT_OFFICIAL_BIN = path.join(
   homedir(),
-  ".local/opt/agy-acp-server-1.5.0/agy-acp-server-canary"
+  ".local/opt/agy-acp-server-1.5.2/agy-acp-server-canary"
 );
 
 export function resolveOfficialBinary(environment: NodeJS.ProcessEnv = process.env): string {

@@ -24,7 +24,7 @@ it.skipIf(process.platform !== "linux" || process.arch !== "x64").each(["current
   const previousPlan = { edits: RC01_KERNEL_COMPAT_PATCH_PLAN.edits.filter(edit =>
     state === "old-skill-recipe" ? edit.id !== "skills-tool-presentation" : edit.target !== "modelSelection") };
   const patchHash = digestPatchPlan(state === "old-recipe" || state === "old-skill-recipe" ? previousPlan : RC01_KERNEL_COMPAT_PATCH_PLAN);
-  const artifactId = `1.5.0-8a35f63dd228-compat-v1-${state === "old-module" ? "000000000000" : moduleHash.slice(0, 12)}-${patchHash.slice(0, 12)}`;
+  const artifactId = `1.5.2-f472860b79c4-compat-v1-${state === "old-module" ? "000000000000" : moduleHash.slice(0, 12)}-${patchHash.slice(0, 12)}`;
   vi.spyOn(OfficialKernelCompatLifecycle.prototype, "status").mockResolvedValue({
     stateRoot: path.dirname(wrapper), rootExists: true, rootSecure: true, stagingEntries: [], issues: [],
     current: { artifactId, verified: state !== "unverified" }

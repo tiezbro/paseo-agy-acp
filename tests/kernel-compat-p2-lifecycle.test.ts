@@ -78,13 +78,13 @@ function observation(created: KernelCompatP2Fixture): {
 }
 
 describe("P2 official kernel compatibility pins", () => {
-  it("keeps the frozen 1.5.0 hashes and real runfiles-relative target paths", () => {
-    expect(PRODUCTION_KERNEL_COMPAT_PINS.profileId).toBe("1.5.0");
-    expect(PRODUCTION_KERNEL_COMPAT_PINS.parSha256).toBe("8a35f63dd2284e3790a1d97dd0cb2236057c55a0c598b26f3bde022b843d5c04");
-    expect(PRODUCTION_KERNEL_COMPAT_PINS.externalHarnessSha256).toBe("13dca92307524722a3434cd50baba3f33502d71a24f804f03ee2efbd18b6017d");
+  it("keeps the frozen 1.5.2 hashes and real runfiles-relative target paths", () => {
+    expect(PRODUCTION_KERNEL_COMPAT_PINS.profileId).toBe("1.5.2");
+    expect(PRODUCTION_KERNEL_COMPAT_PINS.parSha256).toBe("f472860b79c4816a32817e589afdb01cec0ca731e5fa428eae873b14be12387f");
+    expect(PRODUCTION_KERNEL_COMPAT_PINS.externalHarnessSha256).toBe("072fc497e7814b0e25a7d80109bceddacd815eb351d2e48ce579a05510e0cfdf");
     expect(PRODUCTION_KERNEL_COMPAT_PINS.targets.modelSelection).toMatchObject({
       relativePath: `${ACP_SERVER_DIRECTORY}/model_selection.py`,
-      preimageSha256: "fe0d0f56986b6c8b795d4576ede929b7043352cb0abc5c64698268f2abd9f6d6"
+      preimageSha256: "c36b9ecb40e14bdc98a79a3e39c4dbc17a3abcdadf7e615bc37fadf0c15c5edb"
     });
     expect(PRODUCTION_KERNEL_COMPAT_PINS.targets.proxyServer).toMatchObject({
       relativePath: `${ACP_SERVER_DIRECTORY}/ccpa_connection/proxy_server.py`,
@@ -92,12 +92,12 @@ describe("P2 official kernel compatibility pins", () => {
     });
     expect(PRODUCTION_KERNEL_COMPAT_PINS.targets.proxyAgentConfig).toMatchObject({
       relativePath: `${ACP_SERVER_DIRECTORY}/proxy_agent_config.py`,
-      preimageSha256: "3a7ca6fa8937c67fa27c54f42ce66095687b735898536afc32e0dc970c4ae182",
+      preimageSha256: "3da378d7aa666c554d01d71f1dbdfbd62ddb86078649cee39ed47802ce160aec",
       patchable: true
     });
     expect(PRODUCTION_KERNEL_COMPAT_PINS.targets.serverControl).toMatchObject({
       relativePath: `${ACP_SERVER_DIRECTORY}/server.py`,
-      preimageSha256: "c4a5909af7ba15079309a67012014d071c608ac920ab229f3a2344f21383e4fb",
+      preimageSha256: "37b415cf1b299f58f6f574eaf277f0cbe5290e775de502cf9a7d634ec21ca82b",
       patchable: false
     });
   });

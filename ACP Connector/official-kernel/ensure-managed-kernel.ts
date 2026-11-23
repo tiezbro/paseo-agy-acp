@@ -15,7 +15,7 @@ import { digestPatchPlan, OfficialKernelCompatLifecycle } from "./kernel-compat-
 import { PRODUCTION_KERNEL_COMPAT_PINS } from "./kernel-compat-pins.js";
 import { RC01_KERNEL_COMPAT_PATCH_PLAN } from "./kernel-compat-rc01-recipe.js";
 
-const MANAGED_ARTIFACT_PREFIX = "1.5.0-8a35f63dd228-";
+const MANAGED_ARTIFACT_PREFIX = "1.5.2-f472860b79c4-";
 
 export interface OfficialKernelDownload {
   readonly id: string;
@@ -28,43 +28,43 @@ export interface OfficialKernelDownload {
 const OFFICIAL_KERNEL_DOWNLOADS: Readonly<Record<string, OfficialKernelDownload>> = Object.freeze({
   "linux-x64": Object.freeze({
     id: "linux-x64",
-    url: "https://dl.google.com/agy-extensions/releases/linux/agy-acp-server-1.5.0-linux-x86_64.zip",
-    sha256: "36f373e8948edf1727b39c7d62b5722d6a4474bdfd72b04ad3d6def571808c9f",
+    url: "https://dl.google.com/agy-extensions/releases/linux/agy-acp-server-1.5.2-linux-x86_64.zip",
+    sha256: "99dd8612450805011619d7b8447ce374c289e00549d8557f36790e1dd6256852",
     binaryName: "agy_acp_server.par",
     compat: true
   }),
   "linux-arm64": Object.freeze({
     id: "linux-arm64",
-    url: "https://dl.google.com/agy-extensions/releases/linux/agy-acp-server-1.5.0-linux-arm64.zip",
-    sha256: "1e184f439477b54138e94440056b26a78c0a8075a8fd2ffda637ec31267c6459",
+    url: "https://dl.google.com/agy-extensions/releases/linux/agy-acp-server-1.5.2-linux-arm64.zip",
+    sha256: "e729e05ef54ef0763e48900032466b47fa7c9939cde257f93ba49410ab577acb",
     binaryName: "agy_acp_server.par",
     compat: false
   }),
   "darwin-arm64": Object.freeze({
     id: "darwin-arm64",
-    url: "https://dl.google.com/agy-extensions/releases/macos/agy-acp-server-1.5.0-darwin-arm64.zip",
-    sha256: "c82ecb4ef476bfc35cbe5b2745cdddef873b99c9f5bd7fd11e5ca1fc1667a3fc",
+    url: "https://dl.google.com/agy-extensions/releases/macos/agy-acp-server-1.5.2-darwin-arm64.zip",
+    sha256: "123a16d5c40a8ac99e20f01a62b68dd860fd96b1c528dfb8eaa37ca8733d4845",
     binaryName: "agy_acp_server.par",
     compat: false
   }),
   "darwin-x64": Object.freeze({
     id: "darwin-x64",
-    url: "https://dl.google.com/agy-extensions/releases/macos/agy-acp-server-1.5.0-darwin-x86_64.zip",
-    sha256: "86a94e33b25d4a38ff30526ad844546860aa9ed98698498d9e87d30eb794426e",
+    url: "https://dl.google.com/agy-extensions/releases/macos/agy-acp-server-1.5.2-darwin-x86_64.zip",
+    sha256: "92addb5580577b5356d35484d72d1a113d9c5312ad766bcb304983aa8e3fbb06",
     binaryName: "agy_acp_server.par",
     compat: false
   }),
   "win32-x64": Object.freeze({
     id: "win32-x64",
-    url: "https://dl.google.com/agy-extensions/releases/windows/agy-acp-server-1.5.0-windows-x86_64.zip",
-    sha256: "6163f6b59b381bae419652dbae167bc8cda0ef29d665c0ba8af3d8c7fddd8867",
+    url: "https://dl.google.com/agy-extensions/releases/windows/agy-acp-server-1.5.2-windows-x86_64.zip",
+    sha256: "5cbadd4f4df698572473d8890fc26ec2dc1724501f06e3a963941daec2bd21d6",
     binaryName: "agy_acp_server.exe",
     compat: false
   }),
   "win32-arm64": Object.freeze({
     id: "win32-arm64",
-    url: "https://dl.google.com/agy-extensions/releases/windows/agy-acp-server-1.5.0-windows-arm64.zip",
-    sha256: "340092b8af6dafc71eb15f4a8ec54b4d1f0bce16d1fa4d163b562c50b905f8f4",
+    url: "https://dl.google.com/agy-extensions/releases/windows/agy-acp-server-1.5.2-windows-arm64.zip",
+    sha256: "8a4b2ea8df2ffefae33309348752e9119d21a6d36090c0eb48631c2e8f5781ab",
     binaryName: "agy_acp_server.exe",
     compat: false
   })
@@ -76,13 +76,13 @@ export function officialKernelDownload(
 ): OfficialKernelDownload {
   const download = OFFICIAL_KERNEL_DOWNLOADS[`${platform}-${arch}`];
   if (download === undefined) {
-    throw new Error(`no official Antigravity ACP 1.5.0 download for ${platform} ${arch}`);
+    throw new Error(`no official Antigravity ACP 1.5.2 download for ${platform} ${arch}`);
   }
   return download;
 }
 
 export function managedOfficialKernelRoot(home = homedir()): string {
-  return path.join(home, ".local", "opt", "agy-acp-server-1.5.0");
+  return path.join(home, ".local", "opt", "agy-acp-server-1.5.2");
 }
 
 export function managedCompatRoot(home = homedir()): string {
@@ -125,7 +125,7 @@ export async function ensureManagedOfficialKernel(environment: NodeJS.ProcessEnv
         patchPlan: RC01_KERNEL_COMPAT_PATCH_PLAN
       });
       await lifecycle.activate(prepared.artifactId);
-      process.stderr.write(`paseo-agy-acp is using the managed 1.5.0 kernel at ${wrapper}\n`);
+      process.stderr.write(`paseo-agy-acp is using the managed 1.5.2 kernel at ${wrapper}\n`);
       return wrapper;
     }
     return ensureStockOfficialBinary(officialRoot, download);
@@ -185,7 +185,7 @@ async function currentManagedWrapper(home: string): Promise<boolean> {
 async function ensureStockOfficialBinary(root: string, download: OfficialKernelDownload): Promise<string> {
   const binaryPath = path.join(root, download.binaryName);
   if (!existsSync(binaryPath)) await ensureOfficialPayload(root, download);
-  process.stderr.write(`paseo-agy-acp is using the official 1.5.0 kernel at ${binaryPath}\n`);
+  process.stderr.write(`paseo-agy-acp is using the official 1.5.2 kernel at ${binaryPath}\n`);
   return binaryPath;
 }
 
@@ -206,7 +206,7 @@ async function ensureOfficialPayload(root: string, download: OfficialKernelDownl
   const stage = await mkdtemp(`${root}.install-`);
   const zipPath = path.join(stage, "agy-acp-server.zip.partial");
   try {
-    process.stderr.write(`Downloading the official Antigravity ACP kernel 1.5.0 for ${download.id}\n${download.url}\n`);
+    process.stderr.write(`Downloading the official Antigravity ACP kernel 1.5.2 for ${download.id}\n${download.url}\n`);
     await downloadFile(download.url, zipPath);
     if ((await sha256File(zipPath)) !== download.sha256) {
       throw new Error(`official kernel archive checksum mismatch for ${download.id}`);

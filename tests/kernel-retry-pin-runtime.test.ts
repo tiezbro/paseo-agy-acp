@@ -54,7 +54,7 @@ function harnessContains(harness: string, marker: string): boolean {
 const roots = candidateRoots();
 const installed = roots.find(root => existsSync(path.join(root, "agy_acp_server.par")) && existsSync(path.join(root, "localharness_external")));
 
-describe.skipIf(installed === undefined)("installed 1.5.0 retry source pin", () => {
+describe.skipIf(installed === undefined)("installed 1.5.2 retry source pin", () => {
   const root = installed ?? path.join(os.tmpdir(), "missing-official-kernel");
   const par = path.join(root, "agy_acp_server.par");
   const harness = path.join(root, "localharness_external");

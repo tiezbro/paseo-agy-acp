@@ -79,7 +79,7 @@ const verifyActual = async () => {
   assert.equal(typeof state.model, "string");
   return state;
 };
-const summary = { passed: false, paseo: "0.16.2", expectedManagedKernel: "1.5.0", checks: [], output: home };
+const summary = { passed: false, paseo: "0.16.2", expectedManagedKernel: "1.5.2", checks: [], output: home };
 let session;
 let stage = "create";
 const selection = async () => JSON.parse((await readFile(trace, "utf8")).trim().split("\n").at(-1));

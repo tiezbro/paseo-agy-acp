@@ -1,7 +1,7 @@
 # Official Kernel Local Compatibility Runbook
 
 ## Overview
-This runbook provides precise operations for applying the local-only 1.4.5 compatibility layer for the official Antigravity ACP kernel. This lifecycle enables discovering and operating non-Gemini models (e.g., Claude 4.6, GPT-OSS 120B) via precise local request compatibility transforms, without redistributing Google proprietary artifacts or overriding upstream backend controls.
+This runbook provides precise operations for applying the local 1.5.2 compatibility layer for the official Antigravity ACP kernel. This lifecycle enables discovering and operating non-Gemini models (e.g., Claude 4.6, GPT-OSS 120B) via precise local request compatibility transforms, without redistributing Google proprietary artifacts or overriding upstream backend controls.
 
 > [!WARNING]
 > **Boundary & ToS**: This is an explicitly **opt-in**, **local-only** operation applied by the host operator. It is **not** an official Google fix or distribution. Neither modified binaries nor runfiles may be uploaded, published, or distributed.
@@ -9,21 +9,21 @@ This runbook provides precise operations for applying the local-only 1.4.5 compa
 ## Prerequisites and Strict Pins
 
 - **Node/Build Requirement**: A Node.js environment is required, and `npm run build` must have been executed successfully against this working directory before proceeding.
-- **Disk Headroom**: The observed engineered footprint requires ~3 GiB for this 1.4.5 temp artifact. Operators must enforce a conservative >=6 GiB free headroom check (which is filesystem-dependent) before staging.
+- **Disk Headroom**: The observed engineered footprint requires ~3 GiB for this 1.5.2 temp artifact. Operators must enforce a conservative >=6 GiB free headroom check (which is filesystem-dependent) before staging.
 
-This compatibility lifecycle is strictly pinned to official antigravity-acp 1.4.5. Any hash mismatch enforces a **fail-closed** policy out of caution (stale official hash refusal on updates).
+This compatibility lifecycle is strictly pinned to official antigravity-acp 1.5.2. Any hash mismatch enforces a **fail-closed** policy out of caution (stale official hash refusal on updates).
 
 | Artifact | Expected SHA-256 |
 | -------- | ---------------- |
-| agy-acp-server-1.4.5-linux-x86_64.zip (Registry archive) | 923923a0d7dc8073f66cc6f78647a3107e3a7ee2b7e1a24df8b3927b5188013b |
-| `agy_acp_server.par` | `7e7019c8989ca066cbac4d6580552b7a4ad39485dd6b6fd81de9daa9a7b39042` |
-| `localharness_external` | `6c6d28b61a704e9bae4351ea8c4ad4b8b0aba7e1f1027bdf1017401b9c6e18c0` |
-| `model_selection.py` (preimage) | `c24afed84c4291fcf24bc9932a6c7e42b52c296addeb13d0a3aab6e32e120fe7` |
+| agy-acp-server-1.5.2-linux-x86_64.zip (Registry archive) | 99dd8612450805011619d7b8447ce374c289e00549d8557f36790e1dd6256852 |
+| `agy_acp_server.par` | `f472860b79c4816a32817e589afdb01cec0ca731e5fa428eae873b14be12387f` |
+| `localharness_external` | `072fc497e7814b0e25a7d80109bceddacd815eb351d2e48ce579a05510e0cfdf` |
+| `model_selection.py` (preimage) | `c36b9ecb40e14bdc98a79a3e39c4dbc17a3abcdadf7e615bc37fadf0c15c5edb` |
 | `ccpa_connection/proxy_server.py` (preimage) | `e350a8c7bef2d9e3616c6980774527d100137275bec5da147781e87f587012de` |
-| `proxy_agent_config.py` (preimage) | `3a7ca6fa8937c67fa27c54f42ce66095687b735898536afc32e0dc970c4ae182` |
-| `server.py` (unmodified) | `9f1c1b8dc8b452cdd12bd15ff10d5da7226d55c05f0478047baf226e03bb95bb` |
+| `proxy_agent_config.py` (preimage) | `3da378d7aa666c554d01d71f1dbdfbd62ddb86078649cee39ed47802ce160aec` |
+| `server.py` (unmodified) | `37b415cf1b299f58f6f574eaf277f0cbe5290e775de502cf9a7d634ec21ca82b` |
 
-The managed 1.4.5 recipe uses TOOL skill presentation to preserve built-in
+The managed 1.5.2 recipe uses TOOL skill presentation to preserve built-in
 and user skill lookup without automatically writing built-in files into the
 project workspace. The exact configuration edit is covered by both preimage
 pins and runtime postimage verification; `server.py` remains unmodified.

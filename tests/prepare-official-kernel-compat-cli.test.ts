@@ -98,14 +98,14 @@ describe("prepare official kernel compatibility CLI", () => {
       os.homedir(),
       ".local",
       "opt",
-      "agy-acp-server-1.5.0",
+      "agy-acp-server-1.5.2",
       "agy_acp_server.par"
     ));
     expect(observation.options.externalHarnessPath).toBe(path.join(
       os.homedir(),
       ".local",
       "opt",
-      "agy-acp-server-1.5.0",
+      "agy-acp-server-1.5.2",
       "localharness_external"
     ));
     expect(observation.compatibilityModule.mode).toBe(0o400);

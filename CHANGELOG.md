@@ -2,6 +2,20 @@
 
 All notable changes to `paseo-agy-acp` are recorded here.
 
+## 2.10.0 - 2026-11-22
+
+### Changed
+
+- Pin the managed official kernel to Registry `antigravity-acp` 1.5.2. Update all six archive URLs and SHA-256 checksums, the Linux x64 PAR and harness hashes, and the four runfile preimage hashes. Managed files install under `~/.local/opt/agy-acp-server-1.5.2`.
+- Follow official 1.5.2 behavior that the adapter previously did not implement itself: `GEMINI.md` and `AGENTS.md` rule discovery, `.aiexclude` and administrator path policy, enterprise quota visibility on `/usage`, project license locations, unanswered permission cancellation, and Gemini 4 Neon, Hydrogen and Extra High in the API key catalog.
+- Keep the six Linux x64 compatibility edits. 1.5.2 still needs them for the supported non-Gemini catalog, request transforms, tool-based skill presentation and the read-only step observer. Every patch anchor still occurs once.
+- Move the terminal diagnostic filter to the 1.5.2 `prompt` exception callsite. The execution, connection and validation handler now sends that chunk at line 6697.
+
+### Upgrade
+
+- A prepared 1.5.0 compatibility receipt does not match 1.5.2. Run `paseo-agy-acp --prepare-kernel` and wait for it to finish before provider diagnostics. Existing sessions keep the kernel they already loaded.
+- The Linux x86_64 archive checksum was verified by download. The other five platform checksums are the Registry values and have not been downloaded in this change. No live 1.5.2 session acceptance was run.
+
 ## 2.9.2 - 2026-11-21
 
 ### Fixes in 2.9.2
