@@ -11,7 +11,10 @@ All notable changes to `paseo-agy-acp` are recorded here.
   and the actual ACP client identity.
 - Preserve the v2.9.1 grouped configOptions interface and omit the legacy flat
   models catalog. Clean thinking/effort suffixes from model display names only;
-  preserve concrete IDs and the upstream multi-level/single-level controls.
+  preserve concrete IDs. In Paseo, Claude/GPT-OSS fixed models accept the
+  displayed Low/Medium/High choices without changing native inference;
+  models with native levels, including Gemini and Claude 5.5 when the account
+  offers them, still switch their actual thinking level.
 - Reuse managed kernels only when both compatibility module and patch recipe
   digests match, so an upgrade replaces stale compatibility behavior.
 - Preserve the frozen redaction evidence commit in release history so clean CI
@@ -36,10 +39,10 @@ All notable changes to `paseo-agy-acp` are recorded here.
   take several minutes (314 seconds on the test host), exceeding Paseo's
   20-second diagnostic initialization timeout. Existing sessions keep their
   loaded kernel until reopened.
-- Paseo 0.16.2 and managed kernel 1.5.0 were verified for grouped menus,
-  Claude/GPT-OSS text generation and cold session restoration, plus all three
-  Gemini thinking levels. Full browser UI and non-Linux kernels remain outside
-  this acceptance scope.
+- The original grouped-menu change was verified on Paseo 0.16.2 and managed
+  kernel 1.5.0 for Claude/GPT-OSS generation and cold recovery, plus Gemini's
+  actual thinking levels. The separate display-only compatibility check is
+  documented in the grouped-model acceptance runbook.
 
 ## 2.9.1 - 2026-11-20
 

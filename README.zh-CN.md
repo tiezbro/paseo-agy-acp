@@ -130,12 +130,13 @@ paseo-agy-acp --login
 
 从带全局排队的版本迁移时，移除 `AGY_ACP_ADMISSION_*` 和 `AGY_ACP_STATE_DIR`。旧账本保留在磁盘上，适配器不再读取，原 `agy-acp-prepare-state` 入口已移除。账号额度、服务端 429/502/503 和模型生成时间仍由上游决定。
 
-会话建立及配置回包使用分组 `configOptions`，省略旧扁平 `models` 列表。模型菜单只显示名称，多档模型通过独立控件切档；单档模型沿用其实际模型 ID，不额外显示档位选择器。Linux x64 托管兼容层也恢复上游账号目录实际提供的受支持第三方模型，不更改客户端身份。仅在兼容模块和补丁配方均匹配时复用内核缓存。升级或重新构建后，先在终端运行 `paseo-agy-acp --prepare-kernel` 并等待完成，再运行 Provider 诊断。源码检出使用 `node "dist/ACP Connector/main.js" --prepare-kernel`。首次准备可能需要数分钟（本机约 314 秒），超过 Paseo 诊断初始化的 20 秒限时。已运行的会话继续使用原先加载的内核。模型可用性仍以上游账号目录为准。
+会话建立及配置回包使用分组 `configOptions`，省略旧扁平 `models` 列表。模型菜单只显示名称，支持原生档位的模型（如 Gemini，以及符合条件账号上的 Claude 5.5）通过独立控件切换真实推理档位。原版 Paseo 中，受支持的固定档 Claude/GPT‑OSS 也显示低、中、高，但点选只改变界面，不改变实际模型 ID 或推理档位。Linux x64 托管兼容层也恢复上游账号目录实际提供的受支持第三方模型，不更改客户端身份。仅在兼容模块和补丁配方均匹配时复用内核缓存。升级或重新构建后，先在终端运行 `paseo-agy-acp --prepare-kernel` 并等待完成，再运行 Provider 诊断。源码检出使用 `node "dist/ACP Connector/main.js" --prepare-kernel`。首次准备可能需要数分钟（本机约 314 秒），超过 Paseo 诊断初始化的 20 秒限时。已运行的会话继续使用原先加载的内核。模型可用性仍以上游账号目录为准。
 
 - [旧排队配置迁移](docs/operations/admission.md)
 - [轻量适配器验收](docs/operations/lightweight-adapter.md)
 - [内核包装器运维](docs/operations/official-kernel-compat-runbook.md)
 - [Paseo 客户端验收](docs/operations/paseo-adapter-verification.md)
+- [分组模型的真实账号验收](docs/operations/2026-11-22-grouped-model-acceptance.md)
 - [跨主机验收](docs/operations/paseo-cross-host-e2e.md)
 - [npm 发布](docs/operations/npm-publishing.md)
 

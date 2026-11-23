@@ -4,6 +4,7 @@ import type { Readable, Writable } from "node:stream";
 import { TurnClaim, raceClaim, isTurnCancelled } from "../acp/session/turn-claim.js";
 import { extractCwd, extractSessionId, PaseoSessionContext } from "./context.js";
 import { blankTurnError, isSuccessfulEndTurn, sessionUpdateShowsVisibleOutput, shouldRejectBlankTurn } from "./errors.js";
+import { FixedModelEffort } from "./fixed-model-effort.js";
 import { overlayProductIdentity } from "./identity.js";
 import { KernelEventTracker, type KernelBackendNotice, type KernelNotice } from "./kernel-event-tracker.js";
 import type { KernelEvent } from "./kernel-events.js";
@@ -75,6 +76,7 @@ export class OfficialKernelProxy {
   readonly #systemMessageFolder = new SystemMessageFolder();
   readonly #env: NodeJS.ProcessEnv;
   readonly #context: PaseoSessionContext;
+  readonly #fixedModelEffort = new FixedModelEffort();
   readonly #skillMcp: SessionSkillMcpServer;
   readonly #diagnostics: ReturnType<typeof createKernelDiagnostics>;
   readonly #sessionSetup = new Map<JsonRpcId, { native: boolean; token?: string }>();
@@ -194,6 +196,7 @@ export class OfficialKernelProxy {
           } finally {
             this.#claims.clear();
             this.#sessionCwds.clear();
+            this.#fixedModelEffort.clear();
             this.#sessionSetup.clear();
             this.#skillTokens.clear();
             this.#requestTimings.clear();
@@ -287,6 +290,7 @@ export class OfficialKernelProxy {
       return;
     }
     if (request.method === INITIALIZE_METHOD) {
+      this.#fixedModelEffort.observeClient(params);
       this.#requestTimings.set(request.id, this.#diagnostics.start("initialize", { requestId: request.id }));
     }
     if (request.method === SESSION_NEW_METHOD || request.method === SESSION_LOAD_METHOD || request.method === SESSION_RESUME_METHOD) {
@@ -324,6 +328,13 @@ export class OfficialKernelProxy {
         this.#sessionCwds.set(sessionId, cwd);
       }
     } else if (request.method === SESSION_SET_MODE_METHOD || request.method === SESSION_SET_CONFIG_METHOD) {
+      if (request.method === SESSION_SET_CONFIG_METHOD) {
+        const effort = this.#fixedModelEffort.apply(extractSessionId(params), params);
+        if (effort) {
+          this.#writeClient({ jsonrpc: "2.0", id: request.id, result: effort });
+          return;
+        }
+      }
       params = rewriteModeFields(params);
     } else if (request.method === SESSION_PROMPT_METHOD) {
       await this.#handlePrompt(request, params);
@@ -484,7 +495,8 @@ export class OfficialKernelProxy {
       }
 
       if (isRecord(message.params) && isRecord(message.params.update) && message.params.update.sessionUpdate === "config_option_update") {
-        message = { ...message, params: { ...message.params, update: describeOfficialModes(message.params.update) } };
+        const update = this.#fixedModelEffort.present(sessionId, describeOfficialModes(message.params.update));
+        message = { ...message, params: { ...message.params, update } };
       }
       const outboundUpdates = this.#systemMessageFolder.transform(message);
       for (const updateMessage of outboundUpdates) {
@@ -544,6 +556,7 @@ export class OfficialKernelProxy {
         if (token) this.#skillMcp.release(token);
         this.#skillTokens.delete(sessionId);
         this.#sessionCwds.delete(sessionId);
+        this.#fixedModelEffort.forget(sessionId);
         this.#context.forgetSession(sessionId);
         this.#systemMessageFolder.reset(sessionId);
         this.#kernelEvents.forget(sessionId);
@@ -593,7 +606,7 @@ export class OfficialKernelProxy {
       if (isJsonRpcSuccess(outbound) && [SESSION_NEW_METHOD, SESSION_LOAD_METHOD, SESSION_RESUME_METHOD, SESSION_SET_CONFIG_METHOD].includes(pending.method)) {
         outbound = {
           ...outbound,
-          result: describeOfficialModes(outbound.result)
+          result: this.#fixedModelEffort.present(extractSessionId(outbound.result) ?? pending.sessionId, describeOfficialModes(outbound.result))
         };
       }
       this.#writeClient(outbound);

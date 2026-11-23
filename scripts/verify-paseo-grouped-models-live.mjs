@@ -7,6 +7,8 @@ import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { liveProviderEnvironment } from "./paseo-live-config.mjs";
 
+import { actualForNativeLevel, advertisedCapabilities, rawGroupedIds, rawModel, rawThought, trackedFamilies } from "./paseo-live-model-capabilities.mjs";
+
 const root = fileURLToPath(new URL("../", import.meta.url));
 const cliRoot = process.env.PASEO_LIVE_CLI_ROOT;
 assert.ok(cliRoot, "需要 PASEO_LIVE_CLI_ROOT");
@@ -20,6 +22,8 @@ const home = await mkdtemp(path.join(root, ".tmp-paseo-model-live-"));
 const work = path.join(home, "work");
 await mkdir(work);
 const trace = path.join(home, "selection.ndjson");
+const forwardedEffort = path.join(home, "forwarded-effort.log");
+await writeFile(forwardedEffort, "", { mode: 0o600 });
 const wrapper = path.join(home, "kernel.mjs");
 const kernel = path.join(process.env.HOME, ".local/opt/paseo-agy-acp-kernel-compat/agy-acp-kernel-compat-active");
 // 透明观察官方回包中的实际模型 ID；磁盘仅保存选择状态，不保存请求、正文或环境。
@@ -30,10 +34,10 @@ import {createInterface} from 'node:readline';
 const child=spawn(${JSON.stringify(kernel)},[],{env:process.env,stdio:['pipe','pipe','pipe']});
 process.stdin.pipe(child.stdin);child.stderr.pipe(process.stderr);
 let sessionId;
-createInterface({input:process.stdin}).on('line',line=>{try{sessionId=JSON.parse(line).params?.sessionId??sessionId;}catch{}});
+createInterface({input:process.stdin}).on('line',line=>{try{const m=JSON.parse(line);sessionId=m.params?.sessionId??sessionId;if(m.method==='session/set_config_option'||m.method==='session/set_model'||m.method==='session/set_mode')appendFileSync(${JSON.stringify(forwardedEffort)},JSON.stringify({configId:m.params?.configId??(m.method==='session/set_model'?'model':'mode'),value:m.params?.value??m.params?.modelId??m.params?.modeId})+'\\n');}catch{}});
 const probeFile=${JSON.stringify(path.join(home, "probe.json"))};
 watchFile(probeFile,{interval:50},()=>{try {const p=JSON.parse(readFileSync(probeFile,'utf8'));child.stdin.write(JSON.stringify({jsonrpc:'2.0',id:'probe-'+p.nonce,method:'session/load',params:{sessionId,cwd:p.cwd,mcpServers:[]}})+'\\n');}catch{}});
-createInterface({input:child.stdout}).on('line',line=>{try {const m=JSON.parse(line);const r=m.result;sessionId=r?.sessionId??sessionId;const probe=typeof m.id==='string'&&m.id.startsWith('probe-');if(!probe)process.stdout.write(line+'\\n');if(r?.models || r?.configOptions)appendFileSync(${JSON.stringify(trace)},JSON.stringify({probe:probe?m.id.slice(6):undefined,model:r.models?.currentModelId,configOptions:r.configOptions})+'\\n',{encoding:'utf8',mode:0o600});}catch{}});
+createInterface({input:child.stdout}).on('line',line=>{try {const m=JSON.parse(line);const r=m.result;sessionId=r?.sessionId??sessionId;const probe=typeof m.id==='string'&&m.id.startsWith('probe-');if(!probe)process.stdout.write(line+'\\n');if(r?.models || r?.configOptions)appendFileSync(${JSON.stringify(trace)},JSON.stringify({probe:probe?m.id.slice(6):undefined,pid:child.pid,model:r.models?.currentModelId,modelIds:r.models?.availableModels?.map(model=>model.modelId),configOptions:r.configOptions})+'\\n',{encoding:'utf8',mode:0o600});}catch{}});
 process.on('SIGTERM',()=>child.kill('SIGTERM'));child.on('close',code=>process.exit(code??0));
 `, "utf8");
 await chmod(wrapper, 0o700);
@@ -62,7 +66,7 @@ const restore = async () => {
   await ensureAgentLoaded(agentId, { agentManager: daemon.agentManager, agentStorage: daemon.agentStorage, logger: require("pino")({level:"silent"}) });
   session = daemon.agentManager.getAgent(agentId).session;
 };
-const verifyActual = async expected => {
+const verifyActual = async () => {
   const nonce = randomUUID();
   await writeFile(path.join(home, "probe.json"), JSON.stringify({ nonce, cwd: work }), "utf8");
   let state;
@@ -72,14 +76,15 @@ const verifyActual = async expected => {
     await new Promise(resolve => setTimeout(resolve, 50));
   }
   assert.equal(state.probe, nonce);
-  assert.equal(state.model, expected);
+  assert.equal(typeof state.model, "string");
+  return state;
 };
-const summary = { passed: false, paseo: "0.16.2", kernel: "1.5.0", checks: [], output: home };
+const summary = { passed: false, paseo: "0.16.2", expectedManagedKernel: "1.5.0", checks: [], output: home };
 let session;
 let stage = "create";
 const selection = async () => JSON.parse((await readFile(trace, "utf8")).trim().split("\n").at(-1));
-const configModel = state => state.configOptions.find(option => option.category === "model");
-const thinking = state => state.configOptions.find(option => option.category === "thought_level");
+const effortRequests = async () => (await readFile(forwardedEffort, "utf8")).trim().split("\n").filter(Boolean).map(line => JSON.parse(line));
+const forwardedEffortCount = async () => (await effortRequests()).length;
 const run = async prompt => {
   let timer;
   try { return await Promise.race([daemon.agentManager.runAgent(agentId, prompt), new Promise((_, reject) => {
@@ -99,54 +104,94 @@ try {
   agentId = agent.id;
   await daemon.agentManager.ensureInteractiveSession(agentId);
   session = daemon.agentManager.getAgent(agentId).session;
-  let state = await selection();
-  const menu = deriveModelDefinitionsFromACP("paseo-agy-acp", null, (await import(pathToFileURL(path.join(root, "dist/ACP Connector/official-kernel/mode-map.js")))).describeOfficialModes(state).configOptions);
+  const catalog = await selection();
+  const menu = deriveModelDefinitionsFromACP("paseo-agy-acp", null, (await import(pathToFileURL(path.join(root, "dist/ACP Connector/official-kernel/mode-map.js")))).describeOfficialModes(catalog).configOptions);
   summary.menu = menu.map(model => ({ id: model.id, name: model.label }));
-  assert.ok(menu.every(model => !/\((?:thinking|high|medium|low)\)/i.test(model.label)));
-  const targets = menu.filter(model => /^(claude-|gpt-oss-)/.test(model.id));
-  assert.ok(targets.some(model => model.id.startsWith("claude-")));
-  assert.ok(targets.some(model => model.id.startsWith("gpt-oss-")));
-  for (const target of targets) {
-    stage = "select:" + target.id;
-    await daemon.agentManager.setAgentModel(agentId, target.id);
-    state = await selection();
-    assert.equal(configModel(state).currentValue, target.id);
-    assert.equal(thinking(state), undefined, "单档模型不得出现档位选择器");
-    const actual = target.id;
-    const nonce = "check-" + randomUUID();
-    stage = "generate:" + target.id;
-    assert.ok((await run("只回复以下校验码，不调用工具：" + nonce)).finalText.includes(nonce));
-    stage = "restore:" + target.id;
-    await restore();
-    await verifyActual(actual);
-    state = await selection();
-    assert.equal(state.model, actual);
-    assert.equal(configModel(state).currentValue, target.id);
-    assert.equal(thinking(state), undefined);
-    stage = "restored-generate:" + target.id;
-    assert.ok((await run("只回复上一轮给你的完整校验码，不调用工具。")).finalText.includes(nonce));
-    summary.checks.push({ id: target.id, actual, generated: true, restored: true });
+  assert.ok(menu.length, "expected at least one model");
+  assert.ok(menu.every(model => !/\((?:thinking|minimal|high|medium|low|xhigh|extra high|max)(?: thinking)?\)$/i.test(model.label)));
+  const officialIds = rawGroupedIds(catalog);
+  summary.officialCatalog = officialIds;
+  const targets = menu.filter(model => /^(claude-|gpt-oss-|gemini-)/.test(model.id));
+  summary.skips = trackedFamilies(officialIds).map(family => ({
+    family, reason: "not advertised in the official account model catalog"
+  }));
+  assert.deepEqual(targets.map(target => target.id).sort(), officialIds.filter(id => /^(claude-|gpt-oss-|gemini-)/.test(id)).sort());
+  const runtimeSelection = async (id, level) => {
+    const runtime = await session.getRuntimeInfo();
+    assert.equal(runtime.model, id);
+    assert.equal(runtime.thinkingOptionId, level);
+  };
+  for (const { id } of targets) {
+    stage = "select:" + id;
+    await daemon.agentManager.setAgentModel(agentId, id);
+    const initial = await verifyActual();
+    assert.equal(rawModel(initial)?.currentValue, id);
+    const capability = advertisedCapabilities(initial, id);
+    if (capability.kind === "not-bridged" || capability.kind === "unsupported-native-option") {
+      summary.skips.push({ id, reason: capability.kind, nativeOption: capability.id, levels: capability.levels });
+      continue;
+    }
+    const isFixed = capability.kind === "fixed";
+    if (isFixed) assert.equal(initial.model, id, "fixed-model raw ID must match the advertised ID");
+    const initialEffort = isFixed ? (await session.getRuntimeInfo()).thinkingOptionId : rawThought(initial)?.currentValue;
+    // Stock Paseo may skip a re-selection of the current value. Exercise every
+    // native tier as an actual change, with the initial one moved to the end.
+    const levels = [
+      ...capability.levels.filter(level => level !== initialEffort),
+      ...capability.levels.filter(level => level === initialEffort)
+    ];
+    if (!isFixed && levels.length === 1 && levels[0] === initialEffort) {
+      summary.skips.push({ id, reason: "only one native effort advertised; no native change to exercise", levels, actual: initial.model });
+      continue;
+    }
+    for (const level of levels) {
+      stage = capability.kind + "-effort:" + id + ":" + level;
+      const before = await forwardedEffortCount();
+      await daemon.agentManager.setAgentThinkingOption(agentId, level);
+      await runtimeSelection(id, level);
+      const state = await verifyActual();
+      assert.equal(rawModel(state)?.currentValue, id);
+      const expectedActual = isFixed ? initial.model : actualForNativeLevel(initial, id, level);
+      if (!expectedActual) summary.missingConcreteId = { id, level, expected: id + "-" + level, officialModelIds: initial.modelIds };
+      assert.ok(expectedActual, "expected an official concrete model ID for the advertised effort");
+      assert.equal(state.model, expectedActual);
+      const writes = (await effortRequests()).slice(before);
+      if (isFixed) {
+        assert.equal(rawThought(state), undefined);
+        assert.deepEqual(writes, [], "fixed-model display effort must not reach the kernel");
+      } else {
+        assert.equal(rawThought(state)?.currentValue, level);
+        assert.deepEqual(writes.map(({ configId, value }) => ({ configId, value })), [{ configId: capability.id, value: level }]);
+      }
+      const nonce = !id.startsWith("gemini-") && level === levels.at(-1) ? "check-" + randomUUID() : undefined;
+      if (nonce) {
+        stage = "generate:" + id;
+        assert.ok((await run("只回复以下校验码，不调用工具：" + nonce)).finalText.includes(nonce));
+      }
+      stage = "restore:" + id + ":" + level;
+      const beforeRestore = await forwardedEffortCount();
+      await restore();
+      const reopened = await verifyActual();
+      assert.notEqual(reopened.pid, state.pid, "cold restore must use a new kernel process");
+      assert.equal(reopened.model, expectedActual);
+      assert.equal(rawModel(reopened)?.currentValue, id);
+      assert.equal(rawThought(reopened)?.currentValue, isFixed ? undefined : level);
+      if (isFixed) {
+        const restoreWrites = (await effortRequests()).slice(beforeRestore);
+        assert.deepEqual(restoreWrites.filter(write => !["model", "mode", "session_mode"].includes(write.configId)), [],
+          "cold restore must not forward a fixed effort");
+      }
+      await runtimeSelection(id, level);
+      if (nonce) {
+        stage = "restored-generate:" + id;
+        assert.ok((await run("只回复上一轮给你的完整校验码，不调用工具。")).finalText.includes(nonce));
+      }
+      summary.checks.push({ id, actual: state.model, level, capability: capability.kind,
+        nativeWrites: writes.length, restored: true, ...(nonce ? { generated: true, restoredHistory: true } : {}) });
+    }
   }
-  stage = "thinking";
-  const family = menu.find(model => model.id === "gemini-3.8-flash");
-  assert.ok(family);
-  await daemon.agentManager.setAgentModel(agentId, family.id);
-  for (const level of ["low", "medium", "high"]) {
-    await daemon.agentManager.setAgentThinkingOption(agentId, level);
-    state = await selection();
-    assert.equal(thinking(state).currentValue, level);
-    await restore();
-    await verifyActual(family.id + "-" + level);
-    state = await selection();
-    assert.equal(state.model, family.id + "-" + level);
-    assert.equal(thinking(state).currentValue, level);
-    summary.checks.push({ id: family.id, level, actual: state.model });
-  }
-  await restore();
-  await verifyActual(family.id + "-high");
-  state = await selection();
-  assert.equal(state.model, family.id + "-high");
-  assert.equal(thinking(state).currentValue, "high");
+  assert.ok(summary.checks.length, "no target advertised verifiable capabilities");
+  summary.coverage = summary.skips.length ? "advertised capabilities only; see explicit skips" : "all tracked capabilities advertised";
   summary.passed = true;
 } catch (error) {
   summary.errorLocations = [...(error.stack ?? "").matchAll(/\b[\w-]+\.(?:m?js|ts):\d+:\d+/g)].map(m => m[0]).slice(0, 4);
