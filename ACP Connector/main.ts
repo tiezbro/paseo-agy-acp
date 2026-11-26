@@ -5,6 +5,7 @@ import { resolveAcpKernel } from "./official-kernel/kernel.js";
 import { runOfficialLogin } from "./official-kernel/login.js";
 import { runOfficialKernel } from "./official-kernel/run.js";
 import { inspectOfficialKernel, prepareOfficialKernel } from "./official-kernel/kernel-commands.js";
+import { queryOfficialQuota } from "./official-kernel/usage.js";
 
 const argv = process.argv;
 const require = createRequire(import.meta.url);
@@ -17,7 +18,10 @@ const packageJson = require(
 const version = packageJson.version ?? "0.0.0";
 
 if (argv.includes("--version")) {
-  process.stdout.write(`${version}\n`);
+  // 保留旧版已支持的退出开关，让能力探测不会落入普通 ACP 启动。
+  process.stdout.write(argv.includes("--capabilities")
+    ? `${JSON.stringify({ name: "paseo-agy-acp", version, capabilities: { accountQuota: 1 } })}\n`
+    : `${version}\n`);
 } else if (argv.includes("--doctor") || argv.includes("--prepare-kernel")) {
   try {
     resolveAcpKernel(process.env, argv);
@@ -26,6 +30,14 @@ if (argv.includes("--version")) {
       : await inspectOfficialKernel(process.env, version);
     process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
     process.exitCode = report.ready ? 0 : 1;
+  } catch (error) {
+    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+    process.exitCode = 1;
+  }
+} else if (argv.includes("--usage")) {
+  try {
+    const report = await queryOfficialQuota(process.env);
+    process.stdout.write(`${JSON.stringify(report)}\n`);
   } catch (error) {
     process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
     process.exitCode = 1;

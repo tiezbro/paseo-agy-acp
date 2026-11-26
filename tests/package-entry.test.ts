@@ -8,6 +8,15 @@ const builtEntry = path.join(repositoryRoot, "dist/ACP Connector/agent.js");
 const builtCliEntry = path.join(repositoryRoot, "dist/ACP Connector/main.js");
 
 describe("published package entry", () => {
+  it("probes quota capability through --version without starting the kernel", () => {
+    const result = spawnSync(process.execPath, [builtCliEntry, "--version", "--capabilities"], {
+      cwd: repositoryRoot, encoding: "utf8",
+      env: { ...process.env, PASEO_AGY_ACP_OFFICIAL_BIN: "/missing-kernel-must-not-start" }, timeout: 2000,
+    });
+    expect(result.status).toBe(0);
+    expect(result.stderr).toBe("");
+    expect(JSON.parse(result.stdout)).toEqual({ name: "paseo-agy-acp", version: "2.10.0", capabilities: { accountQuota: 1 } });
+  });
   it("imports from the built package layout", () => {
     const result = spawnSync(
       process.execPath,

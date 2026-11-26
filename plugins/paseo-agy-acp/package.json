@@ -1,0 +1,15 @@
+{
+  "name": "paseo-agy-acp-plugin",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test tests/*.test.mjs"
+  },
+  "devDependencies": {
+    "@getpaseo/plugin": "0.17.4",
+    "@types/node": "^26.1.1",
+    "typescript": "^7.0.2",
+    "zod": "^4.1.0"
+  }
+}
