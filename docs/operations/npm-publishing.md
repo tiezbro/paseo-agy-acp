@@ -40,7 +40,7 @@ Prepare and merge the release commit before creating the tag:
 
 1. Set the same three-part version in `package.json` and `package-lock.json`.
 2. Update `CHANGELOG.md`, README version pins, tests, and release smoke checks.
-3. Run `npm run validate` and inspect `npm pack --dry-run --json`.
+3. Run `npm run validate`, install the companion plugin's locked development dependencies, run its typecheck and tests, and inspect `npm pack --dry-run --json`. See [companion plugin releases](plugin-releases.md) for the exact commands and acceptance steps.
 4. Push the release commit to `main` and wait for CI.
 5. Create and push the matching tag, for example `v2.3.0`.
 6. Create the GitHub Release for that tag.
@@ -51,7 +51,9 @@ The tag push automatically runs the npm workflow. That workflow:
 - requires the tag to match `package.json` exactly;
 - requires the tagged commit to be contained in `main`;
 - installs dependencies and runs the complete validation suite;
+- installs the companion plugin's locked development dependencies and requires its typecheck and account-isolation tests to pass;
 - builds one npm tarball and rejects packaged `.par`, database, or SQLite files;
+- requires the plugin manifest, package metadata, entry, usage source and overview in that tarball;
 - uploads the tarball and its content manifest as a 30-day Actions artifact;
 - publishes that exact tarball with public access and npm provenance.
 
@@ -68,3 +70,20 @@ different content under the same version. If the workflow fails before
 `npm publish`, fix the release automation and rerun the failed tag workflow. If
 npm already contains the version, verify its provenance and tarball instead of
 publishing again.
+
+## Companion ACP quota plugin
+
+The optional Paseo plugin ships in the same `paseo-agy-acp` npm artifact under
+`plugins/paseo-agy-acp`. It uses the main package version; do not publish the
+private development package in that directory separately. GitHub Releases remain
+the versioned announcement and migration guide, while npm supplies the installable
+artifact. Creating a GitHub Release alone does not publish npm content.
+
+Follow [the plugin release guide](plugin-releases.md) for the versioned install
+commands, paired adapter/plugin updates, artifact acceptance and rollback. Start
+the GitHub Release body from [the ACP quota release template](../releases/acp-quota-template.md),
+replace its placeholders and include only checks actually completed for that tag.
+The Actions artifact is retained for 30 days; it is not automatically a GitHub
+Release attachment. Attach the verified npm tarball and its checksum explicitly
+when a downloadable release asset is needed. GitHub's source archives do not
+contain the built `dist` directory.

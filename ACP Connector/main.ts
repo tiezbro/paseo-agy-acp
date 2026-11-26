@@ -5,6 +5,7 @@ import { resolveAcpKernel } from "./official-kernel/kernel.js";
 import { runOfficialLogin } from "./official-kernel/login.js";
 import { runOfficialKernel } from "./official-kernel/run.js";
 import { inspectOfficialKernel, prepareOfficialKernel } from "./official-kernel/kernel-commands.js";
+import { queryOfficialQuota } from "./official-kernel/usage.js";
 
 const argv = process.argv;
 const require = createRequire(import.meta.url);
@@ -26,6 +27,14 @@ if (argv.includes("--version")) {
       : await inspectOfficialKernel(process.env, version);
     process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
     process.exitCode = report.ready ? 0 : 1;
+  } catch (error) {
+    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+    process.exitCode = 1;
+  }
+} else if (argv.includes("--usage")) {
+  try {
+    const report = await queryOfficialQuota(process.env);
+    process.stdout.write(`${JSON.stringify(report)}\n`);
   } catch (error) {
     process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
     process.exitCode = 1;

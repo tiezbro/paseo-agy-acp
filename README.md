@@ -144,6 +144,10 @@ The adapter uses grouped `configOptions` and omits the legacy flat `models` cata
 - [Verify grouped models with a live account](docs/operations/2026-11-22-grouped-model-acceptance.md)
 - [Verify across hosts](docs/operations/paseo-cross-host-e2e.md)
 - [Publish to npm](docs/operations/npm-publishing.md)
+- [ACP account quota and the optional Paseo usage plugin](docs/operations/paseo-quota.md)
+- [Release, install and update the companion plugin](docs/operations/plugin-releases.md)
+
+The source checkout adds a standalone `--usage` command for the ACP account. The optional plugin connects that report to Paseo's Usage panel and requires Paseo 0.17.4 or later. It ships inside the main npm package at the same release version. The published 2.10.0 does not include this addition; use a subsequent published version that includes the plugin, following the release guide above.
 
 <!-- readme:development -->
 ## Development

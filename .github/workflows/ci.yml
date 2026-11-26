@@ -101,6 +101,32 @@ jobs:
       - name: Test provider dispatch without identity and with legacy environment
         run: npm run test:paseo-provider
 
+  quota-plugin:
+    name: ACP quota plugin (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-2022]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: plugins/paseo-agy-acp/package-lock.json
+      - name: Install quota plugin development dependencies
+        run: npm ci --prefix plugins/paseo-agy-acp --ignore-scripts
+      - name: Typecheck quota plugin
+        run: npm --prefix plugins/paseo-agy-acp run typecheck
+      - name: Test ACP account isolation and usage refresh
+        run: npm --prefix plugins/paseo-agy-acp test
+
   repository-redaction:
     name: Read-only redaction mappings and secrets
     runs-on: ubuntu-latest

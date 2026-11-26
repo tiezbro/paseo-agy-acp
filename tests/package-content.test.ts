@@ -29,10 +29,17 @@ describe("published package content", () => {
       "assets/official-kernel-compat/rc01/paseo_model_compat.py",
       "dist/ACP Connector/official-kernel/kernel-compat-lifecycle.js",
       "dist/ACP Connector/official-kernel/kernel-compat-pins.js",
-      "dist/ACP Connector/official-kernel/kernel-compat-rc01-recipe.js"
+      "dist/ACP Connector/official-kernel/kernel-compat-rc01-recipe.js",
+      "dist/ACP Connector/official-kernel/usage.js",
+      "plugins/paseo-agy-acp/paseo-plugin.json",
+      "plugins/paseo-agy-acp/package.json",
+      "plugins/paseo-agy-acp/index.server.ts",
+      "plugins/paseo-agy-acp/server/usage.ts",
+      "plugins/paseo-agy-acp/OVERVIEW.md"
     ]));
 
     const prohibited = packedPaths.filter((entry) => (
+      /(^|\/)node_modules(?:\/|$)/i.test(entry) ||
       /(^|\/)[^/]*\.par$/i.test(entry) ||
       /(^|\/)[^/]*\.elf$/i.test(entry) ||
       /(^|\/)localharness_external(?:\/|$)/i.test(entry) ||
@@ -81,5 +88,6 @@ function isExpectedPublishedPath(entry: string): boolean {
     entry === "LICENSE" ||
     entry === "scripts/prepare-official-kernel-compat.mjs" ||
     entry === "assets/official-kernel-compat/rc01/paseo_model_compat.py" ||
+    /^plugins\/paseo-agy-acp\/(?:paseo-plugin\.json|package\.json|index\.server\.ts|server\/usage\.ts|OVERVIEW\.md)$/.test(entry) ||
     /^dist\/ACP Connector\/.+\.(?:js|d\.ts|js\.map)$/.test(entry);
 }

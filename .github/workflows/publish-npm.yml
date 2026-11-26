@@ -74,6 +74,12 @@ jobs:
       - name: Validate release source
         run: npm run validate
 
+      - name: Validate companion ACP quota plugin
+        run: |
+          npm ci --prefix plugins/paseo-agy-acp --ignore-scripts
+          npm --prefix plugins/paseo-agy-acp run typecheck
+          npm --prefix plugins/paseo-agy-acp test
+
       - name: Build npm tarball
         id: pack
         run: |
@@ -82,6 +88,17 @@ jobs:
           package_file="$(node -e "const fs=require('node:fs'); const data=JSON.parse(fs.readFileSync('npm-pack.json','utf8')); if (data.length !== 1 || !data[0].filename) process.exit(1); process.stdout.write(data[0].filename)")"
           test -f "$package_file"
           tar -tzf "$package_file" > npm-pack-contents.txt
+          for required in \
+            package/plugins/paseo-agy-acp/paseo-plugin.json \
+            package/plugins/paseo-agy-acp/package.json \
+            package/plugins/paseo-agy-acp/index.server.ts \
+            package/plugins/paseo-agy-acp/server/usage.ts \
+            package/plugins/paseo-agy-acp/OVERVIEW.md; do
+            if ! grep -Fxq "$required" npm-pack-contents.txt; then
+              echo "npm tarball is missing companion plugin file: $required" >&2
+              exit 1
+            fi
+          done
           if grep -Eiq '\.(par|db|sqlite|sqlite3)$' npm-pack-contents.txt; then
             echo "npm tarball contains a forbidden runtime artifact" >&2
             exit 1

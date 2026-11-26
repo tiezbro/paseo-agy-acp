@@ -144,6 +144,10 @@ paseo-agy-acp --login
 - [分组模型的真实账号验收](docs/operations/2026-11-22-grouped-model-acceptance.md)
 - [跨主机验收](docs/operations/paseo-cross-host-e2e.md)
 - [npm 发布](docs/operations/npm-publishing.md)
+- [ACP 账号额度查询与可选 Paseo 面板插件](docs/operations/paseo-quota.md)
+- [插件随 Release 发布、安装与升级](docs/operations/plugin-releases.md)
+
+源码中的 `--usage` 可独立查询 ACP 账号额度；接入 Paseo「使用情况」面板才需要配套插件和 Paseo 0.17.4 或更新版本。插件随主 npm 包交付，使用相同发布版本。当前公开的 2.10.0 不包含本次新增功能，安装命令应使用后续实际发布并包含插件的版本，详见上方发布说明。
 
 <!-- readme:development -->
 ## 开发验证
