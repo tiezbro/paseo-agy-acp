@@ -29,7 +29,8 @@ async function adapterLocation(launch: ProviderLaunch): Promise<string> {
     const config = JSON.parse(await readFile(path.join(home, "config.json"), "utf8"));
     overridden = Array.isArray(config.agents?.providers?.["paseo-agy-acp"]?.command);
   } catch { /* 无配置读取能力时按实际启动形态提示，并始终包含实际路径。 */ }
-  const script = launch.args.find(arg => /\.(?:[cm]?js|ts)$/i.test(arg));
+  const script = launch.args.find(arg => /\.(?:[cm]?js|ts)$/i.test(arg)) ??
+    (/^(?:node|bun)(?:\.exe)?$/i.test(path.basename(launch.command)) && launch.args[0] && !launch.args[0].startsWith("-") ? launch.args[0] : undefined);
   return overridden
     ? `provider 指定的适配器路径 ${script ?? launch.command}（启动器 ${launch.command}）`
     : `daemon PATH 实际解析的适配器 ${launch.command}`;

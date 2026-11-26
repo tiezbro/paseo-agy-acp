@@ -23,7 +23,7 @@ node "dist/ACP Connector/main.js" --usage
 
 ## 适配器升级预检
 
-插件每次刷新前，会对实际解析的适配器执行 `--version --capabilities`，仅在返回 `name: "paseo-agy-acp"` 和 `capabilities.accountQuota: 1` 时继续查询。provider 可用性探测也复用此检查。这个能力标记与版本号分开，避免把尚未发布的源码版本误判成已发布的同号旧包。
+插件每次刷新额度前，会对实际解析的适配器执行 `--version --capabilities`，仅在返回 `name: "paseo-agy-acp"` 和 `capabilities.accountQuota: 1` 时继续查询。普通 provider 可用性保留 Paseo 原生判断，不要求额度能力；旧适配器可以继续普通 ACP 使用，只在查询额度时提示升级。这个能力标记与版本号分开，避免把尚未发布的源码版本误判成已发布的同号旧包。
 
 已发布的 2.10.0 认识 `--version`，会打印纯版本号并退出，不会因这个组合参数进入普通 ACP 启动。纯文本、畸形 JSON、不支持的能力版本、退出错误和超时都会中止预检，不再发送 `--usage`。不单独向旧版发送新探测开关。
 
@@ -68,8 +68,10 @@ npm --prefix plugins/paseo-agy-acp test
 
 配套插件测试使用 Node 22.6 及更新版本的类型擦除功能。协议测试验证只发送 `initialize`、`session/new`、`session/prompt`，且 prompt 精确为 `/usage`；未声明命令、认证错误和超时都会失败。插件测试验证 ACP 与 CLI 目录隔离及启动环境传递。
 
-安装产物的真实验收使用 `node scripts/verify-paseo-quota-install.mjs --live`。先构建，使用原版 Paseo CLI 0.17.4 和已有 ACP 登录运行；脚本创建独立 daemon，把实际 tarball 经 npm 安装后再加载其中的插件，同时安装已发布 2.10.0 验证 PATH 和 provider 路径错配。它检查普通内核启动标记始终未生成，并将匹配版本的四个额度窗口与同环境的直接 ACP 查询比较。结束后停止隔离 daemon，并脱敏临时配置中的环境值；不自动运行于无账号的 CI，也不修改生产 daemon。
+安装产物的真实验收使用 `node scripts/verify-paseo-quota-install.mjs --live`。先构建，使用原版 Paseo CLI 0.17.4 和已有 ACP 登录运行；也可用 `PASEO_QUOTA_SOURCE_HOME` 指向隔离账号的 daemon 配置目录。脚本从实际 tarball 安装插件，同时安装已发布 2.10.0，分别验证 PATH 和 provider 指定路径的普通 ACP 可用、额度查询单独提示升级，以及匹配版本的四个额度窗口。调用记录只用于判断额度刷新是否误启普通链路。
 
-本次实际安装路径、产物校验值与结果见 [2026-11-26 安装验收记录](2026-11-26-acp-quota-install-acceptance.md)。
+配置只写 `HOME`、`USERPROFILE`、`GEMINI_HOME`、`PASEO_AGY_ACP_OFFICIAL_BIN` 和本轮 `PASEO_HOME` 这些必要路径；代理和证书等网络设置仅通过子进程内存环境传递。脚本不继承 API key、无关令牌或 `NODE_OPTIONS`，不记录原始命令输出。正常结束、异常及退出信号都会清理本轮新建的临时工作目录，包括配置、daemon 密钥、日志、缓存和安装树；只在 `.tmp-quota-results` 保留脱敏结果。该脚本不自动运行于无账号 CI，也不修改生产 daemon。
+
+本次实际安装路径、产物校验值、普通 ACP 与额度对照及环境清理结果见 [2026-11-26 兼容性验收记录](2026-11-26-acp-provider-compat-acceptance.md)。
 
 Paseo 的接口依据：[provider 插件](https://paseo.sh/docs/plugins/providers.md)和[额度来源注册](https://paseo.sh/docs/plugins/reference.md#usage-sources)。

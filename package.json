@@ -55,7 +55,7 @@
     "test:paseo-provider": "npm run build && node --test tests/paseo-provider-platform.test.mjs",
     "validate:architecture": "node scripts/verify-import-boundaries.mjs",
     "validate:secrets": "node scripts/verify-no-secrets.mjs",
-    "validate": "npm test && npm run validate:architecture && npm run validate:secrets && node --test tests/paseo-live-config.test.mjs tests/paseo-live-model-capabilities.test.mjs",
+    "validate": "npm test && npm run validate:architecture && npm run validate:secrets && node --test tests/paseo-live-config.test.mjs tests/paseo-live-model-capabilities.test.mjs tests/quota-install-environment.test.mjs",
     "test:watch": "vitest",
     "prepublishOnly": "npm run build",
     "validate:paseo-client-lock": "node scripts/verify-paseo-client-lock.mjs"
