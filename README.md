@@ -2,7 +2,7 @@
 
 [English](./README.md) | [中文](./README.zh-CN.md) | [Changelog](./CHANGELOG.md)
 
-`paseo-agy-acp` connects an existing Paseo installation to the official Google Antigravity ACP kernel. The adapter package is `2.10.0` and its reference kernel is official `agy_acp_server` 1.5.2 with the managed Linux compatibility layer. Install this package and configure a custom ACP provider in Paseo. No Paseo code changes are required.
+`paseo-agy-acp` connects an existing Paseo installation to the official Google Antigravity ACP kernel. The adapter package is `2.11.0` and its reference kernel is official `agy_acp_server` 1.5.2 with the managed Linux compatibility layer. Install this package and configure a custom ACP provider in Paseo. No Paseo code changes are required.
 
 <!-- readme:positioning -->
 ## Purpose
@@ -84,7 +84,7 @@ The kernel stores session history. The adapter has no scheduling database or run
 On the host running the Paseo daemon, install the npm package for this version. If you have the source checkout, the Development section shows how to produce the same package file.
 
 ```bash
-npm install --global ./paseo-agy-acp-2.10.0.tgz
+npm install --global ./paseo-agy-acp-2.11.0.tgz
 paseo-agy-acp --doctor
 paseo-agy-acp --prepare-kernel
 paseo-agy-acp --login
@@ -147,7 +147,7 @@ The adapter uses grouped `configOptions` and omits the legacy flat `models` cata
 - [ACP account quota and the optional Paseo usage plugin](docs/operations/paseo-quota.md)
 - [Release, install and update the companion plugin](docs/operations/plugin-releases.md)
 
-The source checkout adds a standalone `--usage` command for the ACP account. The optional plugin connects that report to Paseo's Usage panel and requires Paseo 0.17.4 or later. It ships inside the main npm package at the same release version. The published 2.10.0 does not include this addition; use a subsequent published version that includes the plugin, following the release guide above.
+`paseo-agy-acp --usage` queries the ACP account independently of Paseo. On Paseo 0.17.4 or later, the optional plugin displays that report in the Usage panel. The adapter and plugin ship in the same npm package starting with 2.11.0; update both together if you use the panel. The managed kernel remains 1.5.2.
 
 <!-- readme:development -->
 ## Development

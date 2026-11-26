@@ -2,6 +2,20 @@
 
 All notable changes to `paseo-agy-acp` are recorded here.
 
+## 2.11.0 - 2026-11-26
+
+### Added
+
+- Query the signed-in ACP account with `paseo-agy-acp --usage`, independently of Antigravity CLI sign-in and without requesting model generation.
+- Bundle an optional Usage panel plugin for Paseo 0.17.4 or later. Show the quota windows reported by ACP and leave unavailable values unknown.
+- Probe adapter quota capability before requesting usage. An older adapter remains available for ordinary ACP use and receives no quota command.
+- Validate plugin contents in the release tarball. Document installation, upgrades, rollback, and isolated acceptance.
+
+### Upgrade
+
+- Update the adapter and optional plugin together. An existing ACP login can be reused. The managed kernel remains 1.5.2.
+- Thanks to [@maomomo-eth](https://github.com/maomomo-eth) for [PR #25](https://github.com/tiezbro/paseo-agy-acp/pull/25).
+
 ## 2.10.0 - 2026-11-22
 
 ### Changed

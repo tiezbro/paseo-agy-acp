@@ -1,6 +1,6 @@
 {
   "name": "paseo-agy-acp",
-  "version": "2.10.0",
+  "version": "2.11.0",
   "description": "Paseo ACP adapter for the official Google Antigravity kernel with daemon context, skills and protocol compatibility",
   "type": "module",
   "author": {

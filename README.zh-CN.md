@@ -2,7 +2,7 @@
 
 [English](./README.md) | [中文](./README.zh-CN.md) | [Changelog](./CHANGELOG.md)
 
-`paseo-agy-acp` 把 Google 官方 Antigravity ACP 内核接入现有 Paseo。适配器包版本为 `2.10.0`，内核基准是官方 `agy_acp_server` 1.5.2，Linux 托管安装使用兼容层。只需安装本包，在 Paseo 中配置一个 ACP provider，即可使用，无需修改 Paseo。
+`paseo-agy-acp` 把 Google 官方 Antigravity ACP 内核接入现有 Paseo。适配器包版本为 `2.11.0`，内核基准是官方 `agy_acp_server` 1.5.2，Linux 托管安装使用兼容层。只需安装本包，在 Paseo 中配置一个 ACP provider，即可使用，无需修改 Paseo。
 
 <!-- readme:positioning -->
 ## 产品定位
@@ -84,7 +84,7 @@ Paseo → ACP / NDJSON → paseo-agy-acp → agy_acp_server 1.5.2 → Google
 在运行 Paseo daemon 的主机上，从本版本的 npm 包安装。若手头是源码，可按“开发验证”中的命令生成同名安装包。
 
 ```bash
-npm install --global ./paseo-agy-acp-2.10.0.tgz
+npm install --global ./paseo-agy-acp-2.11.0.tgz
 paseo-agy-acp --doctor
 paseo-agy-acp --prepare-kernel
 paseo-agy-acp --login
@@ -147,7 +147,7 @@ paseo-agy-acp --login
 - [ACP 账号额度查询与可选 Paseo 面板插件](docs/operations/paseo-quota.md)
 - [插件随 Release 发布、安装与升级](docs/operations/plugin-releases.md)
 
-源码中的 `--usage` 可独立查询 ACP 账号额度；接入 Paseo「使用情况」面板才需要配套插件和 Paseo 0.17.4 或更新版本。插件随主 npm 包交付，使用相同发布版本。当前公开的 2.10.0 不包含本次新增功能，安装命令应使用后续实际发布并包含插件的版本，详见上方发布说明。
+`paseo-agy-acp --usage` 可独立查询 ACP 账号额度，无需安装 Paseo 插件。接入「使用情况」面板需要 Paseo 0.17.4 或更新版本。自 2.11.0 起，适配器和插件随同一个 npm 包发布；使用面板时请同时升级两者。托管内核仍为 1.5.2。
 
 <!-- readme:development -->
 ## 开发验证

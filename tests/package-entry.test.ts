@@ -15,7 +15,7 @@ describe("published package entry", () => {
     });
     expect(result.status).toBe(0);
     expect(result.stderr).toBe("");
-    expect(JSON.parse(result.stdout)).toEqual({ name: "paseo-agy-acp", version: "2.10.0", capabilities: { accountQuota: 1 } });
+    expect(JSON.parse(result.stdout)).toEqual({ name: "paseo-agy-acp", version: "2.11.0", capabilities: { accountQuota: 1 } });
   });
   it("imports from the built package layout", () => {
     const result = spawnSync(
@@ -56,7 +56,7 @@ describe("published package entry", () => {
     if ("timeout" in result) child.kill("SIGKILL");
 
     expect(result).toEqual({ code: 0, signal: null });
-    expect(stdout).toBe("2.10.0\n");
+    expect(stdout).toBe("2.11.0\n");
     expect(stderr).toBe("");
   });
 });
