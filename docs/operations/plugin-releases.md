@@ -17,6 +17,8 @@
 
 当前插件默认从 daemon 的 `PATH` 启动 `paseo-agy-acp`，也接受 provider 的 `command` 覆盖。它尚未自动定位插件安装包内的适配器，因此插件和全局适配器必须同步安装或升级；仅更新插件不会更新全局命令。若配置了源码路径，必须构建并验收该路径对应的源码版本。包内适配器自动定位属于后续改进。
 
+插件会通过旧版也能安全退出的 `--version --capabilities` 组合参数验证 `accountQuota: 1` 能力。升级错配会提示实际需要升级的 daemon PATH 命令或 provider 脚本路径，并阻止后续 `--usage`；不会把旧入口意外启动成普通 ACP。预检错误、未知能力和超时同样阻断。
+
 ## 用户从发布版本安装
 
 先从 [GitHub Releases](https://github.com/tiezbro/paseo-agy-acp/releases) 选定包含插件的版本，并确认该版本的 npm 发布已经成功。在 daemon 主机上执行，保持与现有 provider 一致的账号环境：

@@ -18,7 +18,10 @@ const packageJson = require(
 const version = packageJson.version ?? "0.0.0";
 
 if (argv.includes("--version")) {
-  process.stdout.write(`${version}\n`);
+  // 保留旧版已支持的退出开关，让能力探测不会落入普通 ACP 启动。
+  process.stdout.write(argv.includes("--capabilities")
+    ? `${JSON.stringify({ name: "paseo-agy-acp", version, capabilities: { accountQuota: 1 } })}\n`
+    : `${version}\n`);
 } else if (argv.includes("--doctor") || argv.includes("--prepare-kernel")) {
   try {
     resolveAcpKernel(process.env, argv);

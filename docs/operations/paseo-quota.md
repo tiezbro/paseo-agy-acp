@@ -21,6 +21,14 @@ node "dist/ACP Connector/main.js" --usage
 
 查询创建独立短会话，不会占用正在工作的 agent，也不会把 `/usage` 加进业务对话。内核可能保留自己的短会话记录，并按原有机制刷新令牌。查询只在内核先声明支持 `/usage` 后发送该命令，不支持时直接失败。
 
+## 适配器升级预检
+
+插件每次刷新前，会对实际解析的适配器执行 `--version --capabilities`，仅在返回 `name: "paseo-agy-acp"` 和 `capabilities.accountQuota: 1` 时继续查询。provider 可用性探测也复用此检查。这个能力标记与版本号分开，避免把尚未发布的源码版本误判成已发布的同号旧包。
+
+已发布的 2.10.0 认识 `--version`，会打印纯版本号并退出，不会因这个组合参数进入普通 ACP 启动。纯文本、畸形 JSON、不支持的能力版本、退出错误和超时都会中止预检，不再发送 `--usage`。不单独向旧版发送新探测开关。
+
+错误提示会显示实际可执行文件或脚本路径，并根据目标 daemon 配置区分 `daemon PATH` 和 provider 指定的 `command`。应升级提示中的适配器；只更新插件或另一台主机上的全局命令无效。预检不会回显其他命令行参数或环境变量。
+
 ## 接入 Paseo 面板
 
 发布版建议安装同版本主包中的插件子目录；先安装并准备主适配器，具体命令见 [发布版安装](plugin-releases.md#用户从发布版本安装)。本地源码开发时，在目标 daemon 上启用插件后，从源码目录安装配套插件：
@@ -59,5 +67,9 @@ npm --prefix plugins/paseo-agy-acp test
 ```
 
 配套插件测试使用 Node 22.6 及更新版本的类型擦除功能。协议测试验证只发送 `initialize`、`session/new`、`session/prompt`，且 prompt 精确为 `/usage`；未声明命令、认证错误和超时都会失败。插件测试验证 ACP 与 CLI 目录隔离及启动环境传递。
+
+安装产物的真实验收使用 `node scripts/verify-paseo-quota-install.mjs --live`。先构建，使用原版 Paseo CLI 0.17.4 和已有 ACP 登录运行；脚本创建独立 daemon，把实际 tarball 经 npm 安装后再加载其中的插件，同时安装已发布 2.10.0 验证 PATH 和 provider 路径错配。它检查普通内核启动标记始终未生成，并将匹配版本的四个额度窗口与同环境的直接 ACP 查询比较。结束后停止隔离 daemon，并脱敏临时配置中的环境值；不自动运行于无账号的 CI，也不修改生产 daemon。
+
+本次实际安装路径、产物校验值与结果见 [2026-11-26 安装验收记录](2026-11-26-acp-quota-install-acceptance.md)。
 
 Paseo 的接口依据：[provider 插件](https://paseo.sh/docs/plugins/providers.md)和[额度来源注册](https://paseo.sh/docs/plugins/reference.md#usage-sources)。
