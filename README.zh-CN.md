@@ -92,7 +92,7 @@ paseo-agy-acp --login
 
 `--doctor` 检查本机安装，`--prepare-kernel` 按需下载固定版本内核。登录使用个人 Google OAuth。无桌面主机可以在另一台设备的浏览器里授权，再把 localhost 回调地址粘贴回 daemon 主机的登录终端。
 
-把下面的 provider 合并到 `~/.paseo/config.json` 的 `agents.providers` 中。如果 daemon 的 `PATH` 找不到可执行文件，请将 `command` 中的值换成该文件的绝对路径。
+若只需配置基础 provider，把下面的示例合并到 `~/.paseo/config.json` 的 `agents.providers` 中。若要在 Paseo 显示用量，按下方的插件步骤配置。如果 daemon 的 `PATH` 找不到可执行文件，请将 `command` 中的值换成该文件的绝对路径。
 
 ```json
 {
@@ -110,6 +110,54 @@ paseo-agy-acp --login
 ```
 
 配置对新启动的 agent 生效。在 Paseo 创建会话时选择 **Antigravity Pro**。
+
+### 在 Paseo 显示 ACP 用量
+
+配套插件在 Paseo「使用情况」中显示当前 ACP 登录账号的 Gemini 和 Claude/GPT 周额度与 5 小时额度。此功能要求 Paseo 0.17.4 或更新版本，适配器和插件须使用相同版本，从 2.11.0 开始支持。
+
+1. 在运行 Paseo daemon 的主机上安装适配器，并按需准备内核。已有 ACP 登录可以直接复用，新账号运行 `paseo-agy-acp --login` 登录。
+
+   ```bash
+   npm install --global paseo-agy-acp@2.11.0
+   paseo-agy-acp --prepare-kernel
+   ```
+
+   在终端运行 `paseo-agy-acp --usage` 验证额度。若 provider 设置了 `GEMINI_HOME` 或 `PASEO_AGY_ACP_OFFICIAL_BIN`，查询时沿用相同的值。这个命令可以独立于插件运行。
+
+2. 在目标 daemon 的「设置 → 插件」中开启「启用插件」，再在该主机上安装同一 npm 版本中的配套插件。
+
+   ```bash
+   paseo plugin install npm:paseo-agy-acp@2.11.0:plugins/paseo-agy-acp
+   ```
+
+3. 若 `~/.paseo/config.json` 已有 `agents.providers["paseo-agy-acp"]`，删除该条目中的 `extends` 和 `kind`，由插件注册 provider。保留现有的 `command`、`env` 和其他覆盖配置。下面是覆盖插件默认配置的最小示例。如果 daemon 的 `PATH` 找不到 `paseo-agy-acp`，在 `command` 中填写已安装的可执行文件的绝对路径。
+
+   ```json
+   {
+     "agents": {
+       "providers": {
+         "paseo-agy-acp": {
+           "enabled": true,
+           "label": "Antigravity Pro",
+           "command": ["paseo-agy-acp"]
+         }
+       }
+     }
+   }
+   ```
+
+   如果 daemon 的 `PATH` 能找到适配器，且无需自定义设置，直接使用插件默认配置即可。
+
+4. 重载配置并确认插件为 `running`。在 Paseo 打开该主机的「使用情况」，刷新 **Antigravity ACP** 卡片。
+
+   ```bash
+   paseo reload --json
+   paseo plugin ls paseo-agy-acp --json
+   ```
+
+![Paseo「使用情况」中 Antigravity ACP 的周额度和 5 小时额度](./docs/images/paseo-acp-usage-panel.png)
+
+升级时请为适配器和插件选择同一版本。自定义安装和故障排查见 [ACP 额度指南](docs/operations/paseo-quota.md)。
 
 <!-- readme:configuration -->
 ## 配置
@@ -146,8 +194,6 @@ paseo-agy-acp --login
 - [npm 发布](docs/operations/npm-publishing.md)
 - [ACP 账号额度查询与可选 Paseo 面板插件](docs/operations/paseo-quota.md)
 - [插件随 Release 发布、安装与升级](docs/operations/plugin-releases.md)
-
-`paseo-agy-acp --usage` 可独立查询 ACP 账号额度，无需安装 Paseo 插件。接入「使用情况」面板需要 Paseo 0.17.4 或更新版本。自 2.11.0 起，适配器和插件随同一个 npm 包发布；使用面板时请同时升级两者。托管内核仍为 1.5.2。
 
 <!-- readme:development -->
 ## 开发验证

@@ -31,7 +31,7 @@ node "dist/ACP Connector/main.js" --usage
 
 ## 接入 Paseo 面板
 
-发布版建议安装同版本主包中的插件子目录；先安装并准备主适配器，具体命令见 [发布版安装](plugin-releases.md#用户从发布版本安装)。本地源码开发时，在目标 daemon 上启用插件后，从源码目录安装配套插件：
+使用 npm 发布版时，按[中文 README 的面板配置步骤](../../README.zh-CN.md#在-paseo-显示-acp-用量)安装插件、迁移 provider 并重载配置。安装及升级细节见[发布版安装](plugin-releases.md#用户从发布版本安装)。本地源码开发时，在目标 daemon 上启用插件后，从源码目录安装配套插件。
 
 ```bash
 paseo plugin install /absolute/path/to/paseo-agy-acp/plugins/paseo-agy-acp
@@ -54,6 +54,8 @@ paseo plugin install /absolute/path/to/paseo-agy-acp/plugins/paseo-agy-acp
 仅当已有 ACP 登录使用了独立 `GEMINI_HOME` 时填写该变量；默认账号可省略 `env`。保留实际使用的内核路径和其他环境设置。已有同名自定义 provider 配置应移除 `kind`、`extends` 字段，让插件注册 provider；保留 `command`、`env`、模型等所需配置。无需修改 Paseo 内置 `antigravity` provider。
 
 用 `paseo reload --json` 加载 provider 配置，用 `paseo plugin ls` 确认插件运行。源文件更新后使用 `paseo plugin reload paseo-agy-acp`。打开「使用情况」，查看单独的 **Antigravity ACP** 卡片；刷新沿用相同的 provider 启动配置。
+
+![Paseo「使用情况」中 Antigravity ACP 的周额度和 5 小时额度](../images/paseo-acp-usage-panel.png)
 
 从 npm 安装适配器时，也可使用全局包内 `plugins/paseo-agy-acp` 的实际绝对路径安装，但它会被识别为目录来源，后续需手动更新适配器并 reload 插件。通过 npm 来源安装的插件由 `paseo plugin update` 管理。两种方式都需同步更新实际启动的适配器；仅查询额度不需要安装插件。
 

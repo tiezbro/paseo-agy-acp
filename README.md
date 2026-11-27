@@ -92,7 +92,7 @@ paseo-agy-acp --login
 
 `--doctor` checks the local installation. `--prepare-kernel` downloads the pinned kernel when needed. Sign in using personal Google OAuth. On a headless host, authorize in a browser on another device, then paste the localhost callback URL into the login terminal on the daemon host.
 
-Merge the provider below into `agents.providers` in `~/.paseo/config.json`. If the daemon cannot find the executable on its `PATH`, use its absolute path in `command`.
+For basic provider setup, merge the example below into `agents.providers` in `~/.paseo/config.json`. To display quota in Paseo, follow the plugin setup below. If the daemon cannot find the executable on its `PATH`, use its absolute path in `command`.
 
 ```json
 {
@@ -110,6 +110,54 @@ Merge the provider below into `agents.providers` in `~/.paseo/config.json`. If t
 ```
 
 The configuration applies to newly launched agents. Choose **Antigravity Pro** when creating a session in Paseo.
+
+### Show ACP quota in Paseo
+
+The optional plugin displays the signed-in ACP account's Gemini and Claude/GPT weekly and 5-hour quota in Paseo **Usage**. It requires Paseo 0.17.4 or later and a matching adapter and plugin version, starting with 2.11.0.
+
+1. On the Paseo daemon host, install the adapter and prepare the kernel if needed. Reuse your existing ACP sign-in or run `paseo-agy-acp --login` for a new account.
+
+   ```bash
+   npm install --global paseo-agy-acp@2.11.0
+   paseo-agy-acp --prepare-kernel
+   ```
+
+   Run `paseo-agy-acp --usage` to verify the ACP quota in the terminal. Use the same `GEMINI_HOME` and `PASEO_AGY_ACP_OFFICIAL_BIN` values as the provider if you set them. This command works independently of the plugin.
+
+2. Turn on **Enable plugins** under **Settings → Plugins** for the target daemon. On that host, install the plugin from the same npm release.
+
+   ```bash
+   paseo plugin install npm:paseo-agy-acp@2.11.0:plugins/paseo-agy-acp
+   ```
+
+3. If you already have an `agents.providers["paseo-agy-acp"]` entry in `~/.paseo/config.json`, remove its `extends` and `kind` fields so the plugin registers the provider. Keep any existing `command`, `env`, and other overrides. Here is a minimal example for overriding the plugin's provider settings. If your daemon cannot find `paseo-agy-acp` on its `PATH`, set `command` to the absolute path of the installed executable.
+
+   ```json
+   {
+     "agents": {
+       "providers": {
+         "paseo-agy-acp": {
+           "enabled": true,
+           "label": "Antigravity Pro",
+           "command": ["paseo-agy-acp"]
+         }
+       }
+     }
+   }
+   ```
+
+   If the daemon can find the adapter on its `PATH` and you have no overrides, the plugin's defaults are enough.
+
+4. Reload the configuration and check that the plugin is `running`. Open **Usage** for that host in Paseo and refresh the **Antigravity ACP** card.
+
+   ```bash
+   paseo reload --json
+   paseo plugin ls paseo-agy-acp --json
+   ```
+
+![Antigravity ACP weekly and 5-hour quota in Paseo's Usage panel](./docs/images/paseo-acp-usage-panel.png)
+
+Upgrade the adapter and plugin together. See the [ACP quota guide](docs/operations/paseo-quota.md) for custom installations and troubleshooting.
 
 <!-- readme:configuration -->
 ## Configuration
@@ -146,8 +194,6 @@ The adapter uses grouped `configOptions` and omits the legacy flat `models` cata
 - [Publish to npm](docs/operations/npm-publishing.md)
 - [ACP account quota and the optional Paseo usage plugin](docs/operations/paseo-quota.md)
 - [Release, install and update the companion plugin](docs/operations/plugin-releases.md)
-
-`paseo-agy-acp --usage` queries the ACP account independently of Paseo. On Paseo 0.17.4 or later, the optional plugin displays that report in the Usage panel. The adapter and plugin ship in the same npm package starting with 2.11.0; update both together if you use the panel. The managed kernel remains 1.5.2.
 
 <!-- readme:development -->
 ## Development
