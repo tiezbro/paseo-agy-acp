@@ -115,7 +115,12 @@ The configuration applies to newly launched agents. Choose **Antigravity Pro** w
 
 Following Paseo 0.17.6 ([PR #10953](https://github.com/getpaseo/paseo/pull/10953)) and Google's terms clarification in [antigravity-cli#1493](https://github.com/google-antigravity/antigravity-cli/issues/1493), the companion plugin no longer registers a background usage source in Paseo **Usage**. On consumer personal sign-in (`oauth-personal`), automated background polling via third-party harnesses can violate Google Antigravity Additional Terms §6 and put accounts at risk.
 
-To check ACP quota safely, send `/usage` manually inside an interactive session, or run `paseo-agy-acp --usage` on demand in a terminal (do not schedule it for background polling on consumer `oauth-personal` accounts). The optional plugin remains available if you want Paseo 0.17.4 or later to register the `paseo-agy-acp` provider.
+Typing `/usage` manually inside an interactive session and running `paseo-agy-acp --usage` in a terminal are distinct paths. The `--usage` CLI entry is retained only as a compatibility capability and is **not** a sanctioned or risk-free alternative for consumer `oauth-personal` accounts: it still creates a short-lived ACP session through this third-party adapter and sends `session/prompt` (`"/usage"`), which Google's clarification has not confirmed as permitted under consumer OAuth. Consumer `oauth-personal` users should prefer the official Antigravity usage interface.
+
+The optional plugin remains available if you want Paseo 0.17.4 or later to register the `paseo-agy-acp` provider. If you already installed the `2.11.0` plugin, updating the global CLI alone does **not** remove the old plugin's background usage source:
+
+- **Plugins installed from npm (`npm:...`)**: update the plugin with `paseo plugin update paseo-agy-acp --version <version>` (or remove it) and restart or reload as needed.
+- **Plugins installed from a local directory**: `paseo plugin update` does not manage directory plugins; update the plugin files in that directory first, then run `paseo plugin reload paseo-agy-acp` (or restart the daemon).
 
 1. On the Paseo daemon host, install the adapter and prepare the kernel if needed. Reuse your existing ACP sign-in or run `paseo-agy-acp --login` for a new account.
 
@@ -124,7 +129,7 @@ To check ACP quota safely, send `/usage` manually inside an interactive session,
    paseo-agy-acp --prepare-kernel
    ```
 
-   If you want to inspect the ACP quota manually in a terminal, run `paseo-agy-acp --usage` with the same `GEMINI_HOME` and `PASEO_AGY_ACP_OFFICIAL_BIN` values as the provider. This command works independently of the plugin.
+   As a compatibility entry independent of the plugin, `paseo-agy-acp --usage` can still be run on demand with the same `GEMINI_HOME` and `PASEO_AGY_ACP_OFFICIAL_BIN` values as the provider. Consumer `oauth-personal` accounts should prefer official Antigravity quota views and must not schedule `--usage` for background polling.
 
 2. If you want the companion plugin to register the provider, turn on **Enable plugins** under **Settings → Plugins** for the target daemon, then install the plugin from the same npm release.
 
@@ -157,7 +162,7 @@ To check ACP quota safely, send `/usage` manually inside an interactive session,
    paseo plugin ls paseo-agy-acp --json
    ```
 
-Upgrade the adapter and plugin together. See the [ACP quota and plugin guide](docs/operations/paseo-quota.md) for rationale, custom installations and troubleshooting.
+Upgrade the adapter and plugin together. See the [ACP quota and plugin guide](docs/operations/paseo-quota.md) for rationale, 2.11.0 upgrade steps, custom installations and troubleshooting.
 
 <!-- readme:configuration -->
 ## Configuration

@@ -115,7 +115,12 @@ paseo-agy-acp --login
 
 参照 Paseo 0.17.6（[PR #10953](https://github.com/getpaseo/paseo/pull/10953)）及 Google 官方维护者在 [antigravity-cli#1493](https://github.com/google-antigravity/antigravity-cli/issues/1493) 中的条款说明，配套插件已移除 Paseo「使用情况」中的后台自动用量数据源。消费级个人登录（`oauth-personal`）由第三方工具在后台自动轮询存在违反 Google Antigravity Additional Terms §6 并导致账号受限的风险。
 
-如需查看 ACP 账号额度，建议在交互会话中手动输入 `/usage`，或在终端按需手动运行 `paseo-agy-acp --usage`（消费级 `oauth-personal` 账号请勿配置为后台定时轮询）。配套插件仍可选用于通过 Paseo 0.17.4 或更新版本注册 `paseo-agy-acp` provider。
+在交互会话内手输 `/usage`，与在终端手动启动适配器 `paseo-agy-acp --usage` 是两条不同路径。`--usage` CLI 入口仅作为**兼容能力**保留，**不构成**消费级 `oauth-personal` 用户的合规或安全替代：它仍会由第三方适配器创建 ACP 短会话并发送 `session/prompt`（`"/usage"`），Google 的说明未确认这条路径在消费级 OAuth 下获准。消费级 `oauth-personal` 用户应优先使用官方 Antigravity 的用量入口。
+
+配套插件仍可选用于通过 Paseo 0.17.4 或更新版本注册 `paseo-agy-acp` provider。已安装 `2.11.0` 插件的用户请注意，**仅升级全局 CLI 不会移除旧插件中的后台用量源**：
+
+- **通过 npm 来源安装的插件（`npm:...`）**：必须同步执行 `paseo plugin update paseo-agy-acp --version <版本>`（或移除插件），并按需重载或重启 daemon。
+- **通过本地目录来源安装的插件**：不受 `paseo plugin update` 管理；必须先更新对应目录中的插件文件，再执行 `paseo plugin reload paseo-agy-acp`（或重启 daemon）。
 
 1. 在运行 Paseo daemon 的主机上安装适配器，并按需准备内核。已有 ACP 登录可以直接复用，新账号运行 `paseo-agy-acp --login` 登录。
 
@@ -124,7 +129,7 @@ paseo-agy-acp --login
    paseo-agy-acp --prepare-kernel
    ```
 
-   如需在终端按需手动查看额度，可运行 `paseo-agy-acp --usage`；若 provider 设置了 `GEMINI_HOME` 或 `PASEO_AGY_ACP_OFFICIAL_BIN`，查询时沿用相同的值。这个命令可以独立于插件运行。
+   作为独立于插件保留的兼容入口，`paseo-agy-acp --usage` 仍可在设置与 provider 相同的 `GEMINI_HOME` 和 `PASEO_AGY_ACP_OFFICIAL_BIN` 后于终端执行；消费级 `oauth-personal` 用户请优先使用官方 Antigravity 用量入口，且勿将其用于后台轮询。
 
 2. 若需要通过配套插件注册 provider，在目标 daemon 的「设置 → 插件」中开启「启用插件」，再在该主机上安装同一 npm 版本中的配套插件。
 
@@ -157,7 +162,7 @@ paseo-agy-acp --login
    paseo plugin ls paseo-agy-acp --json
    ```
 
-升级时请为适配器和插件选择同一版本。移除原因、自定义安装和故障排查见 [ACP 额度与插件说明](docs/operations/paseo-quota.md)。
+升级时请为适配器和插件选择同一版本。移除原因、2.11.0 升级步骤、自定义安装和故障排查见 [ACP 额度与插件说明](docs/operations/paseo-quota.md)。
 
 <!-- readme:configuration -->
 ## 配置
