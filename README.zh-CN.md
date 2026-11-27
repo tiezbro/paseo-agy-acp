@@ -92,7 +92,7 @@ paseo-agy-acp --login
 
 `--doctor` 检查本机安装，`--prepare-kernel` 按需下载固定版本内核。登录使用个人 Google OAuth。无桌面主机可以在另一台设备的浏览器里授权，再把 localhost 回调地址粘贴回 daemon 主机的登录终端。
 
-若只需配置基础 provider，把下面的示例合并到 `~/.paseo/config.json` 的 `agents.providers` 中。若要在 Paseo 显示用量，按下方的插件步骤配置。如果 daemon 的 `PATH` 找不到可执行文件，请将 `command` 中的值换成该文件的绝对路径。
+若只需配置基础 provider，把下面的示例合并到 `~/.paseo/config.json` 的 `agents.providers` 中。如需手动查询额度或使用可选插件注册 provider，见下方说明。如果 daemon 的 `PATH` 找不到可执行文件，请将 `command` 中的值换成该文件的绝对路径。
 
 ```json
 {
@@ -111,9 +111,11 @@ paseo-agy-acp --login
 
 配置对新启动的 agent 生效。在 Paseo 创建会话时选择 **Antigravity Pro**。
 
-### 在 Paseo 显示 ACP 用量
+### 手动查询 ACP 用量与可选 Paseo 插件
 
-配套插件在 Paseo「使用情况」中显示当前 ACP 登录账号的 Gemini 和 Claude/GPT 周额度与 5 小时额度。此功能要求 Paseo 0.17.4 或更新版本，适配器和插件须使用相同版本，从 2.11.0 开始支持。
+参照 Paseo 0.17.6（[PR #10953](https://github.com/getpaseo/paseo/pull/10953)）及 Google 官方维护者在 [antigravity-cli#1493](https://github.com/google-antigravity/antigravity-cli/issues/1493) 中的条款说明，配套插件已移除 Paseo「使用情况」中的后台自动用量数据源。消费级个人登录（`oauth-personal`）由第三方工具在后台自动轮询存在违反 Google Antigravity Additional Terms §6 并导致账号受限的风险。
+
+如需查看 ACP 账号额度，建议在交互会话中手动输入 `/usage`，或在终端按需手动运行 `paseo-agy-acp --usage`（消费级 `oauth-personal` 账号请勿配置为后台定时轮询）。配套插件仍可选用于通过 Paseo 0.17.4 或更新版本注册 `paseo-agy-acp` provider。
 
 1. 在运行 Paseo daemon 的主机上安装适配器，并按需准备内核。已有 ACP 登录可以直接复用，新账号运行 `paseo-agy-acp --login` 登录。
 
@@ -122,9 +124,9 @@ paseo-agy-acp --login
    paseo-agy-acp --prepare-kernel
    ```
 
-   在终端运行 `paseo-agy-acp --usage` 验证额度。若 provider 设置了 `GEMINI_HOME` 或 `PASEO_AGY_ACP_OFFICIAL_BIN`，查询时沿用相同的值。这个命令可以独立于插件运行。
+   如需在终端按需手动查看额度，可运行 `paseo-agy-acp --usage`；若 provider 设置了 `GEMINI_HOME` 或 `PASEO_AGY_ACP_OFFICIAL_BIN`，查询时沿用相同的值。这个命令可以独立于插件运行。
 
-2. 在目标 daemon 的「设置 → 插件」中开启「启用插件」，再在该主机上安装同一 npm 版本中的配套插件。
+2. 若需要通过配套插件注册 provider，在目标 daemon 的「设置 → 插件」中开启「启用插件」，再在该主机上安装同一 npm 版本中的配套插件。
 
    ```bash
    paseo plugin install npm:paseo-agy-acp@2.11.0:plugins/paseo-agy-acp
@@ -148,16 +150,14 @@ paseo-agy-acp --login
 
    如果 daemon 的 `PATH` 能找到适配器，且无需自定义设置，直接使用插件默认配置即可。
 
-4. 重载配置并确认插件为 `running`。在 Paseo 打开该主机的「使用情况」，刷新 **Antigravity ACP** 卡片。
+4. 重载配置并确认插件为 `running`。
 
    ```bash
    paseo reload --json
    paseo plugin ls paseo-agy-acp --json
    ```
 
-![Paseo「使用情况」中 Antigravity ACP 的周额度和 5 小时额度](./docs/images/paseo-acp-usage-panel.png)
-
-升级时请为适配器和插件选择同一版本。自定义安装和故障排查见 [ACP 额度指南](docs/operations/paseo-quota.md)。
+升级时请为适配器和插件选择同一版本。移除原因、自定义安装和故障排查见 [ACP 额度与插件说明](docs/operations/paseo-quota.md)。
 
 <!-- readme:configuration -->
 ## 配置
@@ -192,7 +192,7 @@ paseo-agy-acp --login
 - [分组模型的真实账号验收](docs/operations/2026-11-22-grouped-model-acceptance.md)
 - [跨主机验收](docs/operations/paseo-cross-host-e2e.md)
 - [npm 发布](docs/operations/npm-publishing.md)
-- [ACP 账号额度查询与可选 Paseo 面板插件](docs/operations/paseo-quota.md)
+- [手动查询 ACP 账号额度与可选 Paseo 插件](docs/operations/paseo-quota.md)
 - [插件随 Release 发布、安装与升级](docs/operations/plugin-releases.md)
 
 <!-- readme:development -->

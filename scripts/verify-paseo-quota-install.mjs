@@ -6,8 +6,8 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { acpEnvironment, commandEnvironment, quotaScratch } from "./quota-install-environment.mjs";
 
-// 显式真实验收：独立 daemon、真实 npm 安装产物和现有 ACP 登录；不发送生成请求。
-assert(process.argv.includes("--live"), "真实额度验收需显式传入 --live；会读取现有 ACP 登录并访问额度服务");
+// 显式真实验收：独立 daemon、真实 npm 安装产物和现有 ACP 登录；验证插件不触发后台自动用量刷新，并单独验证手动 --usage。
+assert(process.argv.includes("--live"), "真实额度验收需显式传入 --live；会读取现有 ACP 登录并手动访问额度服务");
 const root = fileURLToPath(new URL("../", import.meta.url));
 const cli = process.env.PASEO_QUOTA_CLI || "paseo";
 let started = false;
@@ -32,7 +32,6 @@ function run(command, args, env = transport) {
   }
 }
 function check(value, safeCode) { if (!value) { const error = new Error(safeCode); error.safeCode = safeCode; throw error; } }
-assert.equal(run(cli, ["--version"]).trim(), "0.17.4", "本验收要求原版 Paseo 0.17.4");
 const originalHome = process.env.PASEO_QUOTA_SOURCE_HOME || process.env.PASEO_HOME || path.join(process.env.HOME, ".paseo");
 const original = JSON.parse(readFileSync(path.join(originalHome, "config.json"), "utf8"));
 // provider 独有的代理等必要网络设置只合并到子进程内存，不写入配置。
@@ -69,16 +68,18 @@ function save() {
   assert(Object.keys(config.agents.providers["paseo-agy-acp"].env).every(key => ["HOME", "USERPROFILE", "GEMINI_HOME", "PASEO_AGY_ACP_OFFICIAL_BIN", "PASEO_HOME"].includes(key)));
   writeFileSync(configPath, JSON.stringify(config, null, 2) + "\n", { encoding: "utf8", mode: 0o600 });
 }
-function usage() {
+function refreshUsageWithoutAcpSource() {
   const before = readFileSync(trace, "utf8").trim().split("\n").filter(Boolean).length;
   const data = JSON.parse(run(cli, ["usage", "ls", "--refresh", "--json"], daemonEnv));
   const calls = readFileSync(trace, "utf8").trim().split("\n").filter(Boolean).slice(before).map(line => JSON.parse(line));
-  const reports = Array.isArray(data) ? data : data.reports || data.data;
-  const own = reports.find(report => report.sourceLabel === "Antigravity ACP");
-  check(own, "quota-source-missing");
-  return { ...own.report, probeCalls: calls };
+  const reports = Array.isArray(data) ? data : data.reports || data.data || [];
+  const own = reports.find(report => report.sourceLabel === "Antigravity ACP" || report.sourceId === "acp-quota");
+  check(!own, "unexpected-background-usage-source");
+  check(!calls.some(args => args.includes("--usage")), "unexpected-background-usage-call");
+  return calls;
 }
-const result = { passed: false, stage: "start", paseo: "0.17.4", adapterVersion: version, tarballSha256: createHash("sha256").update(readFileSync(tarball)).digest("hex"), pluginPath: plugin, cases: [] };
+const cliVersion = run(cli, ["--version"]).trim();
+const result = { passed: false, stage: "start", paseo: cliVersion, adapterVersion: version, tarballSha256: createHash("sha256").update(readFileSync(tarball)).digest("hex"), pluginPath: plugin, cases: [] };
 try {
   save();
   run(cli, ["daemon", "start", "--home", daemonHome], daemonEnv); started = true;
@@ -90,42 +91,29 @@ try {
   result.stage = "old-PATH-ordinary-ACP";
   const pathDiagnostic = JSON.parse(run(cli, ["provider", "diagnostic", "paseo-agy-acp", "--json"], daemonEnv));
   assert.match(pathDiagnostic.diagnostic, /Status: Ready/);
-  result.stage = "old-PATH-quota";
-  const fromPath = usage();
-  check(fromPath.status === "error", "old-PATH-quota-not-error");
-  check(/daemon PATH/.test(fromPath.error), "old-PATH-diagnostic-kind"); check(fromPath.error.includes(old), "old-PATH-diagnostic-location");
-  const pathCalls = fromPath.probeCalls;
-  result.pathLaunchKinds = pathCalls.map(args => args.includes("--usage") ? "unsafe-usage" : args.includes("--version") ? (args.includes("--capabilities") ? "capability-probe" : "version-probe") : "ordinary");
-  // 原版 Paseo 自身也会读 --version；两种调用都必须是旧入口可安全退出的精确参数。
-  const safeProbe = args => [JSON.stringify(["--version"]), JSON.stringify(["--version", "--capabilities"])].includes(JSON.stringify(args));
-  check(pathCalls.some(args => args.includes("--capabilities")), "old-PATH-no-recorded-probe"); check(pathCalls.every(safeProbe), "old-PATH-unexpected-launch");
-  result.cases.push({ name: "published-2.10.0-from-daemon-PATH", ordinaryAcpReady: true, quotaBlocked: true, quotaStartedOrdinaryKernel: false });
+  result.stage = "no-background-usage-from-PATH";
+  refreshUsageWithoutAcpSource();
+  result.cases.push({ name: "published-2.10.0-from-daemon-PATH", ordinaryAcpReady: true, backgroundUsageRemoved: true });
   config.agents.providers["paseo-agy-acp"].command = [process.execPath, legacyCommand];
   result.stage = "old-provider-ordinary-ACP";
   config.agents.providers["paseo-agy-acp"].env = { ...acpPaths, PASEO_HOME: daemonHome };
   save(); run(cli, ["reload", "--json"], daemonEnv);
   const overrideDiagnostic = JSON.parse(run(cli, ["provider", "diagnostic", "paseo-agy-acp", "--json"], daemonEnv));
   assert.match(overrideDiagnostic.diagnostic, /Status: Ready/);
-  result.stage = "old-provider-quota";
-  const fromOverride = usage();
-  assert.equal(fromOverride.status, "error");
-  assert.match(fromOverride.error, /provider 指定/); assert(fromOverride.error.includes(legacyCommand));
-  const overrideCalls = fromOverride.probeCalls;
-  assert(overrideCalls.some(args => args.includes("--capabilities"))); assert(overrideCalls.every(safeProbe), "额度刷新误启普通 ACP");
-  result.cases.push({ name: "published-2.10.0-provider-command", ordinaryAcpReady: true, quotaBlocked: true, quotaStartedOrdinaryKernel: false });
+  result.stage = "no-background-usage-from-provider-command";
+  refreshUsageWithoutAcpSource();
+  result.cases.push({ name: "published-2.10.0-provider-command", ordinaryAcpReady: true, backgroundUsageRemoved: true });
   config.agents.providers["paseo-agy-acp"].command = [process.execPath, entry];
-  result.stage = "matching-ACP-quota";
+  result.stage = "matching-provider-and-manual-usage";
   config.agents.providers["paseo-agy-acp"].env = { ...acpPaths, PASEO_HOME: daemonHome };
   save(); run(cli, ["reload", "--json"], daemonEnv);
-  const matched = usage();
-  assert.equal(matched.status, "available"); assert.equal(matched.windows.length, 4);
+  const matchedDiagnostic = JSON.parse(run(cli, ["provider", "diagnostic", "paseo-agy-acp", "--json"], daemonEnv));
+  assert.match(matchedDiagnostic.diagnostic, /Status: Ready/);
+  refreshUsageWithoutAcpSource();
   const direct = JSON.parse(run(process.execPath, [entry, "--usage"], acpEnv));
   assert.equal(direct.status, "available");
   const normalize = report => report.windows.map(({ id, remainingPct, resetsAt }) => ({ id, remainingPct, resetsAt }));
-  assert.deepEqual(normalize(matched), normalize(direct));
-  result.cases.push({ name: "installed-matching-adapter-and-ACP-account", windows: normalize(matched), matchesDirectAcp: true });
-  const daemonStatus = JSON.parse(run(cli, ["daemon", "status", "--json"], daemonEnv));
-  assert.equal(daemonStatus.daemonVersion, "0.17.4");
+  result.cases.push({ name: "installed-matching-adapter-and-manual-usage", ordinaryAcpReady: true, backgroundUsageRemoved: true, windows: normalize(direct) });
   result.stage = "complete"; result.passed = true;
 } catch (error) {
   result.passed = false; result.error = "验收失败；不保存原始命令输出、环境或账号路径"; result.failureCode = error.safeCode || "assertion-failed"; process.exitCode = 1;

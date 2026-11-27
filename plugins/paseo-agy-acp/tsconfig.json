@@ -3,5 +3,5 @@
     "target": "ES2022", "module": "NodeNext", "moduleResolution": "NodeNext",
     "strict": true, "skipLibCheck": true, "types": ["node"], "noEmit": true
   },
-  "include": ["index.server.ts", "server/**/*.ts"]
+  "include": ["index.server.ts"]
 }

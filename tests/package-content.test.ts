@@ -34,9 +34,9 @@ describe("published package content", () => {
       "plugins/paseo-agy-acp/paseo-plugin.json",
       "plugins/paseo-agy-acp/package.json",
       "plugins/paseo-agy-acp/index.server.ts",
-      "plugins/paseo-agy-acp/server/usage.ts",
       "plugins/paseo-agy-acp/OVERVIEW.md"
     ]));
+    expect(packedPaths).not.toContain("plugins/paseo-agy-acp/server/usage.ts");
 
     const prohibited = packedPaths.filter((entry) => (
       /(^|\/)node_modules(?:\/|$)/i.test(entry) ||
@@ -88,6 +88,6 @@ function isExpectedPublishedPath(entry: string): boolean {
     entry === "LICENSE" ||
     entry === "scripts/prepare-official-kernel-compat.mjs" ||
     entry === "assets/official-kernel-compat/rc01/paseo_model_compat.py" ||
-    /^plugins\/paseo-agy-acp\/(?:paseo-plugin\.json|package\.json|index\.server\.ts|server\/usage\.ts|OVERVIEW\.md)$/.test(entry) ||
+    /^plugins\/paseo-agy-acp\/(?:paseo-plugin\.json|package\.json|index\.server\.ts|OVERVIEW\.md)$/.test(entry) ||
     /^dist\/ACP Connector\/.+\.(?:js|d\.ts|js\.map)$/.test(entry);
 }

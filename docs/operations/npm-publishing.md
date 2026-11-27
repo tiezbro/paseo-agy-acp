@@ -51,9 +51,9 @@ The tag push automatically runs the npm workflow. That workflow:
 - requires the tag to match `package.json` exactly;
 - requires the tagged commit to be contained in `main`;
 - installs dependencies and runs the complete validation suite;
-- installs the companion plugin's locked development dependencies and requires its typecheck and account-isolation tests to pass;
+- installs the companion plugin's locked development dependencies and requires its typecheck and provider registration tests to pass;
 - builds one npm tarball and rejects packaged `.par`, database, or SQLite files;
-- requires the plugin manifest, package metadata, entry, usage source and overview in that tarball;
+- requires the plugin manifest, package metadata, entry and overview in that tarball;
 - uploads the tarball and its content manifest as a 30-day Actions artifact;
 - publishes that exact tarball with public access and npm provenance.
 
@@ -71,7 +71,7 @@ different content under the same version. If the workflow fails before
 npm already contains the version, verify its provenance and tarball instead of
 publishing again.
 
-## Companion ACP quota plugin
+## Companion Paseo plugin
 
 The optional Paseo plugin ships in the same `paseo-agy-acp` npm artifact under
 `plugins/paseo-agy-acp`. It uses the main package version; do not publish the

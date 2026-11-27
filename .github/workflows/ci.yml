@@ -102,7 +102,7 @@ jobs:
         run: npm run test:paseo-provider
 
   quota-plugin:
-    name: ACP quota plugin (${{ matrix.os }})
+    name: Companion Paseo plugin (${{ matrix.os }})
     strategy:
       fail-fast: false
       matrix:
@@ -120,11 +120,11 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: plugins/paseo-agy-acp/package-lock.json
-      - name: Install quota plugin development dependencies
+      - name: Install companion plugin development dependencies
         run: npm ci --prefix plugins/paseo-agy-acp --ignore-scripts
-      - name: Typecheck quota plugin
+      - name: Typecheck companion plugin
         run: npm --prefix plugins/paseo-agy-acp run typecheck
-      - name: Test ACP account isolation and usage refresh
+      - name: Test companion plugin provider registration
         run: npm --prefix plugins/paseo-agy-acp test
 
   repository-redaction:
