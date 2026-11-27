@@ -571,7 +571,7 @@ describe("official kernel proxy", () => {
       );
       const initialized = await collected.waitFor((message) => "id" in message && message.id === 1);
       expect(initialized).toMatchObject({
-        result: { agentInfo: { name: "agy-acp", version: "2.11.0" } }
+        result: { agentInfo: { name: "agy-acp", version: "2.11.1" } }
       });
     } finally {
       child.stdin.end();
