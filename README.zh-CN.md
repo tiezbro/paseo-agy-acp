@@ -2,7 +2,7 @@
 
 [English](./README.md) | [中文](./README.zh-CN.md) | [Changelog](./CHANGELOG.md)
 
-`paseo-agy-acp` 把 Google 官方 Antigravity ACP 内核接入现有 Paseo。适配器包版本为 `2.11.0`，内核基准是官方 `agy_acp_server` 1.5.2，Linux 托管安装使用兼容层。只需安装本包，在 Paseo 中配置一个 ACP provider，即可使用，无需修改 Paseo。
+`paseo-agy-acp` 把 Google 官方 Antigravity ACP 内核接入现有 Paseo。适配器包版本为 `2.11.1`，内核基准是官方 `agy_acp_server` 1.5.2，Linux 托管安装使用兼容层。只需安装本包，在 Paseo 中配置一个 ACP provider，即可使用，无需修改 Paseo。
 
 <!-- readme:positioning -->
 ## 产品定位
@@ -84,7 +84,7 @@ Paseo → ACP / NDJSON → paseo-agy-acp → agy_acp_server 1.5.2 → Google
 在运行 Paseo daemon 的主机上，从本版本的 npm 包安装。若手头是源码，可按“开发验证”中的命令生成同名安装包。
 
 ```bash
-npm install --global ./paseo-agy-acp-2.11.0.tgz
+npm install --global ./paseo-agy-acp-2.11.1.tgz
 paseo-agy-acp --doctor
 paseo-agy-acp --prepare-kernel
 paseo-agy-acp --login
@@ -125,7 +125,7 @@ paseo-agy-acp --login
 1. 在运行 Paseo daemon 的主机上安装适配器，并按需准备内核。已有 ACP 登录可以直接复用，新账号运行 `paseo-agy-acp --login` 登录。
 
    ```bash
-   npm install --global paseo-agy-acp@2.11.0
+   npm install --global paseo-agy-acp@2.11.1
    paseo-agy-acp --prepare-kernel
    ```
 
@@ -134,7 +134,7 @@ paseo-agy-acp --login
 2. 若需要通过配套插件注册 provider，在目标 daemon 的「设置 → 插件」中开启「启用插件」，再在该主机上安装同一 npm 版本中的配套插件。
 
    ```bash
-   paseo plugin install npm:paseo-agy-acp@2.11.0:plugins/paseo-agy-acp
+   paseo plugin install npm:paseo-agy-acp@2.11.1:plugins/paseo-agy-acp
    ```
 
 3. 若 `~/.paseo/config.json` 已有 `agents.providers["paseo-agy-acp"]`，删除该条目中的 `extends` 和 `kind`，由插件注册 provider。保留现有的 `command`、`env` 和其他覆盖配置。下面是覆盖插件默认配置的最小示例。如果 daemon 的 `PATH` 找不到 `paseo-agy-acp`，在 `command` 中填写已安装的可执行文件的绝对路径。

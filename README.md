@@ -2,7 +2,7 @@
 
 [English](./README.md) | [中文](./README.zh-CN.md) | [Changelog](./CHANGELOG.md)
 
-`paseo-agy-acp` connects an existing Paseo installation to the official Google Antigravity ACP kernel. The adapter package is `2.11.0` and its reference kernel is official `agy_acp_server` 1.5.2 with the managed Linux compatibility layer. Install this package and configure a custom ACP provider in Paseo. No Paseo code changes are required.
+`paseo-agy-acp` connects an existing Paseo installation to the official Google Antigravity ACP kernel. The adapter package is `2.11.1` and its reference kernel is official `agy_acp_server` 1.5.2 with the managed Linux compatibility layer. Install this package and configure a custom ACP provider in Paseo. No Paseo code changes are required.
 
 <!-- readme:positioning -->
 ## Purpose
@@ -84,7 +84,7 @@ The kernel stores session history. The adapter has no scheduling database or run
 On the host running the Paseo daemon, install the npm package for this version. If you have the source checkout, the Development section shows how to produce the same package file.
 
 ```bash
-npm install --global ./paseo-agy-acp-2.11.0.tgz
+npm install --global ./paseo-agy-acp-2.11.1.tgz
 paseo-agy-acp --doctor
 paseo-agy-acp --prepare-kernel
 paseo-agy-acp --login
@@ -119,13 +119,13 @@ Typing `/usage` manually inside an interactive session and running `paseo-agy-ac
 
 The optional plugin remains available if you want Paseo 0.17.4 or later to register the `paseo-agy-acp` provider. If you already installed the `2.11.0` plugin, updating the global CLI alone does **not** remove the old plugin's background usage source:
 
-- **Plugins installed from npm (`npm:...`)**: update the plugin with `paseo plugin update paseo-agy-acp --version <version>` (or remove it) and restart or reload as needed.
+- **Plugins installed from npm (`npm:...`)**: update the plugin with `paseo plugin update paseo-agy-acp --version 2.11.1` (or remove it) and restart or reload as needed.
 - **Plugins installed from a local directory**: `paseo plugin update` does not manage directory plugins; update the plugin files in that directory first, then run `paseo plugin reload paseo-agy-acp` (or restart the daemon).
 
 1. On the Paseo daemon host, install the adapter and prepare the kernel if needed. Reuse your existing ACP sign-in or run `paseo-agy-acp --login` for a new account.
 
    ```bash
-   npm install --global paseo-agy-acp@2.11.0
+   npm install --global paseo-agy-acp@2.11.1
    paseo-agy-acp --prepare-kernel
    ```
 
@@ -134,7 +134,7 @@ The optional plugin remains available if you want Paseo 0.17.4 or later to regis
 2. If you want the companion plugin to register the provider, turn on **Enable plugins** under **Settings → Plugins** for the target daemon, then install the plugin from the same npm release.
 
    ```bash
-   paseo plugin install npm:paseo-agy-acp@2.11.0:plugins/paseo-agy-acp
+   paseo plugin install npm:paseo-agy-acp@2.11.1:plugins/paseo-agy-acp
    ```
 
 3. If you already have an `agents.providers["paseo-agy-acp"]` entry in `~/.paseo/config.json`, remove its `extends` and `kind` fields so the plugin registers the provider. Keep any existing `command`, `env`, and other overrides. Here is a minimal example for overriding the plugin's provider settings. If your daemon cannot find `paseo-agy-acp` on its `PATH`, set `command` to the absolute path of the installed executable.

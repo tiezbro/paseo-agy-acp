@@ -2,6 +2,18 @@
 
 All notable changes to `paseo-agy-acp` are recorded here.
 
+## 2.11.1 - 2026-11-28
+
+### Fixed
+
+- Remove the companion plugin's background ACP quota source. Refreshing Paseo Usage no longer launches an ACP session to send `/usage`. The plugin still registers the provider; the managed kernel remains 1.5.2.
+- Prefer Google's official usage interface for consumer OAuth. The standalone `--usage` compatibility command is not a sanctioned workaround.
+
+### Upgrade
+
+- Updating only the global adapter does not remove the old plugin's quota source. Update or remove the 2.11.0 companion plugin separately, then verify the old source is absent. See the [upgrade guide](docs/operations/paseo-quota.md#已安装-2110-用户的升级步骤).
+- Thanks to [@maomomo-eth](https://github.com/maomomo-eth) for [PR #26](https://github.com/tiezbro/paseo-agy-acp/pull/26).
+
 ## 2.11.0 - 2026-11-26
 
 ### Added
