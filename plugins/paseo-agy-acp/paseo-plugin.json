@@ -1,6 +1,6 @@
 {
   "id": "paseo-agy-acp",
   "name": "Antigravity ACP",
-  "description": "通过官方 ACP 内核运行 agent 并查询独立 ACP 账号的额度",
+  "description": "通过官方 ACP 内核在 Paseo 中运行 Antigravity agent",
   "requirements": { "paseo": ">=0.17.4" }
 }

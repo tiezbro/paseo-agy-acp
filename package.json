@@ -37,7 +37,6 @@
     "plugins/paseo-agy-acp/paseo-plugin.json",
     "plugins/paseo-agy-acp/package.json",
     "plugins/paseo-agy-acp/index.server.ts",
-    "plugins/paseo-agy-acp/server/usage.ts",
     "plugins/paseo-agy-acp/OVERVIEW.md",
     "scripts/prepare-official-kernel-compat.mjs",
     "assets/official-kernel-compat/rc01/paseo_model_compat.py",

@@ -74,7 +74,7 @@ jobs:
       - name: Validate release source
         run: npm run validate
 
-      - name: Validate companion ACP quota plugin
+      - name: Validate companion Paseo plugin
         run: |
           npm ci --prefix plugins/paseo-agy-acp --ignore-scripts
           npm --prefix plugins/paseo-agy-acp run typecheck
@@ -92,7 +92,6 @@ jobs:
             package/plugins/paseo-agy-acp/paseo-plugin.json \
             package/plugins/paseo-agy-acp/package.json \
             package/plugins/paseo-agy-acp/index.server.ts \
-            package/plugins/paseo-agy-acp/server/usage.ts \
             package/plugins/paseo-agy-acp/OVERVIEW.md; do
             if ! grep -Fxq "$required" npm-pack-contents.txt; then
               echo "npm tarball is missing companion plugin file: $required" >&2
