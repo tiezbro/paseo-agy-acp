@@ -2,16 +2,16 @@
 
 [English](./README.md) | [中文](./README.zh-CN.md) | [Changelog](./CHANGELOG.md)
 
-`paseo-agy-acp` 把 Google 官方 Antigravity ACP 内核接入现有 Paseo。适配器包版本为 `2.11.1`，内核基准是官方 `agy_acp_server` 1.5.2，Linux 托管安装使用兼容层。只需安装本包，在 Paseo 中配置一个 ACP provider，即可使用，无需修改 Paseo。
+`paseo-agy-acp` 将 Google 官方独立 Antigravity ACP 内核接入 Paseo。[最新稳定版（`2.11.1`）](https://github.com/tiezbro/paseo-agy-acp/releases/tag/v2.11.1)锁定 [Google 官方 `agy_acp_server` `1.5.2`](https://github.com/tiezbro/paseo-agy-acp/blob/v2.11.1/ACP%20Connector/official-kernel/ensure-managed-kernel.ts#L18)。Linux x86_64 托管安装会附加兼容层，无需修改 Paseo。
 
 <!-- readme:positioning -->
 ## 产品定位
 
-在 Paseo 中选择 **Antigravity Pro**，就会启动 `paseo-agy-acp`。它和内置的 **Antigravity**（`antigravity`）可以并存。Antigravity Pro 使用官方 ACP 1.5.2，Linux x86_64 托管运行目录附加兼容补丁；内置 provider 使用主机上的 `agy`。
+在 Paseo 中选择 **Antigravity Pro** 即可启动 `paseo-agy-acp`，它可与内置的 **Antigravity**（`antigravity`）并存。Antigravity Pro 基于官方 ACP 1.5.2 内核（Linux x86_64 托管运行目录包含兼容补丁），内置 provider 则调用主机上的 `agy`。
 
 ![Paseo 中 Antigravity Pro 与内置 Antigravity 并存](./docs/images/antigravity-and-antigravity-pro.png)
 
-Google 内核负责账号认证、模型、工具、重试和会话历史。适配器负责把 Paseo 的工作目录、背景说明和技能交给内核，再把回答、权限请求和错误交回 Paseo。这是社区项目，Google 内核单独下载。
+Google 内核负责账号认证、模型、工具、重试与会话历史；适配器向内核传入 Paseo 的工作目录、背景说明与技能，并将回复、权限请求与错误传回 Paseo。本项目为社区项目，Google 内核需单独下载。
 
 <!-- readme:value -->
 ## 为什么用 paseo-agy-acp
@@ -20,45 +20,53 @@ Google 内核负责账号认证、模型、工具、重试和会话历史。适�
 
 新架构带来的结果：
 
-- 直接连接官方内核，不再刮 `agy` 的界面。
-- 准备重试和 HTTP 503 立刻显示，这一轮继续。
+- 直接连接官方独立 ACP 内核，与本机另装的 `agy` CLI 分开运行。
+- Linux x86_64 托管运行时可显示内核安排的重试或观测到的 HTTP 503，本轮继续。
 - `max_tokens`、`max_turn_requests`、`refusal` 显示成失败，不再看起来像成功。
-- 保留模型分组与独立档位选择；托管兼容层通过技能工具提供内置技能，避免自动向工作区写入技能文件。
+- 保留具体模型选项；托管兼容层通过技能工具提供内置技能，避免自动向工作区写入技能文件。
 
-“官方能力”表示未修改的 1.5.2 是否原生提供第一列所述能力。最后一列依据 Paseo 内置 `antigravity-provider` 的实现。“未核对”表示没有足够证据判断内置 provider 的行为。1.5.0 能力目录仍是历史对照：[官方能力目录](docs/research/2026-11-19-official-capability-catalog.md)。
+### 能力对比
 
-| 能力名称 | 能力内容简述 | 官方能力 | Paseo 适配说明 | Paseo 内置 antigravity |
-| --- | --- | --- | --- | --- |
-| 连接身份 | 多个 provider 并存时，可以辨认当前连接。 | 否 | 保留内核声明的能力，握手名称为 `agy-acp`，标题为 `paseo-agy-acp (official Antigravity ACP kernel)`，版本号取自适配器。 | 注册为 `antigravity`，显示为 Antigravity，启动 `agy`。 |
-| 终端 Google 登录 | 使用个人 Google 账号登录，需要时可重新授权。 | 是 | 在 daemon 主机运行 `paseo-agy-acp --login`，只办理 `oauth-personal`。聊天中无登录或切换账号按钮。 | 在终端启动 `agy` 登录，使用 CLI 的登录状态。 |
-| 崩溃后恢复与历史重放 | 重新打开会话时，找回原对话和工具记录。 | 是 | 优先用 `loadSession` 重放用户消息、回答、已记录的思考和工具。只有内核不支持 load 且声明支持 resume 时，才仅恢复上下文。 | 能做，但只按 `--conversation` 和原会话 ID 继续，CLI 不重放历史时间线。 |
-| 本地会话列表 | 按工作目录列出内核已保存的会话。 | 是 | 透传 `session/list` 和会话 ID。默认数据目录为 `~/.gemini/antigravity-acp`。 | 做不到，内置 provider 可重新打开已知会话，但没有枚举 CLI 历史会话的接口。 |
-| 工作目录与额外目录 | 为会话指定工作目录和允许访问的其他目录。 | 是 | 请求缺少工作目录时取 `PASEO_AGENT_CWD`，客户端给出的 `additionalDirectories` 原样交给内核。 | 能做，但 provider 只将当前工作目录作为 `--add-dir` 传给 CLI。 |
-| 中断当前轮次 | 停止当前请求，保留会话供下次使用。 | 是 | 转发取消。若内核用 `end_turn` 确认本地取消，则向客户端返回 `cancelled`。默认 30 秒无确认后关闭该连接。 | 能做，但会停止 CLI 进程，下次发消息时按原会话 ID 重启。 |
-| 同一会话防重入 | 一轮还在运行时，防止同一会话收到第二个并行请求。 | 否 | 拒绝重叠请求，其他会话直接派发。适配器不设置全局席位或冷却时间。 | 也会拒绝同一会话的重叠请求，返回 `TURN_ACTIVE`。 |
-| 图片与附件 | 消息可包含图片、文件位置或内嵌资源。 | 是 | 粘贴的图片作为 ACP 图片块发送。上传文件（含音频）交给内核的是本机文件位置；直接提供的 ACP 资源块原样转发。 | 能做，但图片先写入临时文件，再把路径发给 CLI。其消息接口只接受文本和图片。 |
-| 每条消息的背景说明 | 会话中途更新 daemon 的背景说明，下一条消息即可使用。 | 否 | 默认逐条读取并前置说明。启用原生会话背景后，在新建、加载或恢复时追加一次。 | 能做，但只在新会话的第一条消息前加说明，恢复后也不会再加。 |
-| `/usage` 与 `/logout` | 单独发送命令可查看用量或退出账号。企业登录且官方打开配额可见开关时，`/usage` 还显示配额告警、活动桶说明和 Overage。 | 是 | daemon 没有保存背景说明，或设置 `PASEO_AGY_ACP_NATIVE_SYSTEM_CONTEXT=1` 并启用官方会话背景时，内核直接处理命令。否则前置说明会让命令作为普通消息进入模型。结果按普通回复显示。配额可见性由官方实验开关决定，个人登录保持原有用量。 | 做不到，内置 provider 启动 CLI 时禁用了斜杠命令。 |
-| 斜杠技能与 `/plan` | 在官方命令菜单里找到工作区和个人技能。 | 否 | 保留官方 `/plan`、`/logout`、`/usage`，在后面追加可调用的本地技能。同名时官方命令优先。`/plan` 用来请求计划，保留当前权限模式。 | 做不到，内置 provider 禁用斜杠命令，发送给 Paseo 的命令列表为空。 |
-| 模型与思考级别 | 查看账号可用的模型，按内核提供的选项调整思考级别。API Key 与 Agent Platform 目录包含 Gemini 4 Neon、Gemini 4 Hydrogen，以及 High、Extra High、Medium、Low。 | 是 | 保留具体模型 ID 和分组思考档，Extra High 原样交给内核。Linux 托管兼容层同时列出上游账号目录实际提供的受支持 Claude/GPT 模型，保留上游禁用模型检查。 | 能做，但从 `agy models` 读取模型，思考级别只能通过模型 ID 选择。 |
-| 三种模式与 YOLO 无人值守 | Default 按策略审批，Auto Edit 自动批准编辑，YOLO 自动批准常规工具。 | 是 | 按官方模式运行。需要无人值守执行常规工具时选 `yolo`。管理员复核规则仍生效；Paseo 对权限请求的 Auto Accept 是独立设置。 | 能做，但只有 Full access，始终用 `--dangerously-skip-permissions` 启动，不能选择 Default 或 Auto Edit。 |
-| 工具审批与单选问答 | 审批工具、保存适用的许可，或从内核给出的选项中作答。本轮取消时，未作答的询问随轮次结束，不再作为回答送回内核。 | 是 | 将官方选项交给 Paseo 的权限面板。多个允许选项需要人选择，切换 YOLO 本身不会让现有 Paseo 代答。取消仍按官方终态转发。 | 做不到，内置 provider 不能把 CLI 的交互式权限请求或单选题交给 Paseo 作答。 |
-| 工作区信任与钩子 | 工作区钩子需要信任时，内核询问是否信任并保存明确选择。 | 是 | 通过普通权限请求显示“信任／不信任”。默认由人选择；启用 Paseo Auto Accept 后，只有一个允许项的信任请求可以被自动批准。 | 做不到，内置 provider 没有向 Paseo 转交工作区信任选项的接口。 |
-| 流式回答与思考摘要 | 阅读逐步到达的正文，以及模型实际提供的思考摘要。 | 是 | 将正文和官方思考分开传给 Paseo；加载历史时可重放已保存的摘要。 | 能做，但只把回复文字写入时间线，没有独立的思考摘要条目。 |
-| 系统消息封套 | 在回复中识别明确标为 `SYSTEM_MESSAGE` 的片段。 | 否 | 识别代码块外的完整封套，将原文作为独立 ACP 文本消息交付。普通 Paseo 能读到正文；引用和命令回执仍是普通回复。 | 做不到，内置 provider 按回复步骤拼接文本，没有识别该封套的处理。 |
-| 工具进度与结果 | 查看工具正在做什么、输出了什么、最终是否成功。 | 是 | 用官方调用 ID 关联更新，保留内核给出的文件位置、命令结果和退出码。 | 能做，但 shell 条目只映射命令和输出，没有单独的退出码字段。 |
-| MCP 工具连接 | 让内核调用会话配置的 MCP 服务。 | 是 | stdio 直接传递，HTTP 和 SSE 经本地协议桥连接，工具调用与结果显示在时间线中。 | 能做，但只能使用 `agy` 自己配置的 MCP 服务；内置 provider 不接入 Paseo 提供的 MCP 工具。 |
-| 上下文与 token 用量 | 查看上下文已用空间、总容量和本轮的用量。 | 是 | 转发官方 `usage_update` 和回包用量；普通 Paseo 可读取输入、输出和缓存读取计数。 | 能做，但只累计输入、输出和缓存读取数，没有官方上下文容量更新。 |
-| 空成功检查 | 区分正常完成与没有产生任何可见内容的 `end_turn`。 | 否 | 有可见回答或工具活动时保留成功；完全没有可见内容时返回 `-32000`，Paseo 显示失败。 | 做不到，CLI 返回 `SUCCESS` 就标记完成，没有检查本轮是否有可见输出。 |
-| 三种未完成原因 | 分别识别 token 达上限、单轮请求达上限和配额耗尽。 | 是 | 把 `max_tokens`、`max_turn_requests`、`refusal` 转成 `-32000` 错误。Paseo 显示对应的英文原因，`error.data.stopReason` 保留官方原值。 | 做不到，内置 provider 处理 CLI 的 `SUCCESS` 或 `ERROR`，没有这三个 ACP 原因的映射。 |
-| 即时重试与 HTTP 503 提示 | 等待时看到内核是否已安排重试，或后端是否报错。 | 否 | 托管 Linux x86_64 包装器捕获到明确重试记录时立即发文字提示。识别到 HTTP 503 时也立即提示，同一轮相同状态码只提示一次；本轮继续，502 或 503 本身不代表已安排重试。 | 做不到，内置 provider 不解析这两种信号，也不向时间线推送相应提示。 |
-| 内核确认的终止失败 | 内核有时在执行失败后仍回 `end_turn`。 | 否 | 托管包装器确认本轮终止失败后，适配器返回 `-32000`。失败诊断长文不会被当成本轮回答。 | 能做，但依据 CLI 的 `ERROR` 或进程异常报告失败，没有这项 ACP 终态校正。 |
-| 企业账号与策略 | 企业登录可启用管理员策略和企业浏览器等受许可功能。 | 是 | 本包的登录命令只办理个人 Google 登录，未提供企业、API key、Agent Platform 或网关登录入口。 | 未核对 |
-| 工作区规则文件 | 内核读取工作区与 Gemini 主目录中的 `GEMINI.md`、`AGENTS.md`，并作为用户规则交给模型。 | 是 | 1.5.2 在规则列表为空时自行注入这两个文件名。适配器不另写规则，也不改写文件内容。 | 未核对 |
-| 路径访问策略 | `.aiexclude` 与管理员允许、拒绝的读写路径约束文件工具和命令参数中的路径。 | 是 | 拒绝由内核执行，适配器原样转发工具错误。拒绝原因包括 `aiexclude_deny`、`aiexclude_deny_wildcard`、`admin_denied_path`、`admin_denied_path_wildcard`。 | 未核对 |
-| 企业许可证区域 | 企业登录按项目查询可领取许可证的区域；查询失败时使用 global、us、eu。 | 是 | 区域列表和回退由官方登录流程决定。本包登录命令仍只办理个人 Google 登录。 | 未核对 |
+#### 能力表基线
 
-另外九项尚未确认的事实见[能力目录第十四节](docs/research/2026-11-19-official-capability-catalog.md#十四仍未确认)。该目录记录的是 1.5.0，不覆盖上表新增的 1.5.2 行。
+- **Paseo 内置 Antigravity：** [Paseo `0.18.1`](https://github.com/getpaseo/paseo/releases/tag/v0.18.1) + [Google Antigravity CLI（`agy`）`1.5.18`](https://github.com/google-antigravity/antigravity-cli/releases/tag/1.5.18)，通过 `agy acp` 启动。
+- **Antigravity Pro：** 同一个 Paseo `0.18.1` + [`paseo-agy-acp` `2.11.1`](https://github.com/tiezbro/paseo-agy-acp/releases/tag/v2.11.1) 及同版本 `2.11.1` 配套插件 + Google 官方独立 ACP 内核 `1.5.2`（`agy_acp_server`）。
+
+`agy` 和 `agy_acp_server` 是 Google 分开发布的两套程序，版本号各自独立。Linux x86_64 托管兼容层的行为在表中单独标明。对照基于发布源码、官方文档和所附验收记录，不代表同一账号的全项实测。
+
+| 能力点 | Paseo 内置 Antigravity | Antigravity Pro（paseo-agy-acp） |
+| --- | --- | --- |
+| 启动与安装 | Provider 随 Paseo 提供，调用另装的官方 `agy acp`；Paseo 0.18.1 要求 CLI 至少为 1.5.1。 | Paseo 启动适配器，再启动独立的 `agy_acp_server`。支持 `--doctor`、托管准备和指定内核路径。适配器、插件、内核分别维护。 |
+| Google 登录与数据 | 复用 CLI 登录，SSH 和非 SSH 环境可能读取不同的凭据。 | `--login` 为独立内核办理个人 OAuth。凭据和会话与 CLI 分开，默认在 `~/.gemini/antigravity-acp`。 |
+| 无人值守认证 | Paseo 文档建议定时或无人值守运行使用 API Key 或 Agent Platform。 | 自带 `--login` 只办理个人 OAuth；等价的 API Key 或 Agent Platform 配置未在此验证。权限模式不会改变 Google 的账号规则。 |
+| 模型目录 | 使用已登录账号经 `agy` 在 ACP 中公布的模型。 | 使用独立内核的目录。Linux x86_64 托管兼容层补回账号实际提供的受支持 Claude/GPT 条目，保留上游禁用检查。没有同账号实测两边的目录差异。 |
+| 模型缓存与刷新 | 在 0.18.1 中，Paseo 重启后可复用目录缓存，按需刷新，不做后台轮询。 | 0.18.1 上的配套插件使用同一 ACP SDK 的按需目录策略。 |
+| 思考档位 | 分别探测各模型公布的档位，不把默认模型的档位套给其他模型。 | 透传原生档位，包括模型实际提供的 Extra High。配套插件未启用内置版的逐模型目录探测。 |
+| 分组显示与固定档模型 | 使用 SDK 的模型与思考档控件；模型没有公布档位时，可能不显示档位选项。 | 协议回包保留分组 `configOptions`，但 0.18.1 的插件 SDK 会展开选项。固定档显示逻辑只识别 `Paseo`，0.18.1 插件宿主发送的是 `paseo`，所以该接法不触发；该逻辑本身也不改变真实思考档。 |
+| 权限模式 | 提供 CLI 原生模式，包括 Default、Accept edits、Plan，以及 Paseo 默认的 Full access；后者可对符合条件的请求代选 Allow once，CLI 策略仍生效。 | 内核提供 Default、Auto Edit 和 YOLO。YOLO 是内核模式，`/plan` 是命令，两者都不等于内置版的 Full access。 |
+| 工具审批与取消问答 | 把工具审批交给 Paseo；停止一轮时清理尚未作答的审批。 | 转交内核的权限选项。1.5.2 负责取消未作答的请求；如果选择题仍发给客户端，YOLO 本身不会代答。未验证原生问答表单是否等价。 |
+| 工作区信任与钩子 | 有通用 ACP 权限接口；未单独验证工作区信任和钩子流程。 | 内核信任请求可走普通权限通道；未单独验证 Paseo 0.18.1 中的呈现是否等价。 |
+| 会话列表和导入 | 能列出和导入 CLI 保存的对话；上游迁移验收使用了真实 CLI。 | 转发 `session/list`，内核声明支持时，插件 SDK 可以列出和导入。两边的历史分开，未验证跨 Provider 导入。 |
+| 冷恢复与历史重放 | 用 `session/load` 加载已保存的会话，兼容旧 Provider 保存的会话 ID，并等待 200 毫秒接收晚到的历史事件。 | 配套插件也用 `session/load`，但没加内置版的等待窗口。适配器可以转发客户端发来的 resume 请求，当前 SDK 不把它作为独立的恢复路径。 |
+| 停止与恢复 | 发送 ACP 取消请求；对 CLI 已回包但工具仍在运行的情况有专门处理。 | 也转发取消；本地取消后若内核回 `end_turn`，校正为 `cancelled`。已派发请求默认 30 秒未确认取消时关闭连接。 |
+| 追问与并发 | 对仍有工具运行的延迟结束轮次提供专门的追问处理，也对周期调度作区分。 | 同会话拒绝重叠请求，不在不同会话之间做全局排队。插件没有启用内置版的延迟轮次处理。 |
+| 工作目录和额外目录 | SDK 发送 `cwd`；标准会话请求不发送 `additionalDirectories`。 | 没收到工作目录时由 `PASEO_AGENT_CWD` 兜底；可透传 ACP 客户端已发来的 `additionalDirectories`，配套插件仍使用同一 SDK。 |
+| 会话背景指令 | CLI 声明支持时，在建立或加载会话时使用原生追加指令。 | 默认每轮在消息前附加 daemon 说明；设置 `PASEO_AGY_ACP_NATIVE_SYSTEM_CONTEXT=1` 且内核支持时，改为在打开会话时追加。 |
+| 斜杠命令与技能 | 显示 CLI 公布的命令和技能，在菜单区分两者，并等待首批菜单。 | 保留内核命令，追加 Paseo、Agents、Codex、Claude、Gemini 等位置发现的本地技能，同名时内核优先。给会话提供列出和读取技能的工具；Linux x86_64 托管兼容层也通过工具提供内置技能，不自动把技能文件写入工作区。 |
+| 图片与其他附件 | SDK 直接发送 ACP 图片块，其他输入块类型会转成文本。 | 同受 Paseo SDK 限制；直连 ACP 的客户端可传原生资源块。能上传文件不意味着 Paseo 原生支持 PDF 或音频输入。 |
+| MCP | 把给 Agent 配置的 MCP 服务交给 `agy`；上游真实验证过 stdio 工具及其审批。 | 接收会话配置，保留 stdio，规范化请求头，并通过本地协议桥转接 HTTP/SSE URL。未逐项验证远端服务兼容性。 |
+| 流式输出与工具卡 | 正文和模型报告的思考分开展示；针对 CLI 映射命令、输出、退出码、文件、搜索及 MCP。 | 转发正文、内核报告的思考和工具事件。配套插件使用通用 ACP 工具卡，未复用内置版的专用映射。 |
+| 上下文与 token | 共用 SDK 读取上游报告的 token 数及上下文窗口用量。 | 由同一 SDK 读取内核字段。这是会话用量，和账号剩余额度是两回事。 |
+| Paseo Usage 额度卡 | 上游在 0.17.6 移除；0.18.1 没有这张卡。 | 配套插件在 2.11.1 移除。只升级 CLI 不会移除已安装的 2.11.0 插件里的后台来源。 |
+| 手动账号命令 | 官方 `agy` 终端提供 `/usage` 和登录管理；Paseo 的 ACP 菜单以 `agy` 实际公布的命令为准。 | 独立内核的 `/usage` 和 `/logout` 与已移除的额度卡无关；消息前置 daemon 说明可能使它们不能作为独立命令识别。适配器仍保留兼容入口 `--usage`；个人 OAuth 用户应使用 Google 官方额度界面。 |
+| 未完成的停止原因 | 在 SDK 的普通消息路径中，成功回包即使带 `max_tokens`、`max_turn_requests` 或 `refusal` 也会标为完成；ACP 错误回包则标为失败。 | 将上述原因转成 ACP 错误，并保留原值 `error.data.stopReason`。 |
+| 空白结束 | 未在内置 Provider 或普通消息路径中发现同样的空白成功检查。 | 内核回成功结束，但没有可见回答或工具活动时，返回明确错误。 |
+| 重试、HTTP 503 与终止失败 | 依赖 `agy` 通过 ACP 上报的状态和错误，没有配置同类内核事件观察器。 | Linux x86_64 托管版可提示内核明确安排的重试或观测到的 HTTP 错误（如 503），本轮继续。HTTP 错误本身不等于重试；观察器也可纠正部分被回报为 `end_turn` 的失败。 |
+| 系统消息封套和轮播文本 | 未在内置适配中找到等价的封套与轮播转换。 | 将 `SYSTEM_MESSAGE` 封套和轮播格式转换为可读 ACP 文本；配套插件接法下未验证独立系统卡。 |
+| 工作区规则与路径策略 | Provider 本身不实现 Google 规则或路径策略；未核对 `GEMINI.md`、`AGENTS.md`、`.aiexclude` 和管理员规则是否等价。 | 工作区规则发现和路径访问由独立 1.5.2 内核执行，适配器转发相应工具错误。 |
+| 企业策略和许可证区域 | 文档说明 Agent Platform 认证；未核对许可证区域回退和完整企业策略。 | 支持的企业策略和许可证区域由独立内核处理；套件自带登录命令仍只办理个人 OAuth。 |
+
+证据：[Paseo 内置 Provider 文档](https://github.com/getpaseo/paseo/blob/v0.18.1/public-docs/supported-providers/antigravity.md)、[内置版 ACP 迁移与实测](https://github.com/getpaseo/paseo/pull/10193)、[Paseo ACP SDK](https://github.com/getpaseo/paseo/blob/v0.18.1/packages/plugin/src/server/acp-internal/connection.ts)、[Paseo 插件客户端身份](https://github.com/getpaseo/paseo/blob/v0.18.1/packages/server/src/server/agent/plugin-provider.ts#L94-L104)、[Pro 插件注册](https://github.com/tiezbro/paseo-agy-acp/blob/v2.11.1/plugins/paseo-agy-acp/index.server.ts)、[Pro 固定档实现](https://github.com/tiezbro/paseo-agy-acp/blob/v2.11.1/ACP%20Connector/official-kernel/fixed-model-effort.ts)、[Pro ACP 转发与轮次结果](https://github.com/tiezbro/paseo-agy-acp/blob/v2.11.1/ACP%20Connector/official-kernel/proxy.ts)和[额度移除及升级说明](docs/operations/paseo-quota.md)。[官方 1.5.0 能力目录](docs/research/2026-11-19-official-capability-catalog.md)记录的是旧版独立内核，作为历史参考。
 
 <!-- readme:architecture -->
 ## 架构
@@ -67,21 +75,21 @@ Google 内核负责账号认证、模型、工具、重试和会话历史。适�
 Paseo → ACP / NDJSON → paseo-agy-acp → agy_acp_server 1.5.2 → Google
 ```
 
-每个适配器进程启动一个内核子进程。托管安装校验 Google 的原始下载包；Linux x86_64 在独立的兼容运行目录中接入内核事件观察器。直接指定未修改的官方可执行文件也可连接，此时重试、HTTP 和终止失败提示取决于该程序是否提供相应信号。
+每个适配器进程启动一个内核子进程。托管安装会校验 Google 原始下载包，并在 Linux x86_64 的独立兼容运行目录中接入内核事件观察器。也可直接指向未修改的官方可执行文件，此时重试、HTTP 与终止失败提示取决于该程序是否输出对应信号。
 
-会话历史由内核保存。适配器没有调度数据库或运行时 npm 依赖。同一连接按顺序建立新会话，使早到的命令菜单能绑定到正确工作区；不同会话的消息可以同时处理。
+会话历史由内核存储；适配器不含调度数据库，也没有运行时 npm 依赖。同一连接上的新会话按顺序建立，确保早到的命令菜单绑定到正确工作区；不同会话的请求可并发处理。
 
 <!-- readme:requirements -->
 ## 运行要求
 
 - Node.js 22 或更高版本，以及支持自定义 ACP provider 的 Paseo。
-- 可使用官方 Antigravity 服务的 Google 账号。
-- 托管 Linux x86_64 包装器需要以非 root 用户运行。
+- 具备官方 Antigravity 服务使用权限的 Google 账号。
+- 运行托管 Linux x86_64 包装器需使用非 root 用户。
 
 <!-- readme:quickstart -->
 ## 试用
 
-在运行 Paseo daemon 的主机上，从本版本的 npm 包安装。若手头是源码，可按“开发验证”中的命令生成同名安装包。
+在运行 Paseo daemon 的主机上安装发布包。如果要从源码构建同一个安装包，先切到对应的发布 tag，再按「开发验证」打包。
 
 ```bash
 npm install --global ./paseo-agy-acp-2.11.1.tgz
@@ -90,7 +98,7 @@ paseo-agy-acp --prepare-kernel
 paseo-agy-acp --login
 ```
 
-`--doctor` 检查本机安装，`--prepare-kernel` 按需下载固定版本内核。登录使用个人 Google OAuth。无桌面主机可以在另一台设备的浏览器里授权，再把 localhost 回调地址粘贴回 daemon 主机的登录终端。
+`--doctor` 检查本机安装，`--prepare-kernel` 按需下载固定版本的内核，`--login` 使用个人 Google OAuth 登录。若为无桌面主机，可在其他设备的浏览器中完成授权，再将 localhost 回调地址粘贴回 daemon 主机的登录终端。
 
 把下面的示例合并到 `~/.paseo/config.json` 的 `agents.providers` 中。如果 daemon 的 `PATH` 找不到可执行文件，请将 `command` 中的值换成该文件的绝对路径。
 
@@ -109,7 +117,7 @@ paseo-agy-acp --login
 }
 ```
 
-配置对新启动的 agent 生效。在 Paseo 创建会话时选择 **Antigravity Pro**。
+配置仅对新启动的 agent 生效。在 Paseo 中新建会话时选择 **Antigravity Pro** 即可。
 
 ### 使用可选 Paseo 插件注册 provider
 
@@ -160,26 +168,26 @@ paseo-agy-acp --login
 
 | 环境变量 | 用途 |
 | --- | --- |
-| `PASEO_AGY_ACP_OFFICIAL_BIN` | 指向已有内核或包装器的绝对路径。留空使用托管安装。 |
-| `PASEO_HOME` | Paseo daemon 数据目录，默认 `~/.paseo`。 |
-| `PASEO_AGY_ACP_NATIVE_SYSTEM_CONTEXT` | 设为 `1`，在内核声明支持时使用会话级背景说明。 |
-| `AGY_ACP_DIAGNOSTICS` | 设为 `1`，向 stderr 写入各阶段耗时，不记录提示正文或凭据。 |
-| `AGY_ACP_CANCEL_TIMEOUT_MS` | 取消后等待内核确认的时间，单位为毫秒，须为正整数，默认 `30000`。 |
+| `PASEO_AGY_ACP_OFFICIAL_BIN` | 已有内核或包装器的绝对路径；留空则使用托管安装。 |
+| `PASEO_HOME` | Paseo daemon 数据目录（默认 `~/.paseo`）。 |
+| `PASEO_AGY_ACP_NATIVE_SYSTEM_CONTEXT` | 设为 `1` 时，在内核声明支持的前提下使用会话级背景说明。 |
+| `AGY_ACP_DIAGNOSTICS` | 设为 `1` 时向 stderr 输出各阶段耗时（不记录提示正文与凭据）。 |
+| `AGY_ACP_CANCEL_TIMEOUT_MS` | 等待内核确认取消的超时时间（毫秒，正整数，默认 `30000`）。 |
 
-模式 ID 为 `default`、`auto_edit` 和 `yolo`。已有配置中的 `accept-edits` 对应 `auto_edit`，`dangerously-skip-permissions` 对应 `yolo`。未知模式交给内核校验。需要先做计划时，在聊天中使用 `/plan`。
+支持的模式 ID 为 `default`、`auto_edit` 和 `yolo`，旧配置中的 `accept-edits`（对应 `auto_edit`）与 `dangerously-skip-permissions`（对应 `yolo`）继续兼容；未知模式交由内核校验。需先制定计划时，在聊天中发送 `/plan`。
 
-权限请求会等到答复或取消。使用网络代理时，在 provider 的环境变量中设置代理地址，并在 `NO_PROXY` 中加入本地 MCP 端点。
+权限请求会保持等待直至答复或取消。若需使用网络代理，请在 provider 环境变量中配置代理地址，并将本地 MCP 端点加入 `NO_PROXY`。
 
-技能发现范围包括配置目录、工作区、全局 Gemini、Agents、Codex 和 Paseo 兼容目录。工作区技能优先于全局同名技能。`user-invocable: false` 隐藏该技能的斜杠菜单项。会话级 `paseo_skills` MCP 只读已发现的技能目录，每个文件最多 1 MiB。
+技能发现涵盖配置目录、工作区根目录、全局 Gemini/Agents/Codex 目录及 Paseo 兼容目录，同名时工作区技能优先于全局技能。设置 `user-invocable: false` 可在斜杠菜单中隐藏该技能。会话级只读 MCP 服务 `paseo_skills` 仅读取已发现的技能目录，单文件上限 1 MiB。
 
 <!-- readme:operations -->
 ## 运维与验收
 
-从带全局排队的版本迁移时，移除 `AGY_ACP_ADMISSION_*` 和 `AGY_ACP_STATE_DIR`。旧账本保留在磁盘上，适配器不再读取，原 `agy-acp-prepare-state` 入口已移除。账号额度、服务端 429/502/503 和模型生成时间仍由上游决定。
+从含全局排队的版本迁移时，请移除 `AGY_ACP_ADMISSION_*` 与 `AGY_ACP_STATE_DIR`。旧账本文件留在磁盘上不再读取，原 `agy-acp-prepare-state` 命令也已移除。账号额度、上游 429/502/503 响应及生成耗时仍由上游服务决定。
 
-从 2.9.2 升级到 2.10.0 会把托管内核从 1.5.0 换成 1.5.2。旧的 1.5.0 兼容收据不能复用。升级或重新构建后，先在终端运行 `paseo-agy-acp --prepare-kernel` 并等待完成，再运行 Provider 诊断。源码检出使用 `node "dist/ACP Connector/main.js" --prepare-kernel`。首次准备可能需要数分钟，超过 Paseo 诊断初始化的 20 秒限时。已运行的会话继续使用原先加载的内核。
+从 2.9.2 升级至 2.10.0 会将托管内核由 1.5.0 替换为 1.5.2，旧的 1.5.0 兼容收据不可复用。升级或重新构建后，请先在终端运行 `paseo-agy-acp --prepare-kernel` 并等待完成，再执行 Provider 诊断（源码检出请使用 `node "dist/ACP Connector/main.js" --prepare-kernel`）。首次准备可能耗时数分钟，超出 Paseo 诊断初始化的 20 秒超时限制。运行中的会话将继续使用原已加载的内核。
 
-会话建立及配置回包使用分组 `configOptions`，省略旧扁平 `models` 列表。模型菜单只显示名称，支持原生档位的模型（如 Gemini，以及符合条件账号上的 Claude 5.5）通过独立控件切换真实推理档位。Gemini 4 Neon 与 Hydrogen 的 Extra High 是官方档位，适配器不把它改成 Low、Medium 或 High。原版 Paseo 中，受支持的固定档 Claude/GPT‑OSS 也显示低、中、高，但点选只改变界面，不改变实际模型 ID 或推理档位。Linux x64 托管兼容层也恢复上游账号目录实际提供的受支持第三方模型，不更改客户端身份。仅在兼容模块和补丁配方均匹配时复用内核缓存。模型可用性仍以上游账号目录为准。
+适配器在 ACP 回包中发送分组 `configOptions`，省略旧扁平 `models` 列表；Paseo 0.18.1 插件 SDK 会展开这些选项。有原生档位的模型（如 Gemini、账号实际提供的 Claude 5.5）使用内核报告的真实档位。Gemini 4 Neon 和 Hydrogen 的 Extra High 原样转发。固定档显示逻辑曾在旧版客户端接法验证；在 0.18.1 配套插件下的行为见上表。Linux x86_64 托管兼容层也恢复上游账号目录实际提供的受支持第三方模型，不更改客户端身份。仅在兼容模块和补丁配方均匹配时复用内核缓存。模型可用性仍以上游账号目录为准。
 
 - [旧排队配置迁移](docs/operations/admission.md)
 - [轻量适配器验收](docs/operations/lightweight-adapter.md)
@@ -195,7 +203,7 @@ paseo-agy-acp --login
 <!-- readme:development -->
 ## 开发验证
 
-在源码根目录安装开发依赖、构建并生成试用所用的 npm 包：
+在源码根目录安装开发依赖、构建并打包试用所需的 npm 安装包：
 
 ```bash
 npm ci
@@ -209,13 +217,13 @@ npm run test:paseo-provider
 npm run test:paseo-client
 ```
 
-客户端测试使用验收指南锁定的 Paseo 客户端和模拟内核。需要用真实账号对照官方内核和适配器时，可另行运行：
+客户端测试基于验收指南中锁定的 Paseo 客户端夹具与模拟内核。如需使用真实账号对比官方内核与适配器，可另行运行探针脚本：
 
 ```bash
 node scripts/compare-kernel.mjs --run --kernel /absolute/path/agy_acp_server.par --concurrency 4 --groups native,adapter
 ```
 
-两组使用同一模型并消耗现有账号额度。脚本拒绝工具权限，遇到异常即停并清理自建进程。报告只保存耗时和状态，不保存模型正文或原始错误。历史证据位于 `docs/research/` 和 `docs/design/`。
+两组使用同一模型并消耗当前账号额度。脚本会拒绝工具权限、遇异常即停并清理自建进程；报告仅记录耗时与状态，不包含模型输出或原始错误。历史证据存放在 `docs/research/` 与 `docs/design/`。
 
 <!-- readme:license -->
 ## License
