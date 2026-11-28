@@ -34,7 +34,8 @@ describe("published package content", () => {
       "plugins/paseo-agy-acp/paseo-plugin.json",
       "plugins/paseo-agy-acp/package.json",
       "plugins/paseo-agy-acp/index.server.ts",
-      "plugins/paseo-agy-acp/OVERVIEW.md"
+      "plugins/paseo-agy-acp/OVERVIEW.md",
+      "README.tr.md"
     ]));
     expect(packedPaths).not.toContain("plugins/paseo-agy-acp/server/usage.ts");
 
@@ -84,6 +85,7 @@ function isExpectedPublishedPath(entry: string): boolean {
   return entry === "package.json" ||
     entry === "README.md" ||
     entry === "README.zh-CN.md" ||
+    entry === "README.tr.md" ||
     entry === "CHANGELOG.md" ||
     entry === "LICENSE" ||
     entry === "scripts/prepare-official-kernel-compat.mjs" ||

@@ -42,6 +42,7 @@
     "assets/official-kernel-compat/rc01/paseo_model_compat.py",
     "README.md",
     "README.zh-CN.md",
+    "README.tr.md",
     "CHANGELOG.md",
     "LICENSE",
     "package.json"

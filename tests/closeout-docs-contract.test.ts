@@ -26,7 +26,7 @@ function markdownTargets(markdown: string): string[] {
 }
 
 describe("v2.0.0.0 closeout documentation contract", () => {
-  it("keeps product READMEs current, bilingual, and separate from release history", () => {
+  it("keeps localized product READMEs in sync and separate from release history", () => {
     const failures: string[] = [];
     const requiredSections = [
       "positioning",
@@ -42,18 +42,20 @@ describe("v2.0.0.0 closeout documentation contract", () => {
     const requiredTargets = [
       "./README.md",
       "./README.zh-CN.md",
+      "./README.tr.md",
       "./CHANGELOG.md",
       "docs/operations/admission.md",
       "docs/operations/official-kernel-compat-runbook.md",
       "docs/operations/npm-publishing.md"
     ];
 
-    const readmes = [
-      ["README.md", readDoc("README.md")],
-      ["README.zh-CN.md", readDoc("README.zh-CN.md")]
-    ] as const;
+    const languageBar = "[English](./README.md) | [中文](./README.zh-CN.md) | " +
+      "[Türkçe](./README.tr.md) | [Changelog](./CHANGELOG.md)";
+    const variants = ["README.zh-CN.md", "README.tr.md"] as const;
+    const english = readDoc("README.md");
 
-    for (const [label, contents] of readmes) {
+    for (const label of ["README.md", ...variants]) {
+      const contents = label === "README.md" ? english : readDoc(label);
       const links = markdownTargets(contents);
       for (const target of requiredTargets) {
         if (!links.includes(target)) {
@@ -62,7 +64,7 @@ describe("v2.0.0.0 closeout documentation contract", () => {
       }
       for (const section of requiredSections) {
         if (!contents.includes(`<!-- readme:${section} -->`)) {
-          failures.push(`${label} lacks bilingual section marker ${section}`);
+          failures.push(`${label} lacks shared section marker ${section}`);
         }
       }
       for (const historicalTarget of [SCHEME_PATH, OLD_DESIGN_PATH, ...STAGE2_ARTIFACTS]) {
@@ -76,7 +78,7 @@ describe("v2.0.0.0 closeout documentation contract", () => {
       if (/\b2\.(?:0|1|2)(?:\.\d+){1,2}\b/.test(contents)) {
         failures.push(`${label} contains historical release narration`);
       }
-      if (!/\[English\]\(\.\/README\.md\) \| \[中文\]\(\.\/README\.zh-CN\.md\) \| \[Changelog\]\(\.\/CHANGELOG\.md\)/.test(contents)) {
+      if (!contents.split(/\r?\n/).includes(languageBar)) {
         failures.push(`${label} does not expose Changelog after the language links`);
       }
 
@@ -84,14 +86,8 @@ describe("v2.0.0.0 closeout documentation contract", () => {
         (match) => match[1]
       );
       if (JSON.stringify(sectionOrder) !== JSON.stringify(requiredSections)) {
-        failures.push(`${label} section order differs from the bilingual contract`);
+        failures.push(`${label} section order differs from the shared README contract`);
       }
-    }
-
-    const english = readmes[0][1];
-    const chinese = readmes[1][1];
-    if (JSON.stringify(markdownTargets(english)) !== JSON.stringify(markdownTargets(chinese))) {
-      failures.push("English and Chinese README link targets differ");
     }
 
     const executableBlocks = (markdown: string) =>
@@ -99,8 +95,16 @@ describe("v2.0.0.0 closeout documentation contract", () => {
         language: match[1],
         body: match[2]
       }));
-    if (JSON.stringify(executableBlocks(english)) !== JSON.stringify(executableBlocks(chinese))) {
-      failures.push("English and Chinese README executable examples differ");
+    const expectedLinks = JSON.stringify(markdownTargets(english));
+    const expectedExamples = JSON.stringify(executableBlocks(english));
+    for (const label of variants) {
+      const readme = readDoc(label);
+      if (JSON.stringify(markdownTargets(readme)) !== expectedLinks) {
+        failures.push(`${label} link targets differ from README.md`);
+      }
+      if (JSON.stringify(executableBlocks(readme)) !== expectedExamples) {
+        failures.push(`${label} executable examples differ from README.md`);
+      }
     }
 
     expect(failures).toEqual([]);
