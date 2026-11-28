@@ -54,7 +54,7 @@ node "dist/ACP Connector/main.js" --usage
 
 ## 可选 Paseo 插件（仅注册 Provider）
 
-使用 npm 发布版时，可按 [中文 README 的插件配置步骤](../../README.zh-CN.md#手动查询-acp-用量与可选-paseo-插件) 安装插件、迁移 provider 并重载配置。安装及升级细节见 [发布版安装](plugin-releases.md#用户从发布版本安装)。本地源码开发时，在目标 daemon 上启用插件后，从源码目录安装配套插件。
+使用 npm 发布版时，可按 [中文 README 的插件配置步骤](../../README.zh-CN.md#使用可选-paseo-插件注册-provider) 安装插件、迁移 provider 并重载配置。安装及升级细节见 [发布版安装](plugin-releases.md#用户从发布版本安装)。本地源码开发时，在目标 daemon 上启用插件后，从源码目录安装配套插件。
 
 ```bash
 paseo plugin install /absolute/path/to/paseo-agy-acp/plugins/paseo-agy-acp
