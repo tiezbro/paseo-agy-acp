@@ -1,6 +1,6 @@
 # paseo-agy-acp
 
-[English](./README.md) | [中文](./README.zh-CN.md) | [Changelog](./CHANGELOG.md)
+[English](./README.md) | [中文](./README.zh-CN.md) | [Türkçe](./README.tr.md) | [Changelog](./CHANGELOG.md)
 
 `paseo-agy-acp` connects Paseo to Google's standalone Antigravity ACP kernel. The [latest stable release (`2.11.1`)](https://github.com/tiezbro/paseo-agy-acp/releases/tag/v2.11.1) pins [Google's `agy_acp_server` `1.5.2`](https://github.com/tiezbro/paseo-agy-acp/blob/v2.11.1/ACP%20Connector/official-kernel/ensure-managed-kernel.ts#L18). Managed Linux x86_64 installs add a compatibility layer. No changes to Paseo are required.
 
